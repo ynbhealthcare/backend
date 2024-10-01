@@ -3,9 +3,9 @@ import blogModel from "../models/blogModel.js";
 import userModel from "../models/userModel.js";
 import chatModel from "../models/chatModel.js";
 import categoryModel from "../models/categoryModel.js";
-import bcrypt from 'bcrypt'
-import jwt from 'jsonwebtoken';
-import dotenv from 'dotenv';
+import bcrypt from "bcrypt";
+import jwt from "jsonwebtoken";
+import dotenv from "dotenv";
 import attributeModel from "../models/attributeModel.js";
 import productModel from "../models/productModel.js";
 import orderModel from "../models/orderModel.js";
@@ -18,16 +18,15 @@ import compareModel from "../models/compareModel.js";
 import zonesModel from "../models/zonesModel.js";
 import promoModel from "../models/promoModel.js";
 import taxModel from "../models/taxModel.js";
-import Razorpay from "razorpay"
+import Razorpay from "razorpay";
 import nodemailer from "nodemailer";
-import { createServer } from 'http';
-import querystring from 'querystring';
-import https from 'https';
-import CryptoJS from 'crypto-js'; // Import the crypto module
-import axios from 'axios';
+import { createServer } from "http";
+import querystring from "querystring";
+import https from "https";
+import CryptoJS from "crypto-js"; // Import the crypto module
+import axios from "axios";
 import { cpSync } from "fs";
 import enquireModel from "../models/enquireModel.js";
-
 
 dotenv.config();
 
@@ -43,13 +42,24 @@ function pkcs5_pad(text, blocksize) {
 // Function to encrypt plaintext
 function encrypt(plainText, key) {
   // Convert key to MD5 and then to binary
-  const secretKey = CryptoJS.enc.Hex.parse(CryptoJS.MD5(key).toString(CryptoJS.enc.Hex));
+  const secretKey = CryptoJS.enc.Hex.parse(
+    CryptoJS.MD5(key).toString(CryptoJS.enc.Hex)
+  );
   // Initialize the initialization vector
-  const initVector = CryptoJS.enc.Utf8.parse(Array(16).fill(0).map((_, i) => String.fromCharCode(i)).join(''));
+  const initVector = CryptoJS.enc.Utf8.parse(
+    Array(16)
+      .fill(0)
+      .map((_, i) => String.fromCharCode(i))
+      .join("")
+  );
   // Pad the plaintext
   const plainPad = pkcs5_pad(plainText, 16);
   // Encrypt using AES-128 in CBC mode
-  const encryptedText = CryptoJS.AES.encrypt(plainPad, secretKey, { iv: initVector, mode: CryptoJS.mode.CBC, padding: CryptoJS.pad.NoPadding });
+  const encryptedText = CryptoJS.AES.encrypt(plainPad, secretKey, {
+    iv: initVector,
+    mode: CryptoJS.mode.CBC,
+    padding: CryptoJS.pad.NoPadding,
+  });
   // Convert the ciphertext to hexadecimal
   return encryptedText.ciphertext.toString(CryptoJS.enc.Hex);
 }
@@ -57,22 +67,33 @@ function encrypt(plainText, key) {
 // Function to decrypt ciphertext
 function decrypt(encryptedText, key) {
   // Convert key to MD5 and then to binary
-  const secretKey = CryptoJS.enc.Hex.parse(CryptoJS.MD5(key).toString(CryptoJS.enc.Hex));
+  const secretKey = CryptoJS.enc.Hex.parse(
+    CryptoJS.MD5(key).toString(CryptoJS.enc.Hex)
+  );
   // Initialize the initialization vector
-  const initVector = CryptoJS.enc.Utf8.parse(Array(16).fill(0).map((_, i) => String.fromCharCode(i)).join(''));
+  const initVector = CryptoJS.enc.Utf8.parse(
+    Array(16)
+      .fill(0)
+      .map((_, i) => String.fromCharCode(i))
+      .join("")
+  );
   // Convert the encryptedText from hexadecimal to binary
   const encryptedData = CryptoJS.enc.Hex.parse(encryptedText);
   // Decrypt using AES-128 in CBC mode
-  const decryptedText = CryptoJS.AES.decrypt({ ciphertext: encryptedData }, secretKey, { iv: initVector, mode: CryptoJS.mode.CBC, padding: CryptoJS.pad.NoPadding });
+  const decryptedText = CryptoJS.AES.decrypt(
+    { ciphertext: encryptedData },
+    secretKey,
+    { iv: initVector, mode: CryptoJS.mode.CBC, padding: CryptoJS.pad.NoPadding }
+  );
   // Remove PKCS#5 padding
-  return decryptedText.toString(CryptoJS.enc.Utf8).replace(/[\x00-\x1F\x80-\xFF]+$/g, '');
+  return decryptedText
+    .toString(CryptoJS.enc.Utf8)
+    .replace(/[\x00-\x1F\x80-\xFF]+$/g, "");
 }
-
-
 
 function decryptURL(encryptedText, key) {
   const keyHex = CryptoJS.enc.Hex.parse(md5(key));
-  const initVector = CryptoJS.enc.Hex.parse('000102030405060708090a0b0c0d0e0f');
+  const initVector = CryptoJS.enc.Hex.parse("000102030405060708090a0b0c0d0e0f");
   const encryptedHex = CryptoJS.enc.Hex.parse(encryptedText);
   const decryptedText = CryptoJS.AES.decrypt(
     { ciphertext: encryptedHex },
@@ -81,8 +102,6 @@ function decryptURL(encryptedText, key) {
   );
   return decryptedText.toString(CryptoJS.enc.Utf8);
 }
-
-
 
 const secretKey = process.env.SECRET_KEY;
 
@@ -133,8 +152,6 @@ const secretKey = process.env.SECRET_KEY;
 //   }
 // }
 
-
-
 export const SignupUser = async (req, res) => {
   try {
     const { username, email, password } = req.body;
@@ -143,7 +160,7 @@ export const SignupUser = async (req, res) => {
     if (!username || !email || !password) {
       return res.status(400).json({
         success: false,
-        message: 'Please fill all fields',
+        message: "Please fill all fields",
       });
     }
 
@@ -151,7 +168,7 @@ export const SignupUser = async (req, res) => {
     if (existingUser) {
       return res.status(401).json({
         success: false,
-        message: 'User Already Exists',
+        message: "User Already Exists",
       });
     }
 
@@ -160,7 +177,9 @@ export const SignupUser = async (req, res) => {
 
     // Create a new user
     const user = new userModel({ username, email, password: hashedPassword });
-    const token = jwt.sign({ userId: user._id }, secretKey, { expiresIn: '1h' });
+    const token = jwt.sign({ userId: user._id }, secretKey, {
+      expiresIn: "1h",
+    });
     user.token = token; // Update the user's token field with the generated token
     await user.save();
 
@@ -168,20 +187,19 @@ export const SignupUser = async (req, res) => {
 
     res.status(201).json({
       success: true,
-      message: 'User created successfully',
+      message: "User created successfully",
       user,
       token,
     });
   } catch (error) {
-    console.error('Error on signup:', error);
+    console.error("Error on signup:", error);
     res.status(500).json({
       success: false,
-      message: 'Error on signup',
+      message: "Error on signup",
       error: error.message,
     });
   }
-}
-
+};
 
 export const postman = async (req, res) => {
   const order_id = req.params.id; // Extracting order ID from params
@@ -194,11 +212,13 @@ export const postman = async (req, res) => {
   const encryptedData = encrypt(merchantData, workingKey);
 
   try {
-    const response = await axios.post(`https://apitest.ccavenue.com/apis/servlet/DoWebTrans?enc_request=${encryptedData}&access_code=${accessCode}&request_type=JSON&response_type=JSON&command=orderStatusTracker&version=1.2`);
+    const response = await axios.post(
+      `https://apitest.ccavenue.com/apis/servlet/DoWebTrans?enc_request=${encryptedData}&access_code=${accessCode}&request_type=JSON&response_type=JSON&command=orderStatusTracker&version=1.2`
+    );
 
-    const encResponse = response.data.split('&')[1].split('=')[1];
+    const encResponse = response.data.split("&")[1].split("=")[1];
 
-    const finalstatus = encResponse.replace(/\s/g, '').toString();
+    const finalstatus = encResponse.replace(/\s/g, "").toString();
     console.log("`" + finalstatus + "`");
     const newStatus = await decrypt(finalstatus, workingKey);
 
@@ -208,27 +228,30 @@ export const postman = async (req, res) => {
     // Construct an object from the cleaned data string
     const newData = constructObjectFromDataString(cleanedData);
 
-
-
     let paymentStatus;
     let OrderStatus;
 
-    if (newData.order_status === 'Awaited') {
+    if (newData.order_status === "Awaited") {
       paymentStatus = 2;
-      OrderStatus = "1"
-    } if (newData.order_status === 'Shipped') {
-      paymentStatus = 1;
-      OrderStatus = "1"
-    } if (newData.order_status === 'Aborted' || newData.order_status === undefined) {
-      paymentStatus = 0;
-      OrderStatus = "0"
+      OrderStatus = "1";
     }
-    if (newData.order_status === 'Initiated') {
+    if (newData.order_status === "Shipped") {
+      paymentStatus = 1;
+      OrderStatus = "1";
+    }
+    if (
+      newData.order_status === "Aborted" ||
+      newData.order_status === undefined
+    ) {
       paymentStatus = 0;
-      OrderStatus = "0"
+      OrderStatus = "0";
+    }
+    if (newData.order_status === "Initiated") {
+      paymentStatus = 0;
+      OrderStatus = "0";
     }
 
-    console.log(paymentStatus, OrderStatus,)
+    console.log(paymentStatus, OrderStatus);
 
     let updateFields = {
       payment: paymentStatus,
@@ -241,33 +264,29 @@ export const postman = async (req, res) => {
       { new: true } // To return the updated document
     );
 
-
     res.status(200).json({
       success: true,
-      message: 'Response received successfully',
+      message: "Response received successfully",
       data: newData, // Sending the JSON data back to the client
       key: workingKey,
-
     });
-
-
   } catch (error) {
-    console.error('Decryption error:', error);
+    console.error("Decryption error:", error);
     res.status(500).json({
       success: false,
-      message: 'Error occurred while processing the request',
-      error: error.message // Sending the error message back to the client
+      message: "Error occurred while processing the request",
+      error: error.message, // Sending the error message back to the client
     });
   }
-}
+};
 
 function cleanDataString(dataString) {
   // Remove backslashes and other unwanted characters
-  return dataString.replace(/\\/g, '').replace(/\u000F/g, '');
+  return dataString.replace(/\\/g, "").replace(/\u000F/g, "");
 }
 
 function constructObjectFromDataString(dataString) {
-  const pairs = dataString.split('","').map(pair => pair.split('":"'));
+  const pairs = dataString.split('","').map((pair) => pair.split('":"'));
   const dataObject = {};
   for (const [key, value] of pairs) {
     dataObject[key] = value;
@@ -275,22 +294,20 @@ function constructObjectFromDataString(dataString) {
   return dataObject;
 }
 
-
-
 export const Userlogin = async (req, res) => {
   try {
-    const { email, password } = req.body
+    const { email, password } = req.body;
     if (!email || !password) {
       return res.status(400).send({
         success: false,
-        message: 'please fill all fields'
-      })
+        message: "please fill all fields",
+      });
     }
-    const user = await userModel.findOne({ email })
+    const user = await userModel.findOne({ email });
     if (!user) {
       return res.status(200).send({
         success: false,
-        message: 'email is not registerd',
+        message: "email is not registerd",
         user,
       });
     }
@@ -300,44 +317,41 @@ export const Userlogin = async (req, res) => {
     if (!isMatch) {
       return res.status(401).send({
         success: false,
-        message: 'password is not incorrect',
-        user
-        ,
+        message: "password is not incorrect",
+        user,
       });
     }
 
-    const token = jwt.sign({ userId: user._id }, secretKey, { expiresIn: '1h' });
+    const token = jwt.sign({ userId: user._id }, secretKey, {
+      expiresIn: "1h",
+    });
 
     return res.status(200).send({
       success: true,
-      message: 'login sucesssfully',
+      message: "login sucesssfully",
       user,
-    })
-
+    });
   } catch (error) {
-    return res.status(500).send
-      ({
-        message: `error on login ${error}`,
-        sucesss: false,
-        error
-      })
+    return res.status(500).send({
+      message: `error on login ${error}`,
+      sucesss: false,
+      error,
+    });
   }
-}
-
-
-
+};
 
 export const updateUserController = async (req, res) => {
   try {
     const { id } = req.params;
     const { phone, pincode, country, address, token } = req.body;
-    console.log(phone, pincode, country, address, token)
+    console.log(phone, pincode, country, address, token);
     const user = await userModel.findByIdAndUpdate(
       id,
       { ...req.body },
-      { new: true })
+      { new: true }
+    );
     return res.status(200).json({
-      message: 'user Updated!',
+      message: "user Updated!",
       success: true,
       user,
     });
@@ -348,36 +362,31 @@ export const updateUserController = async (req, res) => {
       error,
     });
   }
-}
-
+};
 
 export const getAllBlogsController = async (req, res) => {
   try {
-    const blogs = await blogModel.find({}).lean()
+    const blogs = await blogModel.find({}).lean();
     if (!blogs) {
-      return res.status(200).send
-        ({
-          message: 'NO Blogs Find',
-          success: false,
-        });
-    }
-    return res.status(200).send
-      ({
-        message: 'All Blogs List ',
-        BlogCount: blogs.length,
-        success: true,
-        blogs,
-      });
-
-  } catch (error) {
-    return res.status(500).send
-      ({
-        message: `error while getting Blogs ${error}`,
+      return res.status(200).send({
+        message: "NO Blogs Find",
         success: false,
-        error
-      })
+      });
+    }
+    return res.status(200).send({
+      message: "All Blogs List ",
+      BlogCount: blogs.length,
+      success: true,
+      blogs,
+    });
+  } catch (error) {
+    return res.status(500).send({
+      message: `error while getting Blogs ${error}`,
+      success: false,
+      error,
+    });
   }
-}
+};
 
 export const createBlogController = async (req, res) => {
   try {
@@ -419,9 +428,7 @@ export const createBlogController = async (req, res) => {
       error,
     });
   }
-}
-
-
+};
 
 export const updateBlogController = async (req, res) => {
   try {
@@ -430,9 +437,10 @@ export const updateBlogController = async (req, res) => {
     const blog = await blogModel.findByIdAndUpdate(
       id,
       { ...req.body },
-      { new: true })
+      { new: true }
+    );
     return res.status(200).json({
-      message: 'Blog Updated!',
+      message: "Blog Updated!",
       success: true,
       blog,
     });
@@ -443,34 +451,31 @@ export const updateBlogController = async (req, res) => {
       error,
     });
   }
-}
+};
 
 export const getBlogIdController = async (req, res) => {
   try {
     const { id } = req.params;
     const blog = await blogModel.findById(id);
     if (!blog) {
-      return res.status(200).send
-        ({
-          message: 'Blog Not Found By Id',
-          success: false,
-        });
+      return res.status(200).send({
+        message: "Blog Not Found By Id",
+        success: false,
+      });
     }
     return res.status(200).json({
-      message: 'fetch Single Blog!',
+      message: "fetch Single Blog!",
       success: true,
       blog,
     });
-
-  }
-  catch (error) {
+  } catch (error) {
     return res.status(400).json({
       message: `Error while get Blog: ${error}`,
       success: false,
       error,
     });
   }
-}
+};
 
 export const deleteBlogController = async (req, res) => {
   try {
@@ -484,7 +489,6 @@ export const deleteBlogController = async (req, res) => {
       success: true,
       message: "Blog Deleted!",
     });
-
   } catch (error) {
     console.log(error);
     return res.status(400).send({
@@ -496,22 +500,19 @@ export const deleteBlogController = async (req, res) => {
 };
 export const userBlogsController = async (req, res) => {
   try {
-    const userBlog = await userModel.findById(req.params.id).populate('blogs')
+    const userBlog = await userModel.findById(req.params.id).populate("blogs");
     if (!userBlog) {
-      return res.status(200).send
-        ({
-          message: 'Blog Not Found By user',
-          success: false,
-        });
+      return res.status(200).send({
+        message: "Blog Not Found By user",
+        success: false,
+      });
     }
     return res.status(200).json({
-      message: ' user Blog!',
+      message: " user Blog!",
       success: true,
       userBlog,
     });
-
-  }
-  catch (error) {
+  } catch (error) {
     console.log(error);
     return res.status(400).send({
       success: false,
@@ -519,30 +520,25 @@ export const userBlogsController = async (req, res) => {
       error,
     });
   }
-
-}
+};
 
 export const userTokenController = async (req, res) => {
   try {
-
     const { id } = req.params;
-    const user = await userModel.findOne({ token: id })
+    const user = await userModel.findOne({ token: id });
 
     if (!user) {
-      return res.status(200).send
-        ({
-          message: 'Token expire',
-          success: false,
-        });
-    }
-    return res.status(200).send
-      ({
-        message: 'token Found',
-        success: true,
-        user,
+      return res.status(200).send({
+        message: "Token expire",
+        success: false,
       });
-  }
-  catch (error) {
+    }
+    return res.status(200).send({
+      message: "token Found",
+      success: true,
+      user,
+    });
+  } catch (error) {
     console.log(error);
     return res.status(400).send({
       success: false,
@@ -550,29 +546,25 @@ export const userTokenController = async (req, res) => {
       error,
     });
   }
-}
-
+};
 
 export const CreateChatController = async (req, res) => {
   const { firstId, secondId } = req.body;
   try {
     const chat = await chatModel.findOne({
-      members: { $all: [firstId, secondId] }
-    })
+      members: { $all: [firstId, secondId] },
+    });
     if (chat) return res.status(200).json(chat);
     const newChat = new chatModel({
-      members: [firstId, secondId]
-    })
-    const response = await newChat.save()
-    res.status(200).send
-      ({
-        message: 'Chat Added',
-        success: true,
-        response,
-      });
-
-  }
-  catch (error) {
+      members: [firstId, secondId],
+    });
+    const response = await newChat.save();
+    res.status(200).send({
+      message: "Chat Added",
+      success: true,
+      response,
+    });
+  } catch (error) {
     console.log(error);
     return res.status(400).send({
       success: false,
@@ -580,25 +572,21 @@ export const CreateChatController = async (req, res) => {
       error,
     });
   }
-}
-
+};
 
 export const findUserschatController = async (req, res) => {
   const userId = req.params.id;
 
   try {
     const chats = await chatModel.find({
-      members: { $in: [userId] }
-    })
-    return res.status(200).send
-      ({
-        message: 'Chat Added',
-        success: true,
-        chats,
-      });
-
-  }
-  catch (error) {
+      members: { $in: [userId] },
+    });
+    return res.status(200).send({
+      message: "Chat Added",
+      success: true,
+      chats,
+    });
+  } catch (error) {
     console.log(error);
     return res.status(400).send({
       success: false,
@@ -606,25 +594,21 @@ export const findUserschatController = async (req, res) => {
       error,
     });
   }
-}
-
-
+};
 
 export const findchatController = async (req, res) => {
   const { firstId, secondId } = req.params;
 
   try {
     const chats = await chatModel.find({
-      members: { $all: [firstId, secondId] }
-    })
-    res.status(200).send
-      ({
-        message: 'Chat Added',
-        success: true,
-        chats,
-      });
-  }
-  catch (error) {
+      members: { $all: [firstId, secondId] },
+    });
+    res.status(200).send({
+      message: "Chat Added",
+      success: true,
+      chats,
+    });
+  } catch (error) {
     console.log(error);
     return res.status(400).send({
       success: false,
@@ -632,173 +616,141 @@ export const findchatController = async (req, res) => {
       error,
     });
   }
-}
-
-
-
-
+};
 
 export const UsergetAllCategories = async (req, res) => {
-
   try {
-    const categories = await categoryModel.find({ status: 'true' }, '_id title slug');
+    const categories = await categoryModel.find(
+      { status: "true" },
+      "_id title slug"
+    );
 
     if (!categories) {
-      return res.status(200).send
-        ({
-          message: 'NO Category Find',
-          success: false,
-        });
-    }
-    return res.status(200).send
-      ({
-        message: 'All Category List ',
-        catCount: categories.length,
-        success: true,
-        categories,
-      });
-
-  } catch (error) {
-    return res.status(500).send
-      ({
-        message: `error while All Categories ${error}`,
+      return res.status(200).send({
+        message: "NO Category Find",
         success: false,
-        error
-      })
+      });
+    }
+    return res.status(200).send({
+      message: "All Category List ",
+      catCount: categories.length,
+      success: true,
+      categories,
+    });
+  } catch (error) {
+    return res.status(500).send({
+      message: `error while All Categories ${error}`,
+      success: false,
+      error,
+    });
   }
-
-
-}
-
+};
 
 export const UsergetAllProducts = async (req, res) => {
-
   try {
-    const products = await productModel.find({ status: 'true' }, '_id title slug');
+    const products = await productModel.find(
+      { status: "true" },
+      "_id title slug"
+    );
 
     if (!products) {
-      return res.status(200).send
-        ({
-          message: 'NO products Find',
-          success: false,
-        });
-    }
-    return res.status(200).send
-      ({
-        message: 'All products List ',
-        proCount: products.length,
-        success: true,
-        products,
-      });
-
-  } catch (error) {
-    return res.status(500).send
-      ({
-        message: `error while All products ${error}`,
+      return res.status(200).send({
+        message: "NO products Find",
         success: false,
-        error
-      })
+      });
+    }
+    return res.status(200).send({
+      message: "All products List ",
+      proCount: products.length,
+      success: true,
+      products,
+    });
+  } catch (error) {
+    return res.status(500).send({
+      message: `error while All products ${error}`,
+      success: false,
+      error,
+    });
   }
-
-
-}
-
+};
 
 export const UsergetAllHomeProducts = async (req, res) => {
-
   try {
-    const products = await productModel.find({}, '_id title pImage regularPrice salePrice stock slug variant_products variations');
+    const products = await productModel.find(
+      { status: "true" },
+      "_id title pImage regularPrice salePrice stock slug variant_products variations"
+    );
 
     if (!products) {
-      return res.status(200).send
-        ({
-          message: 'NO products Find',
-          success: false,
-        });
-    }
-    return res.status(200).send
-      ({
-        message: 'All products List ',
-        proCount: products.length,
-        success: true,
-        products,
-      });
-
-  } catch (error) {
-    return res.status(500).send
-      ({
-        message: `error while All products ${error}`,
+      return res.status(200).send({
+        message: "NO products Find",
         success: false,
-        error
-      })
+      });
+    }
+    return res.status(200).send({
+      message: "All products List ",
+      proCount: products.length,
+      success: true,
+      products,
+    });
+  } catch (error) {
+    return res.status(500).send({
+      message: `error while All products ${error}`,
+      success: false,
+      error,
+    });
   }
-
-
-}
-
-
+};
 
 export const getAllAttributeUser = async (req, res) => {
   try {
-    const Attribute = await attributeModel.find({})
+    const Attribute = await attributeModel.find({});
     if (!Attribute) {
-      return res.status(200).send
-        ({
-          message: 'NO Attribute Found',
-          success: false,
-        });
-    }
-    return res.status(200).send
-      ({
-        message: 'All Attribute List ',
-        AttributeCount: Attribute.length,
-        success: true,
-        Attribute,
-      });
-
-  } catch (error) {
-    return res.status(500).send
-      ({
-        message: `error while getting attribute ${error}`,
+      return res.status(200).send({
+        message: "NO Attribute Found",
         success: false,
-        error
-      })
+      });
+    }
+    return res.status(200).send({
+      message: "All Attribute List ",
+      AttributeCount: Attribute.length,
+      success: true,
+      Attribute,
+    });
+  } catch (error) {
+    return res.status(500).send({
+      message: `error while getting attribute ${error}`,
+      success: false,
+      error,
+    });
   }
-}
-
-
-
+};
 
 export const getProductIdUser = async (req, res) => {
   try {
     const { id } = req.params;
     const Product = await productModel.findById(id);
     if (!Product) {
-      return res.status(200).send
-        ({
-          message: 'product Not Found By Id',
-          success: false,
-        });
+      return res.status(200).send({
+        message: "product Not Found By Id",
+        success: false,
+      });
     }
     return res.status(200).json({
-      message: 'fetch Single product!',
+      message: "fetch Single product!",
       success: true,
       Product,
     });
-
-  }
-  catch (error) {
+  } catch (error) {
     return res.status(400).json({
       message: `Error while get product: ${error}`,
       success: false,
       error,
     });
   }
-}
+};
 
-
-
-// get home data 
+// get home data
 
 export const getHomeData = async (req, res) => {
   try {
@@ -825,7 +777,7 @@ export const getHomeData = async (req, res) => {
   }
 };
 
-// get home layout data 
+// get home layout data
 
 export const getHomeLayoutData = async (req, res) => {
   try {
@@ -852,12 +804,7 @@ export const getHomeLayoutData = async (req, res) => {
   }
 };
 
-
-
-
 export const createOrderController = async (req, res) => {
-
-
   try {
     const { items, status, mode, details, totalAmount, userId } = req.body;
     //validation
@@ -876,7 +823,13 @@ export const createOrderController = async (req, res) => {
       });
     }
 
-    const newOrder = new orderModel({ items, status, mode, details, totalAmount });
+    const newOrder = new orderModel({
+      items,
+      status,
+      mode,
+      details,
+      totalAmount,
+    });
     const session = await mongoose.startSession();
     session.startTransaction();
     await newOrder.save({ session });
@@ -897,7 +850,7 @@ export const createOrderController = async (req, res) => {
       error,
     });
   }
-}
+};
 
 export const updateUserAndCreateOrderController = async (req, res) => {
   let session;
@@ -920,7 +873,8 @@ export const updateUserAndCreateOrderController = async (req, res) => {
     shipping,
     status,
     totalAmount,
-    userId, verified
+    userId,
+    verified,
   } = req.body;
 
   try {
@@ -938,7 +892,7 @@ export const updateUserAndCreateOrderController = async (req, res) => {
     if (!user) {
       return res.status(404).json({
         success: false,
-        message: 'User not found',
+        message: "User not found",
       });
     }
 
@@ -946,13 +900,11 @@ export const updateUserAndCreateOrderController = async (req, res) => {
     if (!status || !mode || !details || !totalAmount || !userId || !payment) {
       return res.status(400).json({
         success: false,
-        message: 'Please provide all fields for the order',
+        message: "Please provide all fields for the order",
       });
     }
 
-
     // Calculate the auto-increment ID
-
 
     // Calculate the auto-increment ID
     const lastOrder = await orderModel.findOne().sort({ _id: -1 }).limit(1);
@@ -966,7 +918,6 @@ export const updateUserAndCreateOrderController = async (req, res) => {
       order_id = 1;
     }
 
-
     // Create new order
     const newOrder = new orderModel({
       details,
@@ -979,7 +930,7 @@ export const updateUserAndCreateOrderController = async (req, res) => {
       status,
       totalAmount,
       userId,
-      orderId: order_id
+      orderId: order_id,
     });
 
     await newOrder.save({ session });
@@ -1001,9 +952,7 @@ export const updateUserAndCreateOrderController = async (req, res) => {
     await session.commitTransaction();
     transactionInProgress = false;
 
-
-
-    if (mode === 'COD') {
+    if (mode === "COD") {
       // Send order confirmation email
       await sendOrderConfirmationEmail(email, username, userId, newOrder);
       const norder_id = newOrder.orderId;
@@ -1013,15 +962,13 @@ export const updateUserAndCreateOrderController = async (req, res) => {
 
       return res.status(201).json({
         success: true,
-        message: 'Order created successfully',
+        message: "Order created successfully",
         newOrder,
         user,
         Amount: totalAmount,
         online: false,
       });
-
     } else {
-
       const tid = Math.floor(Math.random() * 1000000); // Generating random transaction ID
       const order_id = newOrder.orderId; // Generating order ID
       const accessCode = process.env.ACCESS_CODE;
@@ -1033,22 +980,27 @@ export const updateUserAndCreateOrderController = async (req, res) => {
       return res.status(201).json({
         success: true,
         online: true,
-        tid, order_id, accessCode, merchant_id, WORKING_KEY, cancel_url, redirect_url
+        tid,
+        order_id,
+        accessCode,
+        merchant_id,
+        WORKING_KEY,
+        cancel_url,
+        redirect_url,
       });
     }
-
   } catch (error) {
     if (transactionInProgress) {
       try {
         await session.abortTransaction();
       } catch (abortError) {
-        console.error('Error aborting transaction:', abortError);
+        console.error("Error aborting transaction:", abortError);
       }
     }
-    console.error('Error:', error);
+    console.error("Error:", error);
     return res.status(400).json({
       success: false,
-      message: 'Error while creating order',
+      message: "Error while creating order",
       error: error.message,
     });
   } finally {
@@ -1059,7 +1011,6 @@ export const updateUserAndCreateOrderController = async (req, res) => {
 };
 
 export const PaymentRequest = async (req, res) => {
-
   try {
     const tid = Math.floor(Math.random() * 1000000); // Generating random transaction ID
     const order_id = Math.floor(Math.random() * 1000000); // Generating random order ID
@@ -1069,53 +1020,55 @@ export const PaymentRequest = async (req, res) => {
     const redirect_url = process.env.REDIRECT_URL;
     const cancel_url = process.env.CANCEL_URL;
     // Send the data as JSON response
-    res.json({ tid, order_id, accessCode, merchant_id, WORKING_KEY, cancel_url, redirect_url });
-
+    res.json({
+      tid,
+      order_id,
+      accessCode,
+      merchant_id,
+      WORKING_KEY,
+      cancel_url,
+      redirect_url,
+    });
   } catch (error) {
-    console.error('Error generating payment data:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    console.error("Error generating payment data:", error);
+    res.status(500).json({ error: "Internal server error" });
   }
-
-
-}
+};
 
 export const PaymentResponse = async (req, res) => {
-  console.log('req.body.encResp', req.body.encResp);
+  console.log("req.body.encResp", req.body.encResp);
   const decryptdata = decrypt(req.body.encResp, process.env.WORKING_KEY);
-  console.log('decryptdata', decryptdata);
+  console.log("decryptdata", decryptdata);
 
   // Split the decrypted data into key-value pairs
-  const keyValuePairs = decryptdata.split('&');
+  const keyValuePairs = decryptdata.split("&");
 
   // Create an object to store the key-value pairs
   const data = {};
-  keyValuePairs.forEach(pair => {
-    const [key, value] = pair.split('=');
+  keyValuePairs.forEach((pair) => {
+    const [key, value] = pair.split("=");
     data[key] = value;
   });
 
   // Extract order_id and order_status
-  const orderId = data['order_id'];
-  const orderStatus = data['order_status'];
-  const orderAmt = Math.floor(data['amount']);
+  const orderId = data["order_id"];
+  const orderStatus = data["order_status"];
+  const orderAmt = Math.floor(data["amount"]);
 
-  console.log('Order ID:', orderId);
-  console.log('Order Status:', orderStatus);
+  console.log("Order ID:", orderId);
+  console.log("Order Status:", orderStatus);
 
-  const order = await orderModel.findOne({ orderId }).populate('userId');
+  const order = await orderModel.findOne({ orderId }).populate("userId");
 
   const ordertotal = order.totalAmount;
 
-
-  console.log('fetch data', data);
-  console.log('fetch amt', orderAmt);
-  console.log('order amt', ordertotal);
+  console.log("fetch data", data);
+  console.log("fetch amt", orderAmt);
+  console.log("order amt", ordertotal);
 
   if (!order) {
-    console.log('order not found');
+    console.log("order not found");
   } else {
-
-
     const user = order.userId[0]; // Assuming there's only one user associated with the order
 
     // Accessing user ID, username, and email
@@ -1124,43 +1077,33 @@ export const PaymentResponse = async (req, res) => {
     const email = user.email;
     const phone = user.phone;
 
-    if (orderStatus === 'Success' && orderAmt === ordertotal) {
-
-
+    if (orderStatus === "Success" && orderAmt === ordertotal) {
       // Update payment details
       order.payment = 1;
-      order.status = '1';
+      order.status = "1";
       // // Send order confirmation email
       await sendOrderConfirmationEmail(email, username, userId, order);
 
-
       // block
-      console.log(otp)
+      console.log(otp);
       //   await sendOrderOTP(phone, order._id);
-
     } else {
       // Update payment details
       order.payment = 0;
-      order.status = '0';
-
+      order.status = "0";
     }
 
     // Save the order details
     await order.save();
-
   }
 
-
-  if (orderStatus === 'Success') {
+  if (orderStatus === "Success") {
     // Redirect after saving data
     res.redirect(process.env.COMPLETE_STATUS);
   } else {
     res.redirect(process.env.CANCEL_STATUS);
   }
 };
-
-
-
 
 async function sendOrderConfirmationEmail(email, username, userId, newOrder) {
   try {
@@ -1173,7 +1116,7 @@ async function sendOrderConfirmationEmail(email, username, userId, newOrder) {
       auth: {
         user: process.env.MAIL_USERNAME, // Update with your email address
         pass: process.env.MAIL_PASSWORD, // Update with your email password
-      }
+      },
     });
 
     // Email message
@@ -1181,7 +1124,7 @@ async function sendOrderConfirmationEmail(email, username, userId, newOrder) {
       from: process.env.MAIL_FROM_ADDRESS, // Update with your email address
       to: email, // Update with your email address
       cc: process.env.MAIL_FROM_ADDRESS,
-      subject: 'www.cayroshop.com Order Confirmation',
+      subject: "www.cayroshop.com Order Confirmation",
 
       //   html: `
 
@@ -1237,7 +1180,13 @@ async function sendOrderConfirmationEmail(email, username, userId, newOrder) {
       <th style="text-align:left;"> 
       <img width="200" src="https://backend-9mwl.onrender.com/uploads/new/image-1712823999415.png" />
  </th>
-        <th style="text-align:right;font-weight:400;"> ${new Date(newOrder.createdAt).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })} </th>
+        <th style="text-align:right;font-weight:400;"> ${new Date(
+          newOrder.createdAt
+        ).toLocaleDateString("en-US", {
+          year: "numeric",
+          month: "short",
+          day: "numeric",
+        })} </th>
       </tr>
     </thead>
     <tbody>
@@ -1247,9 +1196,15 @@ async function sendOrderConfirmationEmail(email, username, userId, newOrder) {
       <tr>
         <td colspan="2" style="border: solid 1px #ddd; padding:10px 20px;">
           <p style="font-size:14px;margin:0 0 6px 0;"><span style="font-weight:bold;display:inline-block;min-width:150px">Order status</span><b style="color:green;font-weight:normal;margin:0">Placed</b></p>
-          <p style="font-size:14px;margin:0 0 6px 0;"><span style="font-weight:bold;display:inline-block;min-width:146px">Order ID</span> ${newOrder.orderId}</p>
-          <p style="font-size:14px;margin:0 0 0 0;"><span style="font-weight:bold;display:inline-block;min-width:146px">Order amount</span> Rs. ${newOrder.totalAmount}</p>
-          <p style="font-size:14px;margin:0 0 0 0;"><span style="font-weight:bold;display:inline-block;min-width:146px">Payment Mode</span> ${newOrder.mode}</p>
+          <p style="font-size:14px;margin:0 0 6px 0;"><span style="font-weight:bold;display:inline-block;min-width:146px">Order ID</span> ${
+            newOrder.orderId
+          }</p>
+          <p style="font-size:14px;margin:0 0 0 0;"><span style="font-weight:bold;display:inline-block;min-width:146px">Order amount</span> Rs. ${
+            newOrder.totalAmount
+          }</p>
+          <p style="font-size:14px;margin:0 0 0 0;"><span style="font-weight:bold;display:inline-block;min-width:146px">Payment Mode</span> ${
+            newOrder.mode
+          }</p>
         </td>
       </tr>
       <tr>
@@ -1257,14 +1212,22 @@ async function sendOrderConfirmationEmail(email, username, userId, newOrder) {
       </tr>
       <tr>
         <td  style="width:50%;padding:20px;vertical-align:top">
-          <p style="margin:0 0 10px 0;padding:0;font-size:14px;"><span style="display:block;font-weight:bold;font-size:13px">Name</span> ${newOrder.details[0].username} </p>
-          <p style="margin:0 0 10px 0;padding:0;font-size:14px;"><span style="display:block;font-weight:bold;font-size:13px;">Email</span>  ${newOrder.details[0].email}  </p>
+          <p style="margin:0 0 10px 0;padding:0;font-size:14px;"><span style="display:block;font-weight:bold;font-size:13px">Name</span> ${
+            newOrder.details[0].username
+          } </p>
+          <p style="margin:0 0 10px 0;padding:0;font-size:14px;"><span style="display:block;font-weight:bold;font-size:13px;">Email</span>  ${
+            newOrder.details[0].email
+          }  </p>
       
           
         </td>
         <td style="width:50%;padding:20px;vertical-align:top">
-            <p style="margin:0 0 10px 0;padding:0;font-size:14px;"><span style="display:block;font-weight:bold;font-size:13px;">Phone</span> +91-${newOrder.details[0].phone}</p>
-          <p style="margin:0 0 10px 0;padding:0;font-size:14px;"><span style="display:block;font-weight:bold;font-size:13px;">Address</span> ${newOrder.details[0].address} </p>
+            <p style="margin:0 0 10px 0;padding:0;font-size:14px;"><span style="display:block;font-weight:bold;font-size:13px;">Phone</span> +91-${
+              newOrder.details[0].phone
+            }</p>
+          <p style="margin:0 0 10px 0;padding:0;font-size:14px;"><span style="display:block;font-weight:bold;font-size:13px;">Address</span> ${
+            newOrder.details[0].address
+          } </p>
            
           
         </td>
@@ -1283,7 +1246,9 @@ async function sendOrderConfirmationEmail(email, username, userId, newOrder) {
              <td  style="padding: 10px;text-align:right;font-weight:bold;">Price</td>
       </tr>
 
-      ${newOrder.items.map((Pro) => `
+      ${newOrder.items
+        .map(
+          (Pro) => `
         <tr>
           <td  style="padding: .75rem; vertical-align: top; border-top: 1px solid #dee2e6;" >
             <div className="d-flex mb-2">
@@ -1311,19 +1276,27 @@ async function sendOrderConfirmationEmail(email, username, userId, newOrder) {
 
           <td  style="padding: .75rem; vertical-align: top; border-top: 1px solid #dee2e6;text-align: right;" >₹ ${Pro.price}</td>
         </tr>
-        `).join('')}
+        `
+        )
+        .join("")}
 
     </tbody>
     <tfoot>
         <tr>
             <td colspan="2" style="padding: .75rem; vertical-align: top; border-top: 1px solid #dee2e6;">Subtotal</td>
-            <td  colspan="2"  class="text-end" style="padding: .75rem; vertical-align: top; border-top: 1px solid #dee2e6;text-align: right;">₹${newOrder.items.reduce((total, item) => total + item.quantity * item.price, 0) - Math.floor(
-        newOrder.items.reduce((acc, item) => {
-          const itemPrice = item.quantity * item.price;
-          const itemGST = (itemPrice * item.gst) / 100;
-          return acc + itemGST;
-        }, 0)
-      )}</td>
+            <td  colspan="2"  class="text-end" style="padding: .75rem; vertical-align: top; border-top: 1px solid #dee2e6;text-align: right;">₹${
+              newOrder.items.reduce(
+                (total, item) => total + item.quantity * item.price,
+                0
+              ) -
+              Math.floor(
+                newOrder.items.reduce((acc, item) => {
+                  const itemPrice = item.quantity * item.price;
+                  const itemGST = (itemPrice * item.gst) / 100;
+                  return acc + itemGST;
+                }, 0)
+              )
+            }</td>
         </tr>
 
        
@@ -1331,27 +1304,40 @@ async function sendOrderConfirmationEmail(email, username, userId, newOrder) {
         <tr>
         <td colspan="2" style="padding: .75rem; vertical-align: top; border-top: 1px solid #dee2e6;">GST </td>
         <td colspan="2"  class="text-end" style="padding: .75rem; vertical-align: top; border-top: 1px solid #dee2e6;text-align: right;">₹${Math.floor(
-        newOrder.items.reduce((acc, item) => {
-          const itemPrice = item.quantity * item.price;
-          const itemGST = (itemPrice * item.gst) / 100;
-          return acc + itemGST;
-        }, 0)
-      )}</td>
+          newOrder.items.reduce((acc, item) => {
+            const itemPrice = item.quantity * item.price;
+            const itemGST = (itemPrice * item.gst) / 100;
+            return acc + itemGST;
+          }, 0)
+        )}</td>
     </tr>
 
         <tr>
             <td colspan="2" style="padding: .75rem; vertical-align: top; border-top: 1px solid #dee2e6;">Shipping</td>
-            <td colspan="2"  class="text-end" style="padding: .75rem; vertical-align: top; border-top: 1px solid #dee2e6;text-align: right;">₹${newOrder.shipping}</td>
+            <td colspan="2"  class="text-end" style="padding: .75rem; vertical-align: top; border-top: 1px solid #dee2e6;text-align: right;">₹${
+              newOrder.shipping
+            }</td>
         </tr>
         <tr>
             <td colspan="2" style="padding: .75rem; vertical-align: top; border-top: 1px solid #dee2e6;">Discount</td>
             <td colspan="2"  class="text-danger text-end" style="padding: .75rem; vertical-align: top; border-top: 1px solid #dee2e6; text-align: right;">
-           - ${newOrder.items.reduce((total, item) => total + item.quantity * item.price, 0) - Math.abs(newOrder.discount) === 0 ? '0' : (Math.abs(newOrder.discount))}
+           - ${
+             newOrder.items.reduce(
+               (total, item) => total + item.quantity * item.price,
+               0
+             ) -
+               Math.abs(newOrder.discount) ===
+             0
+               ? "0"
+               : Math.abs(newOrder.discount)
+           }
           </td>
         </tr>
         <tr class="fw-bold">
             <td colspan="2" style="padding: .75rem; vertical-align: top; border-top: 1px solid #dee2e6;">TOTAL</td>
-            <td colspan="2"  class="text-end" style="padding: .75rem; vertical-align: top; border-top: 1px solid #dee2e6;text-align: right;">₹${newOrder.totalAmount}</td>
+            <td colspan="2"  class="text-end" style="padding: .75rem; vertical-align: top; border-top: 1px solid #dee2e6;text-align: right;">₹${
+              newOrder.totalAmount
+            }</td>
         </tr>
     </tfoot>
 </table>
@@ -1374,24 +1360,21 @@ async function sendOrderConfirmationEmail(email, username, userId, newOrder) {
     </tfooter>
   </table> `,
       headers: {
-        'Content-Type': 'text/html; charset=utf-8',
-        'Content-Transfer-Encoding': 'quoted-printable'
-      }
+        "Content-Type": "text/html; charset=utf-8",
+        "Content-Transfer-Encoding": "quoted-printable",
+      },
     };
 
     // Send email
     const info = await transporter.sendMail(mailOptions);
-    console.log('Email sent: ' + info.response);
+    console.log("Email sent: " + info.response);
   } catch (error) {
-    console.error('Failed to send email:', error);
-    throw new Error('Failed to send email');
+    console.error("Failed to send email:", error);
+    throw new Error("Failed to send email");
   }
 }
 
-
-
 export const EmailVerify = async (req, res) => {
-
   const { email } = req.body;
 
   // Generate a random OTP
@@ -1405,51 +1388,46 @@ export const EmailVerify = async (req, res) => {
     secure: process.env.MAIL_ENCRYPTION, // Set to true if using SSL/TLS
     auth: {
       user: process.env.MAIL_USERNAME, // Update with your email address
-      pass: process.env.MAIL_PASSWORD,// Update with your email password
-    }
+      pass: process.env.MAIL_PASSWORD, // Update with your email password
+    },
   });
 
   // Email message
   const mailOptions = {
     from: process.env.MAIL_FROM_ADDRESS, // Update with your email address
     to: email, // Update with your email address
-    subject: 'OTP Verification cayroshop.com',
-    text: `OTP: ${OTP}`
+    subject: "OTP Verification cayroshop.com",
+    text: `OTP: ${OTP}`,
   };
 
   // Send email
   transporter.sendMail(mailOptions, (error, info) => {
     if (error) {
       console.error(error);
-      res.status(500).send('Failed to send email');
+      res.status(500).send("Failed to send email");
     } else {
-      console.log('Email sent: ' + info.response);
+      console.log("Email sent: " + info.response);
       // If email sending is successful, return a success response
       res.status(201).json({
         success: true,
-        message: 'Email sent successfully',
-        OTP: OTP // Include OTP in the response if needed
+        message: "Email sent successfully",
+        OTP: OTP, // Include OTP in the response if needed
       });
     }
   });
-}
-
-
+};
 
 export const HomeSendEnquire = async (req, res) => {
-
   const { fullname, email, phone, service, QTY } = req.body;
 
-
   try {
-
     // Save data to the database
     const newEnquire = new enquireModel({
       fullname,
       email,
       phone,
       service,
-      QTY
+      QTY,
     });
 
     await newEnquire.save();
@@ -1462,26 +1440,26 @@ export const HomeSendEnquire = async (req, res) => {
       secure: process.env.MAIL_ENCRYPTION, // Set to true if using SSL/TLS
       auth: {
         user: process.env.MAIL_USERNAME, // Update with your email address
-        pass: process.env.MAIL_PASSWORD,// Update with your email password
-      }
+        pass: process.env.MAIL_PASSWORD, // Update with your email password
+      },
     });
 
     // Email message
     const mailOptions = {
       from: process.env.MAIL_FROM_ADDRESS, // Update with your email address
       to: process.env.MAIL_TO_ADDRESS, // Update with your email address
-      subject: 'New Enquire Form Submission',
-      text: `Name: ${fullname}\nEmail: ${email}\nPhone: ${phone}\nService: ${service}\nQTY:${QTY}`
+      subject: "New Enquire Form Submission",
+      text: `Name: ${fullname}\nEmail: ${email}\nPhone: ${phone}\nService: ${service}\nQTY:${QTY}`,
     };
 
     // Send email
     transporter.sendMail(mailOptions, (error, info) => {
       if (error) {
         console.error(error);
-        res.status(500).send('Failed to send email');
+        res.status(500).send("Failed to send email");
       } else {
-        console.log('Email sent: ' + info.response);
-        res.status(200).send('Email sent successfully');
+        console.log("Email sent: " + info.response);
+        res.status(200).send("Email sent successfully");
       }
     });
   } catch (error) {
@@ -1493,9 +1471,7 @@ export const HomeSendEnquire = async (req, res) => {
   }
 };
 
-
 export const contactSendEnquire = async (req, res) => {
-
   const { name, email, phone, message } = req.body;
 
   // Configure nodemailer transporter
@@ -1506,50 +1482,61 @@ export const contactSendEnquire = async (req, res) => {
     secure: process.env.MAIL_ENCRYPTION, // Set to true if using SSL/TLS
     auth: {
       user: process.env.MAIL_USERNAME, // Update with your email address
-      pass: process.env.MAIL_PASSWORD,// Update with your email password
-    }
+      pass: process.env.MAIL_PASSWORD, // Update with your email password
+    },
   });
 
   // Email message
   const mailOptions = {
     from: process.env.MAIL_FROM_ADDRESS, // Update with your email address
     to: process.env.MAIL_TO_ADDRESS, // Update with your email address
-    subject: 'New Contact Us Form Submission',
-    text: `Name: ${name}\nEmail: ${email}\nPhone: ${phone}\nMessage: ${message}`
+    subject: "New Contact Us Form Submission",
+    text: `Name: ${name}\nEmail: ${email}\nPhone: ${phone}\nMessage: ${message}`,
   };
 
   // Send email
   transporter.sendMail(mailOptions, (error, info) => {
     if (error) {
       console.error(error);
-      res.status(500).send('Failed to send email');
+      res.status(500).send("Failed to send email");
     } else {
-      console.log('Email sent: ' + info.response);
-      res.status(200).send('Email sent successfully');
+      console.log("Email sent: " + info.response);
+      res.status(200).send("Email sent successfully");
     }
   });
-
 };
-
-
 
 export const updateUserAndCreateOrderController_old = async (req, res) => {
   let session;
   let transactionInProgress = false;
   const { id } = req.params;
-  const { username, email, address, pincode, details, discount, items, mode, payment, primary, shipping, status, totalAmount, userId } = req.body;
+  const {
+    username,
+    email,
+    address,
+    pincode,
+    details,
+    discount,
+    items,
+    mode,
+    payment,
+    primary,
+    shipping,
+    status,
+    totalAmount,
+    userId,
+  } = req.body;
 
   const options = {
     amount: totalAmount * 100, // amount in smallest currency unit (e.g., paisa for INR)
-    currency: 'INR',
-    receipt: 'order_rcptid_' + Math.floor(Math.random() * 1000)
+    currency: "INR",
+    receipt: "order_rcptid_" + Math.floor(Math.random() * 1000),
   };
 
   try {
     session = await mongoose.startSession();
     session.startTransaction();
     transactionInProgress = true;
-
 
     // Update user
     const user = await userModel.findByIdAndUpdate(
@@ -1558,37 +1545,45 @@ export const updateUserAndCreateOrderController_old = async (req, res) => {
       { new: true }
     );
 
-
-
     if (!user) {
       return res.status(404).json({
         success: false,
-        message: 'User not found',
+        message: "User not found",
       });
     }
 
     // Create order for the updated user
-    if (!status || !mode || !details || !totalAmount || !userId || !payment
-    ) {
-      console.log('status:', status);
-      console.log('mode:', mode);
-      console.log('details:', details);
-      console.log('totalAmount:', totalAmount);
-      console.log('userId:', userId);
-      console.log('payment:', payment);
-      console.log('shipping:', shipping);
+    if (!status || !mode || !details || !totalAmount || !userId || !payment) {
+      console.log("status:", status);
+      console.log("mode:", mode);
+      console.log("details:", details);
+      console.log("totalAmount:", totalAmount);
+      console.log("userId:", userId);
+      console.log("payment:", payment);
+      console.log("shipping:", shipping);
 
       return res.status(400).json({
         success: false,
-        message: 'Please provide all fields for the order',
+        message: "Please provide all fields for the order",
       });
-
     }
 
     const order = await razorpay.orders.create(options);
     const apiKey = process.env.RAZORPAY_API_KEY;
 
-    const newOrder = new orderModel({ details, discount, items, mode, payment: 0, primary, shipping, status, totalAmount, userId, orderId: order.id });
+    const newOrder = new orderModel({
+      details,
+      discount,
+      items,
+      mode,
+      payment: 0,
+      primary,
+      shipping,
+      status,
+      totalAmount,
+      userId,
+      orderId: order.id,
+    });
 
     await newOrder.save({ session });
     user.orders.push(newOrder);
@@ -1603,31 +1598,30 @@ export const updateUserAndCreateOrderController_old = async (req, res) => {
       }
     }
 
-
     await session.commitTransaction();
     transactionInProgress = false;
 
     return res.status(201).json({
       success: true,
-      message: 'Order created successfully',
+      message: "Order created successfully",
       newOrder,
       order,
       apiKey,
       user,
-      Amount: totalAmount
+      Amount: totalAmount,
     });
   } catch (error) {
     if (transactionInProgress) {
       try {
         await session.abortTransaction();
       } catch (abortError) {
-        console.error('Error aborting transaction:', abortError);
+        console.error("Error aborting transaction:", abortError);
       }
     }
-    console.error('Error:', error);
+    console.error("Error:", error);
     return res.status(400).json({
       success: false,
-      message: 'Error while creating order',
+      message: "Error while creating order",
       error: error.message,
     });
   } finally {
@@ -1641,19 +1635,18 @@ export const razorpayCallback = async (req, res) => {
   const { payment_id, order_id, status } = req.body;
 
   try {
-    if (status === 'paid') {
+    if (status === "paid") {
       // Payment successful, update order status to paid
       await orderModel.findOneAndUpdate({ orderId: order_id }, { payment: 1 });
-    } else if (status === 'failed') {
+    } else if (status === "failed") {
       // Payment failed, update order status to unpaid
       await orderModel.findOneAndUpdate({ orderId: order_id }, { payment: 2 });
     }
-    res.status(200).send('Order status updated successfully.');
+    res.status(200).send("Order status updated successfully.");
   } catch (error) {
-    res.status(500).send('Error updating order status: ' + error.message);
+    res.status(500).send("Error updating order status: " + error.message);
   }
 };
-
 
 //category fillter
 
@@ -1703,7 +1696,9 @@ export const GetAllCategoriesByParentIdController_old = async (req, res) => {
       const priceRanges = price.split(","); // Split multiple price ranges by comma
       const priceFilters = priceRanges.map((range) => {
         const [minPrice, maxPrice] = range.split("-"); // Split each range into min and max prices
-        return { salePrice: { $gte: parseInt(minPrice), $lte: parseInt(maxPrice) } };
+        return {
+          salePrice: { $gte: parseInt(minPrice), $lte: parseInt(maxPrice) },
+        };
       });
 
       // Add price filters to the existing filters
@@ -1722,7 +1717,10 @@ export const GetAllCategoriesByParentIdController_old = async (req, res) => {
       .lean();
 
     const Procat = { Category: parentId }; // Initialize filters with parent category filter
-    const productsFilter = await productModel.find(Procat).select("_id regularPrice salePrice").lean();
+    const productsFilter = await productModel
+      .find(Procat)
+      .select("_id regularPrice salePrice")
+      .lean();
 
     const proLength = products.length;
     return res.status(200).json({
@@ -1784,7 +1782,9 @@ export const GetAllCategoriesByParentIdController = async (req, res) => {
       const priceRanges = price.split(","); // Split multiple price ranges by comma
       const priceFilters = priceRanges.map((range) => {
         const [minPrice, maxPrice] = range.split("-"); // Split each range into min and max prices
-        return { salePrice: { $gte: parseInt(minPrice), $lte: parseInt(maxPrice) } };
+        return {
+          salePrice: { $gte: parseInt(minPrice), $lte: parseInt(maxPrice) },
+        };
       });
 
       // Add price filters to the existing filters
@@ -1803,7 +1803,10 @@ export const GetAllCategoriesByParentIdController = async (req, res) => {
       .lean();
 
     const Procat = { Category: parentId }; // Initialize filters with parent category filter
-    const productsFilter = await productModel.find(Procat).select("_id regularPrice salePrice variations").lean();
+    const productsFilter = await productModel
+      .find(Procat)
+      .select("_id regularPrice salePrice variations")
+      .lean();
 
     const proLength = products.length;
     return res.status(200).json({
@@ -1823,12 +1826,135 @@ export const GetAllCategoriesByParentIdController = async (req, res) => {
   }
 };
 
+// export const GetAllCategoriesBySlugController = async (req, res) => {
+//   try {
+//     const { parentSlug } = req.params;
+//     const { filter, price, page = 1, perPage = 2 } = req.query; // Extract filter, price, page, and perPage query parameters
+
+//     // Check if parentId is undefined or null
+//     if (!parentSlug) {
+//       return res.status(400).json({
+//         success: false,
+//         message: "Please provide a valid parent ID.",
+//       });
+//     }
+
+//     // Call the recursive function to get all categories
+//     const MainCat = await categoryModel
+//       .findOne({ slug: parentSlug, status: "true" })
+//       .select(
+//         "title metaTitle metaDescription metaKeywords image description specifications slide_head slide_para"
+//       )
+//       .lean();
+
+//     const parentId = MainCat._id;
+//     console.log(parentId, parentSlug);
+
+//     const categories = await getAllCategoriesByParentId(parentId);
+
+//     const filters = { Category: parentId }; // Initialize filters with parent category filter
+
+//     if (filter) {
+//       // Parse the filter parameter
+//       const filterParams = JSON.parse(filter);
+
+//       // Iterate through each parameter in the filter
+//       Object.keys(filterParams).forEach((param) => {
+//         // Split parameter values by comma if present
+//         const paramValues = filterParams[param].split(",");
+//         const variationsKey = `variations.${param}.${param}`;
+
+//         // Handle multiple values for the parameter
+//         filters[variationsKey] = { $in: paramValues };
+//       });
+//     }
+
+//     // Check if price parameter is provided and not blank
+//     if (price && price.trim() !== "") {
+//       const priceRanges = price.split(","); // Split multiple price ranges by comma
+//       const priceFilters = priceRanges.map((range) => {
+//         const [minPrice, maxPrice] = range.split("-"); // Split each range into min and max prices
+//         return {
+//           salePrice: { $gte: parseInt(minPrice), $lte: parseInt(maxPrice) },
+//         };
+//       });
+
+//       // Add price filters to the existing filters
+//       filters.$or = priceFilters;
+//     }
+
+//     // Calculate skip value for pagination
+//     const skip = (page - 1) * perPage;
+
+//     // Fetch products based on filters with pagination
+//     const products = await productModel
+//       .find(filters)
+//       .select("_id title regularPrice salePrice pImage variations")
+//       .skip(skip)
+//       .limit(perPage)
+//       .lean();
+
+//     const Procat = { Category: parentId }; // Initialize filters with parent category filter
+//     const productsFilter = await productModel
+//       .find(Procat)
+//       .select("_id regularPrice salePrice variations")
+//       .lean();
+
+//     const proLength = products.length;
+//     return res.status(200).json({
+//       success: true,
+//       categories,
+//       MainCat,
+//       products,
+//       proLength,
+//       productsFilter,
+//     });
+//   } catch (error) {
+//     console.error("Error in GetAllCategoriesByParentIdController:", error);
+//     return res.status(500).json({
+//       success: false,
+//       message: "Internal Server Error",
+//     });
+//   }
+// };
+
+// export const getAllCategoriesByParentId = async (parentId) => {
+//   try {
+//     const categories = await categoryModel.find({ parent: parentId }).lean();
+
+//     if (!categories || categories.length === 0) {
+//       return [];
+//     }
+
+//     const result = [];
+
+//     for (const category of categories) {
+//       const { _id, title, image, slug /* other fields */ } = category;
+
+//       const categoryData = {
+//         _id,
+//         title,
+//         image,
+//         subcategories: await getAllCategoriesByParentId(_id), // Recursive call
+//         slug,
+//       };
+
+//       result.push(categoryData);
+//     }
+
+//     return result;
+//   } catch (error) {
+//     console.error("Error while fetching categories:", error);
+//     throw error;
+//   }
+// };
+
 export const GetAllCategoriesBySlugController = async (req, res) => {
   try {
     const { parentSlug } = req.params;
-    const { filter, price, page = 1, perPage = 2 } = req.query; // Extract filter, price, page, and perPage query parameters
+    const { filter, price, page = 1, perPage = 2 } = req.query;
 
-    // Check if parentId is undefined or null
+    // Check if parentSlug is undefined or null
     if (!parentSlug) {
       return res.status(400).json({
         success: false,
@@ -1836,48 +1962,50 @@ export const GetAllCategoriesBySlugController = async (req, res) => {
       });
     }
 
-    // Call the recursive function to get all categories
+    // Fetch the main category with status check
     const MainCat = await categoryModel
-      .findOne({ slug: parentSlug })
-      .select("title metaTitle metaDescription metaKeywords image description specifications")
+      .findOne({ slug: parentSlug, status: "true" })
+      .select(
+        "title metaTitle metaDescription metaKeywords image description specifications slide_head slide_para"
+      )
       .lean();
 
-    const parentId = MainCat._id;
-    console.log(parentId, parentSlug);
+    // Check if the MainCat exists
+    if (!MainCat) {
+      return res.status(404).json({
+        success: false,
+        message: "Category not found or inactive.",
+      });
+    }
 
+    const parentId = MainCat._id;
     const categories = await getAllCategoriesByParentId(parentId);
 
-
-    const filters = { Category: parentId }; // Initialize filters with parent category filter
+    const filters = { Category: parentId, status: "true" }; // Add status filter for products
 
     if (filter) {
-      // Parse the filter parameter
       const filterParams = JSON.parse(filter);
-
-      // Iterate through each parameter in the filter
       Object.keys(filterParams).forEach((param) => {
-        // Split parameter values by comma if present
         const paramValues = filterParams[param].split(",");
         const variationsKey = `variations.${param}.${param}`;
-
-        // Handle multiple values for the parameter
         filters[variationsKey] = { $in: paramValues };
       });
     }
 
-    // Check if price parameter is provided and not blank
+    // Check if price parameter is provided
     if (price && price.trim() !== "") {
-      const priceRanges = price.split(","); // Split multiple price ranges by comma
+      const priceRanges = price.split(",");
       const priceFilters = priceRanges.map((range) => {
-        const [minPrice, maxPrice] = range.split("-"); // Split each range into min and max prices
-        return { salePrice: { $gte: parseInt(minPrice), $lte: parseInt(maxPrice) } };
+        const [minPrice, maxPrice] = range.split("-");
+        return {
+          salePrice: { $gte: parseInt(minPrice), $lte: parseInt(maxPrice) },
+          status: "true", // Ensure products are active
+        };
       });
 
-      // Add price filters to the existing filters
       filters.$or = priceFilters;
     }
 
-    // Calculate skip value for pagination
     const skip = (page - 1) * perPage;
 
     // Fetch products based on filters with pagination
@@ -1888,8 +2016,11 @@ export const GetAllCategoriesBySlugController = async (req, res) => {
       .limit(perPage)
       .lean();
 
-    const Procat = { Category: parentId }; // Initialize filters with parent category filter
-    const productsFilter = await productModel.find(Procat).select("_id regularPrice salePrice variations").lean();
+    const Procat = { Category: parentId, status: "true" }; // Add status filter for products
+    const productsFilter = await productModel
+      .find(Procat)
+      .select("_id regularPrice salePrice variations")
+      .lean();
 
     const proLength = products.length;
     return res.status(200).json({
@@ -1901,7 +2032,7 @@ export const GetAllCategoriesBySlugController = async (req, res) => {
       productsFilter,
     });
   } catch (error) {
-    console.error("Error in GetAllCategoriesByParentIdController:", error);
+    console.error("Error in GetAllCategoriesBySlugController:", error);
     return res.status(500).json({
       success: false,
       message: "Internal Server Error",
@@ -1911,7 +2042,9 @@ export const GetAllCategoriesBySlugController = async (req, res) => {
 
 export const getAllCategoriesByParentId = async (parentId) => {
   try {
-    const categories = await categoryModel.find({ parent: parentId }).lean();
+    const categories = await categoryModel
+      .find({ parent: parentId, status: "true" })
+      .lean(); // Check status
 
     if (!categories || categories.length === 0) {
       return [];
@@ -1920,13 +2053,14 @@ export const getAllCategoriesByParentId = async (parentId) => {
     const result = [];
 
     for (const category of categories) {
-      const { _id, title, image /* other fields */ } = category;
+      const { _id, title, image, slug } = category;
 
       const categoryData = {
         _id,
         title,
         image,
         subcategories: await getAllCategoriesByParentId(_id), // Recursive call
+        slug,
       };
 
       result.push(categoryData);
@@ -1942,29 +2076,25 @@ export const getAllCategoriesByParentId = async (parentId) => {
 export const userOrdersController = async (req, res) => {
   try {
     const userOrder = await userModel.findById(req.params.id).populate({
-      path: 'orders',
-      select: '_id createdAt totalAmount status mode orderId', // Select only _id and title fields
+      path: "orders",
+      select: "_id createdAt totalAmount status mode orderId", // Select only _id and title fields
       options: {
-        sort: { createdAt: -1 } // Sort by createdAt field in descending order
-      }
+        sort: { createdAt: -1 }, // Sort by createdAt field in descending order
+      },
     });
 
-
     if (!userOrder) {
-      return res.status(200).send
-        ({
-          message: 'Order Not Found By user',
-          success: false,
-        });
+      return res.status(200).send({
+        message: "Order Not Found By user",
+        success: false,
+      });
     }
     return res.status(200).json({
-      message: ' user Orders!',
+      message: " user Orders!",
       success: true,
       userOrder,
     });
-
-  }
-  catch (error) {
+  } catch (error) {
     console.log(error);
     return res.status(400).send({
       success: false,
@@ -1972,33 +2102,29 @@ export const userOrdersController = async (req, res) => {
       error,
     });
   }
-
-}
-
+};
 
 export const userOrdersViewController = async (req, res) => {
   try {
     const { userId, orderId } = req.params;
 
-
     // Find the user by ID and populate their orders
-    const userOrder = await userModel.findById(userId)
-      .populate({
-        path: 'orders',
-        match: { _id: orderId } // Match the order ID
-      });
+    const userOrder = await userModel.findById(userId).populate({
+      path: "orders",
+      match: { _id: orderId }, // Match the order ID
+    });
 
     // If user or order not found, return appropriate response
     if (!userOrder || !userOrder.orders.length) {
       return res.status(404).json({
-        message: 'Order Not Found By user or Order ID',
+        message: "Order Not Found By user or Order ID",
         success: false,
       });
     }
 
     // If user order found, return success response with the single order
     return res.status(200).json({
-      message: 'Single Order Found By user ID and Order ID',
+      message: "Single Order Found By user ID and Order ID",
       success: true,
       userOrder: userOrder.orders[0], // Assuming there's only one order per user
     });
@@ -2011,44 +2137,49 @@ export const userOrdersViewController = async (req, res) => {
       error,
     });
   }
-}
-
-
-
-
+};
 
 export const AddCart = async (req, res) => {
   try {
-    const { items, isEmpty, totalItems, totalUniqueItems, cartTotal } = req.body;
+    const { items, isEmpty, totalItems, totalUniqueItems, cartTotal } =
+      req.body;
 
-    const Cart = new cartModel({ items, isEmpty, totalItems, totalUniqueItems, cartTotal });
+    const Cart = new cartModel({
+      items,
+      isEmpty,
+      totalItems,
+      totalUniqueItems,
+      cartTotal,
+    });
     await Cart.save();
 
     res.status(201).json({
       success: true,
-      message: 'User created successfully',
-      Cart
+      message: "User created successfully",
+      Cart,
     });
   } catch (error) {
-    console.error('Error on signup:', error);
+    console.error("Error on signup:", error);
     res.status(500).json({
       success: false,
-      message: 'Error on signup',
+      message: "Error on signup",
       error: error.message,
     });
   }
-}
+};
 
 export const UpdateCart = async (req, res) => {
   try {
     const { id } = req.params;
-    const { items, isEmpty, totalItems, totalUniqueItems, cartTotal } = req.body;
+    const { items, isEmpty, totalItems, totalUniqueItems, cartTotal } =
+      req.body;
     const Cart = await cartModel.findByIdAndUpdate(
       id,
       { ...req.body },
-      { new: true })
+      { new: true }
+    );
     return res.status(200).json({
-      message: 'Cart Updated!',
+      message: "Cart Updated!",
       success: true,
       Cart,
     });
@@ -2059,36 +2190,31 @@ export const UpdateCart = async (req, res) => {
       error,
     });
   }
-}
-
+};
 
 export const getCart = async (req, res) => {
   try {
     const { id } = req.params;
     const Cart = await cartModel.findById(id);
     if (!Cart) {
-      return res.status(200).send
-        ({
-          message: 'Cart Not Found',
-          success: false,
-        });
+      return res.status(200).send({
+        message: "Cart Not Found",
+        success: false,
+      });
     }
     return res.status(200).json({
-      message: 'Cart Found successfully!',
+      message: "Cart Found successfully!",
       success: true,
       Cart,
     });
-
-  }
-  catch (error) {
+  } catch (error) {
     return res.status(400).json({
       message: `Error while get cart: ${error}`,
       success: false,
       error,
     });
   }
-}
-
+};
 
 export const AddRating = async (req, res) => {
   try {
@@ -2098,31 +2224,26 @@ export const AddRating = async (req, res) => {
     if (!userId || !rating || !comment || !productId) {
       return res.status(400).json({
         success: false,
-        message: 'Please fill all fields',
+        message: "Please fill all fields",
       });
-    }
-    else {
+    } else {
       // Create a new user rating instance
       const newUserRating = new ratingModel({
         userId,
         rating,
         comment,
-        productId
-
+        productId,
       });
 
       // Save the user rating to the database
       await newUserRating.save();
 
       return res.status(200).json({
-        message: 'User rating created successfully!',
+        message: "User rating created successfully!",
         success: true,
         newUserRating,
       });
-
-
     }
-
   } catch (error) {
     return res.status(400).json({
       message: `Error while add rating: ${error}`,
@@ -2130,9 +2251,7 @@ export const AddRating = async (req, res) => {
       error,
     });
   }
-
-}
-
+};
 
 export const ViewProductRating = async (req, res) => {
   try {
@@ -2141,35 +2260,32 @@ export const ViewProductRating = async (req, res) => {
     // Find all ratings for a specific product
     const productRatings = await ratingModel.find({ productId, status: 1 });
 
-
     // Fetch user details for each rating
-    const ratingsWithUserDetails = await Promise.all(productRatings.map(async (rating) => {
-      const user = await userModel.findById(rating.userId);
-      return {
-        rating: rating.rating,
-        comment: rating.comment,
-        username: user ? user.username : 'Unknown',
-        createdAt: rating.createdAt,
-        userId: user ? user._id : 'Unknown',
-      };
-    }));
+    const ratingsWithUserDetails = await Promise.all(
+      productRatings.map(async (rating) => {
+        const user = await userModel.findById(rating.userId);
+        return {
+          rating: rating.rating,
+          comment: rating.comment,
+          username: user ? user.username : "Unknown",
+          createdAt: rating.createdAt,
+          userId: user ? user._id : "Unknown",
+        };
+      })
+    );
 
     return res.status(200).json({
       success: true,
-      message: 'Getting product ratings successfully!',
+      message: "Getting product ratings successfully!",
       productRatings: ratingsWithUserDetails,
     });
   } catch (error) {
-    console.error('Error getting product ratings:', error);
-    res.status(500).json({ success: false, message: 'Internal server error' });
+    console.error("Error getting product ratings:", error);
+    res.status(500).json({ success: false, message: "Internal server error" });
   }
 };
 
-
-
-
 export const ViewCategoryRating = async (req, res) => {
-
   try {
     // Query the database for all ratings where status is 1
     const ratings = await ratingModel.find({ status: 1 });
@@ -2179,8 +2295,7 @@ export const ViewCategoryRating = async (req, res) => {
     console.error("Error fetching ratings:", error);
     res.status(500).json({ success: false, message: "Internal Server Error" });
   }
-
-}
+};
 
 // add Wishlist by user
 export const AddWishListByUser = async (req, res) => {
@@ -2191,35 +2306,37 @@ export const AddWishListByUser = async (req, res) => {
     if (!userId || !productId) {
       return res.status(400).json({
         success: false,
-        message: 'Please provide both userId & productId',
+        message: "Please provide both userId & productId",
       });
     }
 
     // Check if the wishlist item already exists for the user
-    const existingWishlistItem = await wishlistModel.findOne({ userId, productId });
+    const existingWishlistItem = await wishlistModel.findOne({
+      userId,
+      productId,
+    });
 
     if (existingWishlistItem) {
       return res.status(400).json({
         success: false,
-        message: 'Wishlist item already exists',
+        message: "Wishlist item already exists",
       });
     }
 
     // Create a new wishlist item
     const newWishlistItem = new wishlistModel({
       userId,
-      productId
+      productId,
     });
 
     // Save the wishlist item to the database
     await newWishlistItem.save();
 
     return res.status(200).json({
-      message: 'Wishlist item created successfully!',
+      message: "Wishlist item created successfully!",
       success: true,
       newWishlistItem,
     });
-
   } catch (error) {
     return res.status(400).json({
       message: `Error while adding wishlist item: ${error}`,
@@ -2229,7 +2346,6 @@ export const AddWishListByUser = async (req, res) => {
   }
 };
 
-
 export const ViewWishListByUser = async (req, res) => {
   try {
     const userId = req.params.id;
@@ -2238,36 +2354,38 @@ export const ViewWishListByUser = async (req, res) => {
     const wishlistItems = await wishlistModel.find({ userId });
 
     // Extract product IDs from wishlist items
-    const productIds = wishlistItems.map(item => item.productId);
+    const productIds = wishlistItems.map((item) => item.productId);
 
     // Fetch product details for each product ID
-    const productDetails = await productModel.find({ _id: { $in: productIds } }).select('_id pImage regularPrice salePrice title');
+    const productDetails = await productModel
+      .find({ _id: { $in: productIds } })
+      .select("_id pImage regularPrice salePrice title");
 
     // Combine wishlist items with product details
-    const wishlistWithProductDetails = wishlistItems.map(item => {
-      const productDetail = productDetails.find(product => product._id.toString() === item.productId.toString());
+    const wishlistWithProductDetails = wishlistItems.map((item) => {
+      const productDetail = productDetails.find(
+        (product) => product._id.toString() === item.productId.toString()
+      );
       return {
         _id: item._id,
         userId: item.userId,
         productId: item.productId,
         createdAt: item.createdAt,
         updatedAt: item.updatedAt,
-        productDetail: productDetail // Add product details to wishlist item
+        productDetail: productDetail, // Add product details to wishlist item
       };
     });
 
     return res.status(200).json({
       success: true,
-      message: 'Getting wishlist successfully!',
-      wishlist: wishlistWithProductDetails
+      message: "Getting wishlist successfully!",
+      wishlist: wishlistWithProductDetails,
     });
   } catch (error) {
-    console.error('Error getting wishlist:', error);
-    res.status(500).json({ success: false, message: 'Internal server error' });
+    console.error("Error getting wishlist:", error);
+    res.status(500).json({ success: false, message: "Internal server error" });
   }
 };
-
-
 
 export const deleteWishListByUser = async (req, res) => {
   try {
@@ -2287,8 +2405,6 @@ export const deleteWishListByUser = async (req, res) => {
   }
 };
 
-
-
 export const AddCompareByUser = async (req, res) => {
   try {
     const { userId, productId } = req.body;
@@ -2297,18 +2413,19 @@ export const AddCompareByUser = async (req, res) => {
     if (!userId || !productId) {
       return res.status(400).json({
         success: false,
-        message: 'Please fill userId & productId',
+        message: "Please fill userId & productId",
       });
-    }
-    else {
-
+    } else {
       // Check if the wishlist item already exists for the user
-      const existingWishlistItem = await compareModel.findOne({ userId, productId });
+      const existingWishlistItem = await compareModel.findOne({
+        userId,
+        productId,
+      });
 
       if (existingWishlistItem) {
         return res.status(400).json({
           success: false,
-          message: 'Comparsion item already exists',
+          message: "Comparsion item already exists",
         });
       }
       const entryCount = await compareModel.countDocuments({ userId });
@@ -2320,28 +2437,21 @@ export const AddCompareByUser = async (req, res) => {
         });
       }
 
-
       // Create a new user rating instance
       const newUserCompare = new compareModel({
         userId,
-        productId
-
+        productId,
       });
-
-
 
       // Save the user rating to the database
       await newUserCompare.save();
 
       return res.status(200).json({
-        message: 'User comparsion created successfully!',
+        message: "User comparsion created successfully!",
         success: true,
         newUserCompare,
       });
-
-
     }
-
   } catch (error) {
     return res.status(400).json({
       message: `Error while add comparsion: ${error}`,
@@ -2349,7 +2459,6 @@ export const AddCompareByUser = async (req, res) => {
       error,
     });
   }
-
 };
 
 export const ViewCompareByUser = async (req, res) => {
@@ -2360,35 +2469,38 @@ export const ViewCompareByUser = async (req, res) => {
     const CompareItems = await compareModel.find({ userId });
 
     // Extract product IDs from wishlist items
-    const productIds = CompareItems.map(item => item.productId);
+    const productIds = CompareItems.map((item) => item.productId);
 
     // Fetch product details for each product ID
-    const productDetails = await productModel.find({ _id: { $in: productIds } }).select('_id pImage regularPrice salePrice title specifications');
+    const productDetails = await productModel
+      .find({ _id: { $in: productIds } })
+      .select("_id pImage regularPrice salePrice title specifications");
 
     // Combine wishlist items with product details
-    const CompareWithProductDetails = CompareItems.map(item => {
-      const productDetail = productDetails.find(product => product._id.toString() === item.productId.toString());
+    const CompareWithProductDetails = CompareItems.map((item) => {
+      const productDetail = productDetails.find(
+        (product) => product._id.toString() === item.productId.toString()
+      );
       return {
         _id: item._id,
         userId: item.userId,
         productId: item.productId,
         createdAt: item.createdAt,
         updatedAt: item.updatedAt,
-        productDetail: productDetail // Add product details to wishlist item
+        productDetail: productDetail, // Add product details to wishlist item
       };
     });
 
     return res.status(200).json({
       success: true,
-      message: 'Getting Compare successfully!',
-      comparsion: CompareWithProductDetails
+      message: "Getting Compare successfully!",
+      comparsion: CompareWithProductDetails,
     });
   } catch (error) {
-    console.error('Error getting Compare:', error);
-    res.status(500).json({ success: false, message: 'Internal server error' });
+    console.error("Error getting Compare:", error);
+    res.status(500).json({ success: false, message: "Internal server error" });
   }
 };
-
 
 export const deleteCompareByUser = async (req, res) => {
   try {
@@ -2408,8 +2520,6 @@ export const deleteCompareByUser = async (req, res) => {
   }
 };
 
-
-
 export const ViewOrderByUser = async (req, res) => {
   try {
     const userId = req.params.id;
@@ -2418,65 +2528,64 @@ export const ViewOrderByUser = async (req, res) => {
     const userItems = await userModel.find({ userId });
 
     // Extract product IDs from userItems items
-    const productIds = userItems.map(item => item.productId);
+    const productIds = userItems.map((item) => item.productId);
 
     // Fetch product details for each product ID
-    const productDetails = await orderModel.find({ _id: { $in: productIds } }).select('_id username email phone pincode country address status');
+    const productDetails = await orderModel
+      .find({ _id: { $in: productIds } })
+      .select("_id username email phone pincode country address status");
 
     // Combine userItems items with product details
-    const UsertWithProductDetails = userItems.map(item => {
-      const productDetail = productDetails.find(product => product._id.toString() === item.productId.toString());
+    const UsertWithProductDetails = userItems.map((item) => {
+      const productDetail = productDetails.find(
+        (product) => product._id.toString() === item.productId.toString()
+      );
       return {
         _id: item._id,
         userId: item.userId,
         productId: item.productId,
         createdAt: item.createdAt,
         updatedAt: item.updatedAt,
-        productDetail: productDetail // Add product details to wishlist item
+        productDetail: productDetail, // Add product details to wishlist item
       };
     });
 
     return res.status(200).json({
       success: true,
-      message: 'Getting wishlist successfully!',
-      wishlist: wishlistWithProductDetails
+      message: "Getting wishlist successfully!",
+      wishlist: wishlistWithProductDetails,
     });
   } catch (error) {
-    console.error('Error getting wishlist:', error);
-    res.status(500).json({ success: false, message: 'Internal server error' });
+    console.error("Error getting wishlist:", error);
+    res.status(500).json({ success: false, message: "Internal server error" });
   }
 };
 
-// for zones 
+// for zones
 
 export const ViewAllZones = async (req, res) => {
-
   try {
     // Query the database for all ratings where status is 1
-    const Zones = await zonesModel.find({ status: 'true' });
+    const Zones = await zonesModel.find({ status: "true" });
 
     res.status(200).json({ success: true, Zones });
   } catch (error) {
     console.error("Error fetching ratings:", error);
     res.status(500).json({ success: false, message: "Internal Server Error" });
   }
-
-}
-
+};
 
 export const ViewAllUserTaxes = async (req, res) => {
-
   try {
     // Query the database for all ratings where status is 1
-    const taxes = await taxModel.find({ status: 'true' });
+    const taxes = await taxModel.find({ status: "true" });
 
     res.status(200).json({ success: true, taxes });
   } catch (error) {
     console.error("Error fetching ratings:", error);
     res.status(500).json({ success: false, message: "Internal Server Error" });
   }
-
-}
+};
 
 export const getTaxIdUser = async (req, res) => {
   try {
@@ -2504,81 +2613,81 @@ export const getTaxIdUser = async (req, res) => {
   }
 };
 
-
-
 export const applyPromoCode = async (req, res) => {
   try {
     const { promoCode } = req.body;
-    console.log('promoCode', req.body.promoCode)
+    console.log("promoCode", req.body.promoCode);
     // Find the promo code in the database
     const promo = await promoModel.findOne({ name: promoCode });
 
     if (!promo) {
-      return res.status(400).json({ message: 'Promo code not found' });
+      return res.status(400).json({ message: "Promo code not found" });
     }
 
     // Check if the promo code is valid and active
-    if (promo.status !== 'true') {
-      return res.status(400).json({ message: 'Promo code is not active' });
+    if (promo.status !== "true") {
+      return res.status(400).json({ message: "Promo code is not active" });
     }
 
     // Apply the promo code based on its type
     let discount = 0;
-    let type = '';
+    let type = "";
 
-    if (promo.type === 1) { // Percentage
+    if (promo.type === 1) {
+      // Percentage
       // Calculate discount percentage
       discount = parseFloat(promo.rate) / 100;
-      type = 'percentage';
-    } else if (promo.type === 2) { // Fixed Amount
+      type = "percentage";
+    } else if (promo.type === 2) {
+      // Fixed Amount
       // Assume type is 'value', calculate discount value
       discount = parseFloat(promo.rate);
-      type = 'fixed';
+      type = "fixed";
     } else {
-      return res.status(400).json({ message: 'Invalid promo code type' });
+      return res.status(400).json({ message: "Invalid promo code type" });
     }
 
     // Return the discount and type to the client
     return res.status(200).json({ discount, type });
   } catch (error) {
-    console.error('Error applying promo code:', error);
-    return res.status(500).json({ message: 'Internal server error' });
+    console.error("Error applying promo code:", error);
+    return res.status(500).json({ message: "Internal server error" });
   }
 };
-
-
 
 const sendRegOTP = async (phone, otp) => {
   try {
     // Construct the request URL with query parameters
     const queryParams = querystring.stringify({
-      username: 'cayro.trans',
-      password: 'CsgUK',
+      username: "cayro.trans",
+      password: "CsgUK",
       unicode: false,
-      from: 'CAYROE',
+      from: "CAYROE",
       to: phone,
-      text: `Here is your OTP ${otp} for registering your account on cayroshop.com`
+      text: `Here is your OTP ${otp} for registering your account on cayroshop.com`,
     });
     const url = `https://pgapi.smartping.ai/fe/api/v1/send?${queryParams}`;
 
     // Make the GET request to send OTP
-    https.get(url, (res) => {
-      console.log(`OTP API response status code: ${res.statusCode}`);
-      res.setEncoding('utf8');
-      res.on('data', (chunk) => {
-        console.log(`Response body: ${chunk}`);
+    https
+      .get(url, (res) => {
+        console.log(`OTP API response status code: ${res.statusCode}`);
+        res.setEncoding("utf8");
+        res.on("data", (chunk) => {
+          console.log(`Response body: ${chunk}`);
+        });
+      })
+      .on("error", (error) => {
+        // console.log('url', url)
+        console.error("Error sending OTP:", error);
+        throw new Error("Failed to send OTP");
       });
-    }).on('error', (error) => {
-      // console.log('url', url)
-      console.error('Error sending OTP:', error);
-      throw new Error('Failed to send OTP');
-    });
 
-    console.log('OTP request sent successfully');
+    console.log("OTP request sent successfully");
   } catch (error) {
     // Handle errors
-    console.error('Error sending OTP:', error);
-    throw new Error('Failed to send OTP');
+    console.error("Error sending OTP:", error);
+    throw new Error("Failed to send OTP");
   }
 };
 
@@ -2586,70 +2695,73 @@ const sendLogOTP = async (phone, otp) => {
   try {
     // Construct the request URL with query parameters
     const queryParams = querystring.stringify({
-      username: 'cayro.trans',
-      password: 'CsgUK',
+      username: "cayro.trans",
+      password: "CsgUK",
       unicode: false,
-      from: 'CAYROE',
+      from: "CAYROE",
       to: phone,
-      text: `Here is OTP ${otp} for mobile no verification in website cayroshop.com`
+      text: `Here is OTP ${otp} for mobile no verification in website cayroshop.com`,
     });
     const url = `https://pgapi.smartping.ai/fe/api/v1/send?${queryParams}`;
 
-    console.log(url)
+    console.log(url);
     // Make the GET request to send OTP
-    https.get(url, (res) => {
-      console.log(`OTP API response status code: ${res.statusCode}`);
-      res.setEncoding('utf8');
-      res.on('data', (chunk) => {
-        console.log(`Response body: ${chunk}`);
+    https
+      .get(url, (res) => {
+        console.log(`OTP API response status code: ${res.statusCode}`);
+        res.setEncoding("utf8");
+        res.on("data", (chunk) => {
+          console.log(`Response body: ${chunk}`);
+        });
+      })
+      .on("error", (error) => {
+        // console.log('url', url)
+        console.error("Error sending OTP:", error);
+        throw new Error("Failed to send OTP");
       });
-    }).on('error', (error) => {
-      // console.log('url', url)
-      console.error('Error sending OTP:', error);
-      throw new Error('Failed to send OTP');
-    });
 
-    console.log('OTP request sent successfully');
+    console.log("OTP request sent successfully");
   } catch (error) {
     // Handle errors
-    console.error('Error sending OTP:', error);
-    throw new Error('Failed to send OTP');
+    console.error("Error sending OTP:", error);
+    throw new Error("Failed to send OTP");
   }
 };
-
 
 const sendOrderOTP = async (phone, order_id) => {
   try {
     // Construct the request URL with query parameters
     const queryParams = querystring.stringify({
-      username: 'cayro.trans',
-      password: 'CsgUK',
+      username: "cayro.trans",
+      password: "CsgUK",
       unicode: false,
-      from: 'CAYROE',
+      from: "CAYROE",
       to: phone,
-      text: `Thank you for your order. Your order id is ${order_id} cayroshop.com`
+      text: `Thank you for your order. Your order id is ${order_id} cayroshop.com`,
     });
     const url = `https://pgapi.smartping.ai/fe/api/v1/send?${queryParams}`;
 
-    console.log(url)
+    console.log(url);
     // Make the GET request to send OTP
-    https.get(url, (res) => {
-      console.log(`OTP API response status code: ${res.statusCode}`);
-      res.setEncoding('utf8');
-      res.on('data', (chunk) => {
-        console.log(`Response body: ${chunk}`);
+    https
+      .get(url, (res) => {
+        console.log(`OTP API response status code: ${res.statusCode}`);
+        res.setEncoding("utf8");
+        res.on("data", (chunk) => {
+          console.log(`Response body: ${chunk}`);
+        });
+      })
+      .on("error", (error) => {
+        // console.log('url', url)
+        console.error("Error sending OTP:", error);
+        throw new Error("Failed to send OTP");
       });
-    }).on('error', (error) => {
-      // console.log('url', url)
-      console.error('Error sending OTP:', error);
-      throw new Error('Failed to send OTP');
-    });
 
-    console.log('OTP request sent successfully');
+    console.log("OTP request sent successfully");
   } catch (error) {
     // Handle errors
-    console.error('Error sending OTP:', error);
-    throw new Error('Failed to send OTP');
+    console.error("Error sending OTP:", error);
+    throw new Error("Failed to send OTP");
   }
 };
 
@@ -2662,14 +2774,14 @@ export const SendOTP = async (req, res) => {
     // Send OTP via Phone
     await sendOTP(phone, otp);
 
-    res.status(200).json({ success: true, message: 'OTP sent successfully', OTP: otp });
+    res
+      .status(200)
+      .json({ success: true, message: "OTP sent successfully", OTP: otp });
   } catch (error) {
     console.error(error);
-    res.status(500).json({ message: 'Server Error' });
+    res.status(500).json({ message: "Server Error" });
   }
 };
-
-
 
 export const SignupLoginUser = async (req, res) => {
   try {
@@ -2683,7 +2795,7 @@ export const SignupLoginUser = async (req, res) => {
     if (!Gtoken) {
       return res.status(400).json({
         success: false,
-        message: 'you can access this page ',
+        message: "you can access this page ",
       });
     }
 
@@ -2691,7 +2803,7 @@ export const SignupLoginUser = async (req, res) => {
     if (!phone) {
       return res.status(400).json({
         success: false,
-        message: 'Please fill all fields',
+        message: "Please fill all fields",
       });
     }
 
@@ -2699,38 +2811,41 @@ export const SignupLoginUser = async (req, res) => {
 
     if (existingUser) {
       if (existingUser.password !== undefined) {
-        if (existingUser.status === '0') {
+        if (existingUser.status === "0") {
           return res.status(400).json({
             success: false,
-            message: 'An error occurred. Please contact support.',
+            message: "An error occurred. Please contact support.",
           });
         }
         return res.status(201).json({
           success: true,
-          message: 'User found with password',
+          message: "User found with password",
           password: true,
         });
       } else {
-
         // Hash the OTP
         const ecryptOTP = await bcrypt.hash(String(otp), 10);
 
-        if (existingUser.status === '0') {
+        if (existingUser.status === "0") {
           return res.status(400).json({
             success: false,
-            message: 'An error occurred. Please contact support.',
+            message: "An error occurred. Please contact support.",
           });
         }
 
-
         // block
-        console.log(otp)
+        console.log(otp);
         //  await sendLogOTP(phone, otp);
 
         return res.status(201).json({
           success: true,
-          message: 'User found',
-          existingUser: { _id: existingUser._id, username: existingUser.username, phone: existingUser.phone, email: existingUser.email },
+          message: "User found",
+          existingUser: {
+            _id: existingUser._id,
+            username: existingUser.username,
+            phone: existingUser.phone,
+            email: existingUser.email,
+          },
           token: existingUser.token,
           otp: ecryptOTP,
         });
@@ -2739,27 +2854,24 @@ export const SignupLoginUser = async (req, res) => {
       const ecryptOTP = await bcrypt.hash(String(otp), 10);
 
       // block
-      console.log(otp)
+      console.log(otp);
       // await sendRegOTP(phone, otp);
       return res.status(200).json({
         success: true,
-        message: 'New User found',
+        message: "New User found",
         newUser: true,
         otp: ecryptOTP,
       });
     }
   } catch (error) {
-    console.error('Error on login:', error);
+    console.error("Error on login:", error);
     return res.status(500).json({
       success: false,
-      message: 'Error on login',
+      message: "Error on login",
       error: error.message,
     });
   }
-}
-
-
-
+};
 
 export const SignupNewUser = async (req, res) => {
   try {
@@ -2774,37 +2886,42 @@ export const SignupNewUser = async (req, res) => {
     if (!phone) {
       return res.status(400).json({
         success: false,
-        message: 'Please fill all fields',
+        message: "Please fill all fields",
       });
     }
 
     // Create a new user
     const user = new userModel({ phone });
-    const token = jwt.sign({ userId: user._id }, secretKey, { expiresIn: '1h' });
+    const token = jwt.sign({ userId: user._id }, secretKey, {
+      expiresIn: "1h",
+    });
     user.token = token; // Update the user's token field with the generated token
     await user.save();
-
 
     // Hash the OTP
     const ecryptOTP = await bcrypt.hash(String(otp), 10);
 
     res.status(201).json({
       success: true,
-      message: 'User created successfully',
-      existingUser: { _id: user._id, username: user.username, phone: user.phone, email: user.email },
+      message: "User created successfully",
+      existingUser: {
+        _id: user._id,
+        username: user.username,
+        phone: user.phone,
+        email: user.email,
+      },
       otp: ecryptOTP,
       token,
     });
   } catch (error) {
-    console.error('Error on signup:', error);
+    console.error("Error on signup:", error);
     res.status(500).json({
       success: false,
-      message: 'Error on signup',
+      message: "Error on signup",
       error: error.message,
     });
   }
-}
-
+};
 
 export const LoginUserWithOTP = async (req, res) => {
   try {
@@ -2825,44 +2942,44 @@ export const LoginUserWithOTP = async (req, res) => {
     if (!phone) {
       return res.status(400).json({
         success: false,
-        message: 'Please fill all fields',
+        message: "Please fill all fields",
       });
     }
 
-    const existingUser = await userModel.findOne({ phone, status: '1' });
+    const existingUser = await userModel.findOne({ phone, status: "1" });
 
     if (existingUser) {
-
       // Hash the OTP
       const ecryptOTP = await bcrypt.hash(String(otp), 10);
 
-
       // block
-      console.log(otp)
+      console.log(otp);
       //   await sendLogOTP(phone, otp);
 
       return res.status(201).json({
         success: true,
-        message: 'User found',
-        existingUser: { _id: existingUser._id, username: existingUser.username, phone: existingUser.phone, email: existingUser.email },
+        message: "User found",
+        existingUser: {
+          _id: existingUser._id,
+          username: existingUser.username,
+          phone: existingUser.phone,
+          email: existingUser.email,
+        },
         token: existingUser.token,
         otp: ecryptOTP,
       });
-
     }
   } catch (error) {
-    console.error('Error on signup:', error);
+    console.error("Error on signup:", error);
     res.status(500).json({
       success: false,
-      message: 'Error on signup',
+      message: "Error on signup",
       error: error.message,
     });
   }
-}
-
+};
 
 export const LoginUserWithPass = async (req, res) => {
-
   try {
     const { phone, Gtoken, password } = req.body;
 
@@ -2872,10 +2989,10 @@ export const LoginUserWithPass = async (req, res) => {
     if (!phone || !password || !Gtoken) {
       return res.status(400).send({
         success: false,
-        message: 'please fill all fields'
-      })
+        message: "please fill all fields",
+      });
     }
-    const user = await userModel.findOne({ phone })
+    const user = await userModel.findOne({ phone });
 
     // password check
 
@@ -2883,7 +3000,7 @@ export const LoginUserWithPass = async (req, res) => {
     if (!isMatch) {
       return res.status(401).send({
         success: false,
-        message: 'password is not incorrect',
+        message: "password is not incorrect",
         user,
       });
     }
@@ -2892,27 +3009,26 @@ export const LoginUserWithPass = async (req, res) => {
 
     return res.status(200).json({
       success: true,
-      message: 'login sucesssfully with password',
-      existingUser: { _id: user._id, username: user.username, phone: user.phone, email: user.email },
+      message: "login sucesssfully with password",
+      existingUser: {
+        _id: user._id,
+        username: user.username,
+        phone: user.phone,
+        email: user.email,
+      },
       token: user.token,
       checkpass: true,
     });
-
-
   } catch (error) {
-    return res.status(500).send
-      ({
-        message: `error on login ${error}`,
-        sucesss: false,
-        error
-      })
+    return res.status(500).send({
+      message: `error on login ${error}`,
+      sucesss: false,
+      error,
+    });
   }
-
-}
-
+};
 
 export const LoginAndVerifyOTP = async (req, res) => {
-
   try {
     const { OTP, HASHOTP } = req.body;
 
@@ -2920,30 +3036,22 @@ export const LoginAndVerifyOTP = async (req, res) => {
 
     if (isMatch) {
       return res.status(200).json({
-        success: true
+        success: true,
       });
-
     } else {
       return res.status(400).json({
         success: false,
-        message: 'OTP Not Verified',
-
+        message: "OTP Not Verified",
       });
-
     }
-
-
   } catch (error) {
-    return res.status(500).send
-      ({
-        message: `error on login ${error}`,
-        sucesss: false,
-        error
-      })
+    return res.status(500).send({
+      message: `error on login ${error}`,
+      sucesss: false,
+      error,
+    });
   }
-
-}
-
+};
 
 export const updatePromoAdmin = async (req, res) => {
   try {
@@ -2952,7 +3060,10 @@ export const updatePromoAdmin = async (req, res) => {
     const { name, rate, type, status } = req.body;
 
     let updateFields = {
-      name, rate, type, status
+      name,
+      rate,
+      type,
+      status,
     };
 
     const Promo = await promoModel.findByIdAndUpdate(id, updateFields, {
@@ -2973,10 +3084,7 @@ export const updatePromoAdmin = async (req, res) => {
   }
 };
 
-
-
 export const AuthUserByID = async (req, res) => {
-
   try {
     const { id, token } = req.body;
 
@@ -2984,58 +3092,61 @@ export const AuthUserByID = async (req, res) => {
 
     if (existingUser) {
       if (existingUser.token === token) {
-
         return res.status(200).json({
           success: true,
-          message: 'login sucesssfully with password',
+          message: "login sucesssfully with password",
           existingUser: {
-            _id: existingUser._id, username: existingUser.username, phone: existingUser.phone, email: existingUser.email,
-            address: existingUser.address, pincode: existingUser.pincode, state: existingUser.state, verified: existingUser.verified,
+            _id: existingUser._id,
+            username: existingUser.username,
+            phone: existingUser.phone,
+            email: existingUser.email,
+            address: existingUser.address,
+            pincode: existingUser.pincode,
+            state: existingUser.state,
+            verified: existingUser.verified,
           },
         });
-
       } else {
         return res.status(401).send({
           success: false,
-          message: 'token is not incorrect',
+          message: "token is not incorrect",
         });
       }
     } else {
       return res.status(401).send({
         success: false,
-        message: 'user Not found',
+        message: "user Not found",
       });
     }
-
   } catch (error) {
-    return res.status(500).send
-      ({
-        message: `error on Auth ${error}`,
-        sucesss: false,
-        error
-      })
+    return res.status(500).send({
+      message: `error on Auth ${error}`,
+      sucesss: false,
+      error,
+    });
   }
-
-}
-
+};
 
 export const updateProfileUser = async (req, res) => {
   try {
     const { id } = req.params;
-    const { username, phone, state, email, pincode, address, password } = req.body;
+    const { username, phone, state, email, pincode, address, password } =
+      req.body;
 
     if (!password) {
-
-
       if (!username || !email || !pincode || !address || !state) {
         return res.status(400).json({
           success: false,
-          message: 'Please fill all fields',
+          message: "Please fill all fields",
         });
       }
 
       let updateFields = {
-        username, email, pincode, address, state
+        username,
+        email,
+        pincode,
+        address,
+        state,
       };
 
       await userModel.findByIdAndUpdate(id, updateFields, {
@@ -3046,12 +3157,11 @@ export const updateProfileUser = async (req, res) => {
         message: "Profile Updated!",
         success: true,
       });
-    }
-    else {
+    } else {
       const hashedPassword = await bcrypt.hash(password, 10);
 
       let updateFields = {
-        password: hashedPassword
+        password: hashedPassword,
       };
 
       const user = await userModel.findByIdAndUpdate(id, updateFields, {
@@ -3063,8 +3173,6 @@ export const updateProfileUser = async (req, res) => {
         success: true,
       });
     }
-
-
   } catch (error) {
     return res.status(400).json({
       message: `Error while updating Promo code: ${error}`,
@@ -3074,9 +3182,7 @@ export const updateProfileUser = async (req, res) => {
   }
 };
 
-
 export const contactEnquire = async (req, res) => {
-
   const { name, email, message } = req.body;
 
   // Configure nodemailer transporter
@@ -3087,60 +3193,57 @@ export const contactEnquire = async (req, res) => {
     secure: process.env.MAIL_ENCRYPTION, // Set to true if using SSL/TLS
     auth: {
       user: process.env.MAIL_USERNAME, // Update with your email address
-      pass: process.env.MAIL_PASSWORD,// Update with your email password
-    }
+      pass: process.env.MAIL_PASSWORD, // Update with your email password
+    },
   });
 
   // Email message
   const mailOptions = {
     from: process.env.MAIL_FROM_ADDRESS, // Update with your email address
     to: process.env.MAIL_TO_ADDRESS, // Update with your email address
-    subject: 'New Contact Us Form Submission',
-    text: `Name: ${name}\nEmail: ${email}\nMessage: ${message}`
+    subject: "New Contact Us Form Submission",
+    text: `Name: ${name}\nEmail: ${email}\nMessage: ${message}`,
   };
 
   // Send email
   transporter.sendMail(mailOptions, (error, info) => {
     if (error) {
       console.error(error);
-      res.status(500).send('Failed to send email');
+      res.status(500).send("Failed to send email");
     } else {
-      console.log('Email sent: ' + info.response);
-      res.status(200).send('Email sent successfully');
+      console.log("Email sent: " + info.response);
+      res.status(200).send("Email sent successfully");
     }
   });
-
 };
 
 export const getProductsByHSN = async (req, res) => {
-
   try {
-
     const { id } = req.params;
 
-    const products = await productModel.find({ hsn: id }).select('variations').exec();
+    const products = await productModel
+      .find({ hsn: id })
+      .select("variations")
+      .exec();
     if (!products) {
       return res.status(401).send({
         success: false,
-        message: 'Product not found',
+        message: "Product not found",
       });
     }
     return res.status(200).json({
       success: true,
-      message: 'Product found',
-      products
+      message: "Product found",
+      products,
     });
-
   } catch (error) {
-    return res.status(500).send
-      ({
-        message: `error on Auth ${error}`,
-        sucesss: false,
-        error
-      })
+    return res.status(500).send({
+      message: `error on Auth ${error}`,
+      sucesss: false,
+      error,
+    });
   }
-
-}
+};
 
 export const getProductsByFilterUser = async (req, res) => {
   try {
@@ -3163,12 +3266,9 @@ export const getProductsByFilterUser = async (req, res) => {
     console.error("Error fetching products:", error);
     res.status(500).json({ message: "Internal Server Error" });
   }
-}
+};
 
-
-
-
-// for cancel order 
+// for cancel order
 
 export const cancelOrderUser = async (req, res) => {
   try {
@@ -3176,7 +3276,7 @@ export const cancelOrderUser = async (req, res) => {
     const { comment, reason } = req.body;
 
     let updateFields = {
-      status: '0',
+      status: "0",
       comment,
       reason,
     };
@@ -3189,8 +3289,6 @@ export const cancelOrderUser = async (req, res) => {
       message: "Order Cancel!",
       success: true,
     });
-
-
   } catch (error) {
     return res.status(400).json({
       message: `Error while updating Rating: ${error}`,
