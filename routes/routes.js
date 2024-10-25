@@ -127,6 +127,7 @@ import {
   userOrdersViewController,
   getAllAttributeUser,
   getProductIdUser,
+  getProductIdUserBySlug,
   updateUserController,
   createOrderController,
   updateUserAndCreateOrderController,
@@ -273,7 +274,7 @@ router.post("/admin/import/allproducts/", importAllProAdmin);
 // Middleware function to check if the request is coming from an authorized domain
 function checkOrigin(req, res, next) {
   const allowedOrigins = [
-    "https://ynbhealthcare.com",
+    "http://localhost:3000",
     "https://admin.ynbhealthcare.com",
   ]; // Add your authorized domains here
   const origin = req.headers.origin;
@@ -342,6 +343,7 @@ router.get("/validatetoken/:id", checkOrigin, userTokenController);
 router.get("/user-blogs/:id", checkOrigin, userBlogsController);
 
 router.get("/user-product/:id", checkOrigin, getProductIdUser);
+router.get("/user-product-slug/:slug", checkOrigin, getProductIdUserBySlug);
 router.get("/all-attribute", checkOrigin, getAllAttributeUser);
 
 // home settings user

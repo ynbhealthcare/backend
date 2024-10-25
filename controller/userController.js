@@ -750,6 +750,30 @@ export const getProductIdUser = async (req, res) => {
   }
 };
 
+export const getProductIdUserBySlug = async (req, res) => {
+  try {
+    const { slug } = req.params;
+    const Product = await productModel.findOne({ slug: slug });
+    if (!Product) {
+      return res.status(200).send({
+        message: "product Not Found By Id",
+        success: false,
+      });
+    }
+    return res.status(200).json({
+      message: "fetch Single product!",
+      success: true,
+      Product,
+    });
+  } catch (error) {
+    return res.status(400).json({
+      message: `Error while get product: ${error}`,
+      success: false,
+      error,
+    });
+  }
+};
+
 // get home data
 
 export const getHomeData = async (req, res) => {
@@ -1966,7 +1990,7 @@ export const GetAllCategoriesBySlugController = async (req, res) => {
     const MainCat = await categoryModel
       .findOne({ slug: parentSlug, status: "true" })
       .select(
-        "title metaTitle metaDescription metaKeywords image description specifications slide_head slide_para"
+        "title metaTitle metaDescription metaKeywords image description specifications slide_head slide_para filter"
       )
       .lean();
 
