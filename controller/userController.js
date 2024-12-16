@@ -2035,7 +2035,7 @@ export const GetAllCategoriesBySlugController = async (req, res) => {
     // Fetch products based on filters with pagination
     const products = await productModel
       .find(filters)
-      .select("_id title regularPrice salePrice pImage variations")
+      .select("_id title regularPrice salePrice pImage variations slug")
       .skip(skip)
       .limit(perPage)
       .lean();
@@ -2043,7 +2043,7 @@ export const GetAllCategoriesBySlugController = async (req, res) => {
     const Procat = { Category: parentId, status: "true" }; // Add status filter for products
     const productsFilter = await productModel
       .find(Procat)
-      .select("_id regularPrice salePrice variations")
+      .select("_id regularPrice salePrice variations slug")
       .lean();
 
     const proLength = products.length;
