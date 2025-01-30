@@ -1,4 +1,5 @@
 import mongoose from "mongoose";
+import bcrypt from "bcrypt";
 
 const userSchema = mongoose.Schema({
   username: {
@@ -16,16 +17,21 @@ const userSchema = mongoose.Schema({
   },
   password: {
     type: String,
-  }, token: {
-    type: String,
-    required: [true, "token is required"],
   },
+  type: {
+    type: Number,
+  },
+   token: {
+    type: String,
+   },
   pincode: {
     type: String,
   },
   state: {
     type: String,
   },statename: {
+    type: String,
+  },city: {
     type: String,
   },
   address: {
@@ -44,11 +50,38 @@ const userSchema = mongoose.Schema({
   verified:{
     type: Number,
     default: 0
-  }
+  }, profile: {
+    type: String,
+    default: "",
+  },
 },
   { timestamps: true }
 );
 
-const userModel = mongoose.model('User', userSchema);
+const userModel = mongoose.model("User", userSchema);
+
+// Check if data exists, if not, create a new document with default values
+const checkOrCreateDefaultData = async () => {
+  try {
+    const result = await userModel.findOne({ type: 0 });
+    if (!result) {
+      const hashedPassword = await bcrypt.hash("admin@987", 10);
+      const admin = new userModel({
+        username: "Administrator",
+        email: "admin@gmail.com",
+        phone: "9876543210",
+        password: hashedPassword,
+        token: hashedPassword,
+        type: "0",
+      });
+      await admin.save();
+      console.log("Admin created successfully.");
+    }
+  } catch (error) {
+    console.error("Error checking or creating admin:", error);
+  }
+};
+
+checkOrCreateDefaultData();
 
 export default userModel;

@@ -27,6 +27,11 @@ import CryptoJS from "crypto-js"; // Import the crypto module
 import axios from "axios";
 import { cpSync } from "fs";
 import enquireModel from "../models/enquireModel.js";
+import planModel from "../models/planModel.js";
+import planCategoryModel from "../models/PlanCategoryModel.js";
+import buyPlanModel from "../models/buyPlanModel.js";
+
+
 
 dotenv.config();
 
@@ -339,6 +344,82 @@ export const Userlogin = async (req, res) => {
     });
   }
 };
+
+
+export const SignupUserType = async (req, res) => {
+  try {
+    const {
+      type,
+      username,
+      phone,
+      email,
+      state,
+      statename,
+      country,
+      password,
+      pincode,
+      Gender,
+      DOB,
+      address,
+      city,
+    } = req.body;
+
+ 
+    // const {
+    //   profile,
+
+    //   AadhaarFront,
+    //   AadhaarBack,
+    // } = req.files;
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    // Calculate the auto-increment ID
+    const lastUser = await userModel.findOne().sort({ _id: -1 }).limit(1);
+    let userId;
+
+    if (lastUser) {
+      // Convert lastOrder.orderId to a number before adding 1
+      const lastUserId = parseInt(lastUser.userId || 1);
+      userId = lastUserId + 1;
+    } else {
+      userId = 1;
+    }
+
+    const newUser = new userModel({
+      type,
+      username,
+      phone,
+      email,
+      password: hashedPassword,
+      pincode,
+      gender: Gender,
+      DOB,
+      address,
+      state,
+      statename,
+      country,
+      city,
+       
+      userId,
+    });
+
+    await newUser.save();
+    res.status(201).json({
+      success: true,
+      message: "User signed up successfully",
+    });
+  } catch (error) {
+    console.log(error);
+    return res.status(500).send({
+      message: `Error occurred during user signup ${error}`,
+      success: false,
+      error,
+    });
+  }
+};
+
+
 
 export const updateUserController = async (req, res) => {
   try {
@@ -677,7 +758,7 @@ export const UsergetAllProducts = async (req, res) => {
 export const UsergetAllHomeProducts = async (req, res) => {
   try {
     const products = await productModel.find(
-      { status: "true" },
+      {},
       "_id title pImage regularPrice salePrice stock slug variant_products variations"
     );
 
@@ -730,30 +811,6 @@ export const getProductIdUser = async (req, res) => {
   try {
     const { id } = req.params;
     const Product = await productModel.findById(id);
-    if (!Product) {
-      return res.status(200).send({
-        message: "product Not Found By Id",
-        success: false,
-      });
-    }
-    return res.status(200).json({
-      message: "fetch Single product!",
-      success: true,
-      Product,
-    });
-  } catch (error) {
-    return res.status(400).json({
-      message: `Error while get product: ${error}`,
-      success: false,
-      error,
-    });
-  }
-};
-
-export const getProductIdUserBySlug = async (req, res) => {
-  try {
-    const { slug } = req.params;
-    const Product = await productModel.findOne({ slug: slug });
     if (!Product) {
       return res.status(200).send({
         message: "product Not Found By Id",
@@ -1764,6 +1821,7 @@ export const GetAllCategoriesByParentIdController_old = async (req, res) => {
   }
 };
 
+
 export const GetAllCategoriesByParentIdController = async (req, res) => {
   try {
     const { parentId } = req.params;
@@ -1850,128 +1908,7 @@ export const GetAllCategoriesByParentIdController = async (req, res) => {
   }
 };
 
-// export const GetAllCategoriesBySlugController = async (req, res) => {
-//   try {
-//     const { parentSlug } = req.params;
-//     const { filter, price, page = 1, perPage = 2 } = req.query; // Extract filter, price, page, and perPage query parameters
 
-//     // Check if parentId is undefined or null
-//     if (!parentSlug) {
-//       return res.status(400).json({
-//         success: false,
-//         message: "Please provide a valid parent ID.",
-//       });
-//     }
-
-//     // Call the recursive function to get all categories
-//     const MainCat = await categoryModel
-//       .findOne({ slug: parentSlug, status: "true" })
-//       .select(
-//         "title metaTitle metaDescription metaKeywords image description specifications slide_head slide_para"
-//       )
-//       .lean();
-
-//     const parentId = MainCat._id;
-//     console.log(parentId, parentSlug);
-
-//     const categories = await getAllCategoriesByParentId(parentId);
-
-//     const filters = { Category: parentId }; // Initialize filters with parent category filter
-
-//     if (filter) {
-//       // Parse the filter parameter
-//       const filterParams = JSON.parse(filter);
-
-//       // Iterate through each parameter in the filter
-//       Object.keys(filterParams).forEach((param) => {
-//         // Split parameter values by comma if present
-//         const paramValues = filterParams[param].split(",");
-//         const variationsKey = `variations.${param}.${param}`;
-
-//         // Handle multiple values for the parameter
-//         filters[variationsKey] = { $in: paramValues };
-//       });
-//     }
-
-//     // Check if price parameter is provided and not blank
-//     if (price && price.trim() !== "") {
-//       const priceRanges = price.split(","); // Split multiple price ranges by comma
-//       const priceFilters = priceRanges.map((range) => {
-//         const [minPrice, maxPrice] = range.split("-"); // Split each range into min and max prices
-//         return {
-//           salePrice: { $gte: parseInt(minPrice), $lte: parseInt(maxPrice) },
-//         };
-//       });
-
-//       // Add price filters to the existing filters
-//       filters.$or = priceFilters;
-//     }
-
-//     // Calculate skip value for pagination
-//     const skip = (page - 1) * perPage;
-
-//     // Fetch products based on filters with pagination
-//     const products = await productModel
-//       .find(filters)
-//       .select("_id title regularPrice salePrice pImage variations")
-//       .skip(skip)
-//       .limit(perPage)
-//       .lean();
-
-//     const Procat = { Category: parentId }; // Initialize filters with parent category filter
-//     const productsFilter = await productModel
-//       .find(Procat)
-//       .select("_id regularPrice salePrice variations")
-//       .lean();
-
-//     const proLength = products.length;
-//     return res.status(200).json({
-//       success: true,
-//       categories,
-//       MainCat,
-//       products,
-//       proLength,
-//       productsFilter,
-//     });
-//   } catch (error) {
-//     console.error("Error in GetAllCategoriesByParentIdController:", error);
-//     return res.status(500).json({
-//       success: false,
-//       message: "Internal Server Error",
-//     });
-//   }
-// };
-
-// export const getAllCategoriesByParentId = async (parentId) => {
-//   try {
-//     const categories = await categoryModel.find({ parent: parentId }).lean();
-
-//     if (!categories || categories.length === 0) {
-//       return [];
-//     }
-
-//     const result = [];
-
-//     for (const category of categories) {
-//       const { _id, title, image, slug /* other fields */ } = category;
-
-//       const categoryData = {
-//         _id,
-//         title,
-//         image,
-//         subcategories: await getAllCategoriesByParentId(_id), // Recursive call
-//         slug,
-//       };
-
-//       result.push(categoryData);
-//     }
-
-//     return result;
-//   } catch (error) {
-//     console.error("Error while fetching categories:", error);
-//     throw error;
-//   }
-// };
 
 export const GetAllCategoriesBySlugController = async (req, res) => {
   try {
@@ -2066,9 +2003,7 @@ export const GetAllCategoriesBySlugController = async (req, res) => {
 
 export const getAllCategoriesByParentId = async (parentId) => {
   try {
-    const categories = await categoryModel
-      .find({ parent: parentId, status: "true" })
-      .lean(); // Check status
+    const categories = await categoryModel.find({ parent: parentId }).lean();
 
     if (!categories || categories.length === 0) {
       return [];
@@ -2077,7 +2012,7 @@ export const getAllCategoriesByParentId = async (parentId) => {
     const result = [];
 
     for (const category of categories) {
-      const { _id, title, image, slug } = category;
+      const { _id, title, image, slug /* other fields */ } = category;
 
       const categoryData = {
         _id,
@@ -2369,6 +2304,32 @@ export const AddWishListByUser = async (req, res) => {
     });
   }
 };
+
+
+export const getProductIdUserBySlug = async (req, res) => {
+  try {
+    const { slug } = req.params;
+    const Product = await productModel.findOne({ slug: slug });
+    if (!Product) {
+      return res.status(200).send({
+        message: "product Not Found By Id",
+        success: false,
+      });
+    }
+    return res.status(200).json({
+      message: "fetch Single product!",
+      success: true,
+      Product,
+    });
+  } catch (error) {
+    return res.status(400).json({
+      message: `Error while get product: ${error}`,
+      success: false,
+      error,
+    });
+  }
+};
+
 
 export const ViewWishListByUser = async (req, res) => {
   try {
@@ -3108,6 +3069,1296 @@ export const updatePromoAdmin = async (req, res) => {
   }
 };
 
+
+
+const cityData = {
+  "Andaman and Nicobar Islands": ["Port Blair"],
+  Haryana: [
+    "Faridabad",
+    "Gurgaon",
+    "Hisar",
+    "Rohtak",
+    "Panipat",
+    "Karnal",
+    "Sonipat",
+    "Yamunanagar",
+    "Panchkula",
+    "Bhiwani",
+    "Bahadurgarh",
+    "Jind",
+    "Sirsa",
+    "Thanesar",
+    "Kaithal",
+    "Palwal",
+    "Rewari",
+    "Hansi",
+    "Narnaul",
+    "Fatehabad",
+    "Gohana",
+    "Tohana",
+    "Narwana",
+    "Mandi Dabwali",
+    "Charkhi Dadri",
+    "Shahbad",
+    "Pehowa",
+    "Samalkha",
+    "Pinjore",
+    "Ladwa",
+    "Sohna",
+    "Safidon",
+    "Taraori",
+    "Mahendragarh",
+    "Ratia",
+    "Rania",
+    "Sarsod",
+  ],
+  "Tamil Nadu": [
+    "Chennai",
+    "Coimbatore",
+    "Madurai",
+    "Tiruchirappalli",
+    "Salem",
+    "Tirunelveli",
+    "Tiruppur",
+    "Ranipet",
+    "Nagercoil",
+    "Thanjavur",
+    "Vellore",
+    "Kancheepuram",
+    "Erode",
+    "Tiruvannamalai",
+    "Pollachi",
+    "Rajapalayam",
+    "Sivakasi",
+    "Pudukkottai",
+    "Neyveli (TS)",
+    "Nagapattinam",
+    "Viluppuram",
+    "Tiruchengode",
+    "Vaniyambadi",
+    "Theni Allinagaram",
+    "Udhagamandalam",
+    "Aruppukkottai",
+    "Paramakudi",
+    "Arakkonam",
+    "Virudhachalam",
+    "Srivilliputhur",
+    "Tindivanam",
+    "Virudhunagar",
+    "Karur",
+    "Valparai",
+    "Sankarankovil",
+    "Tenkasi",
+    "Palani",
+    "Pattukkottai",
+    "Tirupathur",
+    "Ramanathapuram",
+    "Udumalaipettai",
+    "Gobichettipalayam",
+    "Thiruvarur",
+    "Thiruvallur",
+    "Panruti",
+    "Namakkal",
+    "Thirumangalam",
+    "Vikramasingapuram",
+    "Nellikuppam",
+    "Rasipuram",
+    "Tiruttani",
+    "Nandivaram-Guduvancheri",
+    "Periyakulam",
+    "Pernampattu",
+    "Vellakoil",
+    "Sivaganga",
+    "Vadalur",
+    "Rameshwaram",
+    "Tiruvethipuram",
+    "Perambalur",
+    "Usilampatti",
+    "Vedaranyam",
+    "Sathyamangalam",
+    "Puliyankudi",
+    "Nanjikottai",
+    "Thuraiyur",
+    "Sirkali",
+    "Tiruchendur",
+    "Periyasemur",
+    "Sattur",
+    "Vandavasi",
+    "Tharamangalam",
+    "Tirukkoyilur",
+    "Oddanchatram",
+    "Palladam",
+    "Vadakkuvalliyur",
+    "Tirukalukundram",
+    "Uthamapalayam",
+    "Surandai",
+    "Sankari",
+    "Shenkottai",
+    "Vadipatti",
+    "Sholingur",
+    "Tirupathur",
+    "Manachanallur",
+    "Viswanatham",
+    "Polur",
+    "Panagudi",
+    "Uthiramerur",
+    "Thiruthuraipoondi",
+    "Pallapatti",
+    "Ponneri",
+    "Lalgudi",
+    "Natham",
+    "Unnamalaikadai",
+    "P.N.Patti",
+    "Tharangambadi",
+    "Tittakudi",
+    "Pacode",
+    "O' Valley",
+    "Suriyampalayam",
+    "Sholavandan",
+    "Thammampatti",
+    "Namagiripettai",
+    "Peravurani",
+    "Parangipettai",
+    "Pudupattinam",
+    "Pallikonda",
+    "Sivagiri",
+    "Punjaipugalur",
+    "Padmanabhapuram",
+    "Thirupuvanam",
+  ],
+  "Madhya Pradesh": [
+    "Indore",
+    "Bhopal",
+    "Jabalpur",
+    "Gwalior",
+    "Ujjain",
+    "Sagar",
+    "Ratlam",
+    "Satna",
+    "Murwara (Katni)",
+    "Morena",
+    "Singrauli",
+    "Rewa",
+    "Vidisha",
+    "Ganjbasoda",
+    "Shivpuri",
+    "Mandsaur",
+    "Neemuch",
+    "Nagda",
+    "Itarsi",
+    "Sarni",
+    "Sehore",
+    "Mhow Cantonment",
+    "Seoni",
+    "Balaghat",
+    "Ashok Nagar",
+    "Tikamgarh",
+    "Shahdol",
+    "Pithampur",
+    "Alirajpur",
+    "Mandla",
+    "Sheopur",
+    "Shajapur",
+    "Panna",
+    "Raghogarh-Vijaypur",
+    "Sendhwa",
+    "Sidhi",
+    "Pipariya",
+    "Shujalpur",
+    "Sironj",
+    "Pandhurna",
+    "Nowgong",
+    "Mandideep",
+    "Sihora",
+    "Raisen",
+    "Lahar",
+    "Maihar",
+    "Sanawad",
+    "Sabalgarh",
+    "Umaria",
+    "Porsa",
+    "Narsinghgarh",
+    "Malaj Khand",
+    "Sarangpur",
+    "Mundi",
+    "Nepanagar",
+    "Pasan",
+    "Mahidpur",
+    "Seoni-Malwa",
+    "Rehli",
+    "Manawar",
+    "Rahatgarh",
+    "Panagar",
+    "Wara Seoni",
+    "Tarana",
+    "Sausar",
+    "Rajgarh",
+    "Niwari",
+    "Mauganj",
+    "Manasa",
+    "Nainpur",
+    "Prithvipur",
+    "Sohagpur",
+    "Nowrozabad (Khodargama)",
+    "Shamgarh",
+    "Maharajpur",
+    "Multai",
+    "Pali",
+    "Pachore",
+    "Rau",
+    "Mhowgaon",
+    "Vijaypur",
+    "Narsinghgarh",
+  ],
+  Jharkhand: [
+    "Dhanbad",
+    "Ranchi",
+    "Jamshedpur",
+    "Bokaro Steel City",
+    "Deoghar",
+    "Phusro",
+    "Adityapur",
+    "Hazaribag",
+    "Giridih",
+    "Ramgarh",
+    "Jhumri Tilaiya",
+    "Saunda",
+    "Sahibganj",
+    "Medininagar (Daltonganj)",
+    "Chaibasa",
+    "Chatra",
+    "Gumia",
+    "Dumka",
+    "Madhupur",
+    "Chirkunda",
+    "Pakaur",
+    "Simdega",
+    "Musabani",
+    "Mihijam",
+    "Patratu",
+    "Lohardaga",
+    "Tenu dam-cum-Kathhara",
+  ],
+  Mizoram: ["Aizawl", "Lunglei", "Saiha"],
+  Nagaland: [
+    "Dimapur",
+    "Kohima",
+    "Zunheboto",
+    "Tuensang",
+    "Wokha",
+    "Mokokchung",
+  ],
+  "Himachal Pradesh": [
+    "Shimla",
+    "Mandi",
+    "Solan",
+    "Nahan",
+    "Sundarnagar",
+    "Palampur",
+    "Kullu",
+  ],
+  Tripura: [
+    "Agartala",
+    "Udaipur",
+    "Dharmanagar",
+    "Pratapgarh",
+    "Kailasahar",
+    "Belonia",
+    "Khowai",
+  ],
+  "Andhra Pradesh": [
+    "Visakhapatnam",
+    "Vijayawada",
+    "Guntur",
+    "Nellore",
+    "Kurnool",
+    "Rajahmundry",
+    "Kakinada",
+    "Tirupati",
+    "Anantapur",
+    "Kadapa",
+    "Vizianagaram",
+    "Eluru",
+    "Ongole",
+    "Nandyal",
+    "Machilipatnam",
+    "Adoni",
+    "Tenali",
+    "Chittoor",
+    "Hindupur",
+    "Proddatur",
+    "Bhimavaram",
+    "Madanapalle",
+    "Guntakal",
+    "Dharmavaram",
+    "Gudivada",
+    "Srikakulam",
+    "Narasaraopet",
+    "Rajampet",
+    "Tadpatri",
+    "Tadepalligudem",
+    "Chilakaluripet",
+    "Yemmiganur",
+    "Kadiri",
+    "Chirala",
+    "Anakapalle",
+    "Kavali",
+    "Palacole",
+    "Sullurpeta",
+    "Tanuku",
+    "Rayachoti",
+    "Srikalahasti",
+    "Bapatla",
+    "Naidupet",
+    "Nagari",
+    "Gudur",
+    "Vinukonda",
+    "Narasapuram",
+    "Nuzvid",
+    "Markapur",
+    "Ponnur",
+    "Kandukur",
+    "Bobbili",
+    "Rayadurg",
+    "Samalkot",
+    "Jaggaiahpet",
+    "Tuni",
+    "Amalapuram",
+    "Bheemunipatnam",
+    "Venkatagiri",
+    "Sattenapalle",
+    "Pithapuram",
+    "Palasa Kasibugga",
+    "Parvathipuram",
+    "Macherla",
+    "Gooty",
+    "Salur",
+    "Mandapeta",
+    "Jammalamadugu",
+    "Peddapuram",
+    "Punganur",
+    "Nidadavole",
+    "Repalle",
+    "Ramachandrapuram",
+    "Kovvur",
+    "Tiruvuru",
+    "Uravakonda",
+    "Narsipatnam",
+    "Yerraguntla",
+    "Pedana",
+    "Puttur",
+    "Renigunta",
+    "Rajam",
+    "Srisailam Project (Right Flank Colony) Township",
+  ],
+  Punjab: [
+    "Ludhiana",
+    "Patiala",
+    "Amritsar",
+    "Jalandhar",
+    "Bathinda",
+    "Pathankot",
+    "Hoshiarpur",
+    "Batala",
+    "Moga",
+    "Malerkotla",
+    "Khanna",
+    "Mohali",
+    "Barnala",
+    "Firozpur",
+    "Phagwara",
+    "Kapurthala",
+    "Zirakpur",
+    "Kot Kapura",
+    "Faridkot",
+    "Muktsar",
+    "Rajpura",
+    "Sangrur",
+    "Fazilka",
+    "Gurdaspur",
+    "Kharar",
+    "Gobindgarh",
+    "Mansa",
+    "Malout",
+    "Nabha",
+    "Tarn Taran",
+    "Jagraon",
+    "Sunam",
+    "Dhuri",
+    "Firozpur Cantt.",
+    "Sirhind Fatehgarh Sahib",
+    "Rupnagar",
+    "Jalandhar Cantt.",
+    "Samana",
+    "Nawanshahr",
+    "Rampura Phul",
+    "Nangal",
+    "Nakodar",
+    "Zira",
+    "Patti",
+    "Raikot",
+    "Longowal",
+    "Urmar Tanda",
+    "Morinda, India",
+    "Phillaur",
+    "Pattran",
+    "Qadian",
+    "Sujanpur",
+    "Mukerian",
+    "Talwara",
+  ],
+  Chandigarh: ["Chandigarh"],
+  Rajasthan: [
+    "Jaipur",
+    "Jodhpur",
+    "Bikaner",
+    "Udaipur",
+    "Ajmer",
+    "Bhilwara",
+    "Alwar",
+    "Bharatpur",
+    "Pali",
+    "Barmer",
+    "Sikar",
+    "Tonk",
+    "Sadulpur",
+    "Sawai Madhopur",
+    "Nagaur",
+    "Makrana",
+    "Sujangarh",
+    "Sardarshahar",
+    "Ladnu",
+    "Ratangarh",
+    "Nokha",
+    "Nimbahera",
+    "Suratgarh",
+    "Rajsamand",
+    "Lachhmangarh",
+    "Rajgarh (Churu)",
+    "Nasirabad",
+    "Nohar",
+    "Phalodi",
+    "Nathdwara",
+    "Pilani",
+    "Merta City",
+    "Sojat",
+    "Neem-Ka-Thana",
+    "Sirohi",
+    "Pratapgarh",
+    "Rawatbhata",
+    "Sangaria",
+    "Lalsot",
+    "Pilibanga",
+    "Pipar City",
+    "Taranagar",
+    "Vijainagar, Ajmer",
+    "Sumerpur",
+    "Sagwara",
+    "Ramganj Mandi",
+    "Lakheri",
+    "Udaipurwati",
+    "Losal",
+    "Sri Madhopur",
+    "Ramngarh",
+    "Rawatsar",
+    "Rajakhera",
+    "Shahpura",
+    "Shahpura",
+    "Raisinghnagar",
+    "Malpura",
+    "Nadbai",
+    "Sanchore",
+    "Nagar",
+    "Rajgarh (Alwar)",
+    "Sheoganj",
+    "Sadri",
+    "Todaraisingh",
+    "Todabhim",
+    "Reengus",
+    "Rajaldesar",
+    "Sadulshahar",
+    "Sambhar",
+    "Prantij",
+    "Mount Abu",
+    "Mangrol",
+    "Phulera",
+    "Mandawa",
+    "Pindwara",
+    "Mandalgarh",
+    "Takhatgarh",
+  ],
+  Assam: [
+    "Guwahati",
+    "Silchar",
+    "Dibrugarh",
+    "Nagaon",
+    "Tinsukia",
+    "Jorhat",
+    "Bongaigaon City",
+    "Dhubri",
+    "Diphu",
+    "North Lakhimpur",
+    "Tezpur",
+    "Karimganj",
+    "Sibsagar",
+    "Goalpara",
+    "Barpeta",
+    "Lanka",
+    "Lumding",
+    "Mankachar",
+    "Nalbari",
+    "Rangia",
+    "Margherita",
+    "Mangaldoi",
+    "Silapathar",
+    "Mariani",
+    "Marigaon",
+  ],
+  Odisha: [
+    "Bhubaneswar",
+    "Cuttack",
+    "Raurkela",
+    "Brahmapur",
+    "Sambalpur",
+    "Puri",
+    "Baleshwar Town",
+    "Baripada Town",
+    "Bhadrak",
+    "Balangir",
+    "Jharsuguda",
+    "Bargarh",
+    "Paradip",
+    "Bhawanipatna",
+    "Dhenkanal",
+    "Barbil",
+    "Kendujhar",
+    "Sunabeda",
+    "Rayagada",
+    "Jatani",
+    "Byasanagar",
+    "Kendrapara",
+    "Rajagangapur",
+    "Parlakhemundi",
+    "Talcher",
+    "Sundargarh",
+    "Phulabani",
+    "Pattamundai",
+    "Titlagarh",
+    "Nabarangapur",
+    "Soro",
+    "Malkangiri",
+    "Rairangpur",
+    "Tarbha",
+  ],
+  Chhattisgarh: [
+    "Raipur",
+    "Bhilai Nagar",
+    "Korba",
+    "Bilaspur",
+    "Durg",
+    "Rajnandgaon",
+    "Jagdalpur",
+    "Raigarh",
+    "Ambikapur",
+    "Mahasamund",
+    "Dhamtari",
+    "Chirmiri",
+    "Bhatapara",
+    "Dalli-Rajhara",
+    "Naila Janjgir",
+    "Tilda Newra",
+    "Mungeli",
+    "Manendragarh",
+    "Sakti",
+  ],
+  "Jammu and Kashmir": [
+    "Srinagar",
+    "Jammu",
+    "Baramula",
+    "Anantnag",
+    "Sopore",
+    "KathUrban Agglomeration",
+    "Rajauri",
+    "Punch",
+    "Udhampur",
+  ],
+  Karnataka: [
+    "Bengaluru",
+    "Hubli-Dharwad",
+    "Belagavi",
+    "Mangaluru",
+    "Davanagere",
+    "Ballari",
+    "Mysore",
+    "Tumkur",
+    "Shivamogga",
+    "Raayachuru",
+    "Robertson Pet",
+    "Kolar",
+    "Mandya",
+    "Udupi",
+    "Chikkamagaluru",
+    "Karwar",
+    "Ranebennuru",
+    "Ranibennur",
+    "Ramanagaram",
+    "Gokak",
+    "Yadgir",
+    "Rabkavi Banhatti",
+    "Shahabad",
+    "Sirsi",
+    "Sindhnur",
+    "Tiptur",
+    "Arsikere",
+    "Nanjangud",
+    "Sagara",
+    "Sira",
+    "Puttur",
+    "Athni",
+    "Mulbagal",
+    "Surapura",
+    "Siruguppa",
+    "Mudhol",
+    "Sidlaghatta",
+    "Shahpur",
+    "Saundatti-Yellamma",
+    "Wadi",
+    "Manvi",
+    "Nelamangala",
+    "Lakshmeshwar",
+    "Ramdurg",
+    "Nargund",
+    "Tarikere",
+    "Malavalli",
+    "Savanur",
+    "Lingsugur",
+    "Vijayapura",
+    "Sankeshwara",
+    "Madikeri",
+    "Talikota",
+    "Sedam",
+    "Shikaripur",
+    "Mahalingapura",
+    "Mudalagi",
+    "Muddebihal",
+    "Pavagada",
+    "Malur",
+    "Sindhagi",
+    "Sanduru",
+    "Afzalpur",
+    "Maddur",
+    "Madhugiri",
+    "Tekkalakote",
+    "Terdal",
+    "Mudabidri",
+    "Magadi",
+    "Navalgund",
+    "Shiggaon",
+    "Shrirangapattana",
+    "Sindagi",
+    "Sakaleshapura",
+    "Srinivaspur",
+    "Ron",
+    "Mundargi",
+    "Sadalagi",
+    "Piriyapatna",
+    "Adyar",
+  ],
+  Manipur: ["Imphal", "Thoubal", "Lilong", "Mayang Imphal"],
+  Kerala: [
+    "Thiruvananthapuram",
+    "Kochi",
+    "Kozhikode",
+    "Kollam",
+    "Thrissur",
+    "Palakkad",
+    "Alappuzha",
+    "Malappuram",
+    "Ponnani",
+    "Vatakara",
+    "Kanhangad",
+    "Taliparamba",
+    "Koyilandy",
+    "Neyyattinkara",
+    "Kayamkulam",
+    "Nedumangad",
+    "Kannur",
+    "Tirur",
+    "Kottayam",
+    "Kasaragod",
+    "Kunnamkulam",
+    "Ottappalam",
+    "Thiruvalla",
+    "Thodupuzha",
+    "Chalakudy",
+    "Changanassery",
+    "Punalur",
+    "Nilambur",
+    "Cherthala",
+    "Perinthalmanna",
+    "Mattannur",
+    "Shoranur",
+    "Varkala",
+    "Paravoor",
+    "Pathanamthitta",
+    "Peringathur",
+    "Attingal",
+    "Kodungallur",
+    "Pappinisseri",
+    "Chittur-Thathamangalam",
+    "Muvattupuzha",
+    "Adoor",
+    "Mavelikkara",
+    "Mavoor",
+    "Perumbavoor",
+    "Vaikom",
+    "Palai",
+    "Panniyannur",
+    "Guruvayoor",
+    "Puthuppally",
+    "Panamattom",
+  ],
+  Delhi: ["Delhi", "New Delhi"],
+  "Dadra and Nagar Haveli": ["Silvassa"],
+  Puducherry: ["Pondicherry", "Karaikal", "Yanam", "Mahe"],
+  Uttarakhand: [
+    "Dehradun",
+    "Hardwar",
+    "Haldwani-cum-Kathgodam",
+    "Srinagar",
+    "Kashipur",
+    "Roorkee",
+    "Rudrapur",
+    "Rishikesh",
+    "Ramnagar",
+    "Pithoragarh",
+    "Manglaur",
+    "Nainital",
+    "Mussoorie",
+    "Tehri",
+    "Pauri",
+    "Nagla",
+    "Sitarganj",
+    "Bageshwar",
+  ],
+  "Uttar Pradesh": [
+    "Lucknow",
+    "Kanpur",
+    "Firozabad",
+    "Agra",
+    "Meerut",
+    "Varanasi",
+    "Allahabad",
+    "Amroha",
+    "Moradabad",
+    "Aligarh",
+    "Saharanpur",
+    "Noida",
+    "Loni",
+    "Jhansi",
+    "Shahjahanpur",
+    "Rampur",
+    "Modinagar",
+    "Hapur",
+    "Etawah",
+    "Sambhal",
+    "Orai",
+    "Bahraich",
+    "Unnao",
+    "Rae Bareli",
+    "Lakhimpur",
+    "Sitapur",
+    "Lalitpur",
+    "Pilibhit",
+    "Chandausi",
+    "Hardoi ",
+    "Azamgarh",
+    "Khair",
+    "Sultanpur",
+    "Tanda",
+    "Nagina",
+    "Shamli",
+    "Najibabad",
+    "Shikohabad",
+    "Sikandrabad",
+    "Shahabad, Hardoi",
+    "Pilkhuwa",
+    "Renukoot",
+    "Vrindavan",
+    "Ujhani",
+    "Laharpur",
+    "Tilhar",
+    "Sahaswan",
+    "Rath",
+    "Sherkot",
+    "Kalpi",
+    "Tundla",
+    "Sandila",
+    "Nanpara",
+    "Sardhana",
+    "Nehtaur",
+    "Seohara",
+    "Padrauna",
+    "Mathura",
+    "Thakurdwara",
+    "Nawabganj",
+    "Siana",
+    "Noorpur",
+    "Sikandra Rao",
+    "Puranpur",
+    "Rudauli",
+    "Thana Bhawan",
+    "Palia Kalan",
+    "Zaidpur",
+    "Nautanwa",
+    "Zamania",
+    "Shikarpur, Bulandshahr",
+    "Naugawan Sadat",
+    "Fatehpur Sikri",
+    "Shahabad, Rampur",
+    "Robertsganj",
+    "Utraula",
+    "Sadabad",
+    "Rasra",
+    "Lar",
+    "Lal Gopalganj Nindaura",
+    "Sirsaganj",
+    "Pihani",
+    "Shamsabad, Agra",
+    "Rudrapur",
+    "Soron",
+    "SUrban Agglomerationr",
+    "Samdhan",
+    "Sahjanwa",
+    "Rampur Maniharan",
+    "Sumerpur",
+    "Shahganj",
+    "Tulsipur",
+    "Tirwaganj",
+    "PurqUrban Agglomerationzi",
+    "Shamsabad, Farrukhabad",
+    "Warhapur",
+    "Powayan",
+    "Sandi",
+    "Achhnera",
+    "Naraura",
+    "Nakur",
+    "Sahaspur",
+    "Safipur",
+    "Reoti",
+    "Sikanderpur",
+    "Saidpur",
+    "Sirsi",
+    "Purwa",
+    "Parasi",
+    "Lalganj",
+    "Phulpur",
+    "Shishgarh",
+    "Sahawar",
+    "Samthar",
+    "Pukhrayan",
+    "Obra",
+    "Niwai",
+    "Mirzapur",
+  ],
+  Bihar: [
+    "Patna",
+    "Gaya",
+    "Bhagalpur",
+    "Muzaffarpur",
+    "Darbhanga",
+    "Arrah",
+    "Begusarai",
+    "Chhapra",
+    "Katihar",
+    "Munger",
+    "Purnia",
+    "Saharsa",
+    "Sasaram",
+    "Hajipur",
+    "Dehri-on-Sone",
+    "Bettiah",
+    "Motihari",
+    "Bagaha",
+    "Siwan",
+    "Kishanganj",
+    "Jamalpur",
+    "Buxar",
+    "Jehanabad",
+    "Aurangabad",
+    "Lakhisarai",
+    "Nawada",
+    "Jamui",
+    "Sitamarhi",
+    "Araria",
+    "Gopalganj",
+    "Madhubani",
+    "Masaurhi",
+    "Samastipur",
+    "Mokameh",
+    "Supaul",
+    "Dumraon",
+    "Arwal",
+    "Forbesganj",
+    "BhabUrban Agglomeration",
+    "Narkatiaganj",
+    "Naugachhia",
+    "Madhepura",
+    "Sheikhpura",
+    "Sultanganj",
+    "Raxaul Bazar",
+    "Ramnagar",
+    "Mahnar Bazar",
+    "Warisaliganj",
+    "Revelganj",
+    "Rajgir",
+    "Sonepur",
+    "Sherghati",
+    "Sugauli",
+    "Makhdumpur",
+    "Maner",
+    "Rosera",
+    "Nokha",
+    "Piro",
+    "Rafiganj",
+    "Marhaura",
+    "Mirganj",
+    "Lalganj",
+    "Murliganj",
+    "Motipur",
+    "Manihari",
+    "Sheohar",
+    "Maharajganj",
+    "Silao",
+    "Barh",
+    "Asarganj",
+  ],
+  Gujarat: [
+    "Ahmedabad",
+    "Surat",
+    "Vadodara",
+    "Rajkot",
+    "Bhavnagar",
+    "Jamnagar",
+    "Nadiad",
+    "Porbandar",
+    "Anand",
+    "Morvi",
+    "Mahesana",
+    "Bharuch",
+    "Vapi",
+    "Navsari",
+    "Veraval",
+    "Bhuj",
+    "Godhra",
+    "Palanpur",
+    "Valsad",
+    "Patan",
+    "Deesa",
+    "Amreli",
+    "Anjar",
+    "Dhoraji",
+    "Khambhat",
+    "Mahuva",
+    "Keshod",
+    "Wadhwan",
+    "Ankleshwar",
+    "Savarkundla",
+    "Kadi",
+    "Visnagar",
+    "Upleta",
+    "Una",
+    "Sidhpur",
+    "Unjha",
+    "Mangrol",
+    "Viramgam",
+    "Modasa",
+    "Palitana",
+    "Petlad",
+    "Kapadvanj",
+    "Sihor",
+    "Wankaner",
+    "Limbdi",
+    "Mandvi",
+    "Thangadh",
+    "Vyara",
+    "Padra",
+    "Lunawada",
+    "Rajpipla",
+    "Vapi",
+    "Umreth",
+    "Sanand",
+    "Rajula",
+    "Radhanpur",
+    "Mahemdabad",
+    "Ranavav",
+    "Tharad",
+    "Mansa",
+    "Umbergaon",
+    "Talaja",
+    "Vadnagar",
+    "Manavadar",
+    "Salaya",
+    "Vijapur",
+    "Pardi",
+    "Rapar",
+    "Songadh",
+    "Lathi",
+    "Adalaj",
+    "Chhapra",
+    "Gandhinagar",
+  ],
+  Telangana: [
+    "Hyderabad",
+    "Warangal",
+    "Nizamabad",
+    "Karimnagar",
+    "Ramagundam",
+    "Khammam",
+    "Mahbubnagar",
+    "Mancherial",
+    "Adilabad",
+    "Suryapet",
+    "Jagtial",
+    "Miryalaguda",
+    "Nirmal",
+    "Kamareddy",
+    "Kothagudem",
+    "Bodhan",
+    "Palwancha",
+    "Mandamarri",
+    "Koratla",
+    "Sircilla",
+    "Tandur",
+    "Siddipet",
+    "Wanaparthy",
+    "Kagaznagar",
+    "Gadwal",
+    "Sangareddy",
+    "Bellampalle",
+    "Bhongir",
+    "Vikarabad",
+    "Jangaon",
+    "Bhadrachalam",
+    "Bhainsa",
+    "Farooqnagar",
+    "Medak",
+    "Narayanpet",
+    "Sadasivpet",
+    "Yellandu",
+    "Manuguru",
+    "Kyathampalle",
+    "Nagarkurnool",
+  ],
+  Meghalaya: ["Shillong", "Tura", "Nongstoin"],
+  "Himachal Praddesh": ["Manali"],
+  "Arunachal Pradesh": ["Naharlagun", "Pasighat"],
+  Maharashtra: [
+    "Mumbai",
+    "Pune",
+    "Nagpur",
+    "Thane",
+    "Nashik",
+    "Kalyan-Dombivali",
+    "Vasai-Virar",
+    "Solapur",
+    "Mira-Bhayandar",
+    "Bhiwandi",
+    "Amravati",
+    "Nanded-Waghala",
+    "Sangli",
+    "Malegaon",
+    "Akola",
+    "Latur",
+    "Dhule",
+    "Ahmednagar",
+    "Ichalkaranji",
+    "Parbhani",
+    "Panvel",
+    "Yavatmal",
+    "Achalpur",
+    "Osmanabad",
+    "Nandurbar",
+    "Satara",
+    "Wardha",
+    "Udgir",
+    "Aurangabad",
+    "Amalner",
+    "Akot",
+    "Pandharpur",
+    "Shrirampur",
+    "Parli",
+    "Washim",
+    "Ambejogai",
+    "Manmad",
+    "Ratnagiri",
+    "Uran Islampur",
+    "Pusad",
+    "Sangamner",
+    "Shirpur-Warwade",
+    "Malkapur",
+    "Wani",
+    "Lonavla",
+    "Talegaon Dabhade",
+    "Anjangaon",
+    "Umred",
+    "Palghar",
+    "Shegaon",
+    "Ozar",
+    "Phaltan",
+    "Yevla",
+    "Shahade",
+    "Vita",
+    "Umarkhed",
+    "Warora",
+    "Pachora",
+    "Tumsar",
+    "Manjlegaon",
+    "Sillod",
+    "Arvi",
+    "Nandura",
+    "Vaijapur",
+    "Wadgaon Road",
+    "Sailu",
+    "Murtijapur",
+    "Tasgaon",
+    "Mehkar",
+    "Yawal",
+    "Pulgaon",
+    "Nilanga",
+    "Wai",
+    "Umarga",
+    "Paithan",
+    "Rahuri",
+    "Nawapur",
+    "Tuljapur",
+    "Morshi",
+    "Purna",
+    "Satana",
+    "Pathri",
+    "Sinnar",
+    "Uchgaon",
+    "Uran",
+    "Pen",
+    "Karjat",
+    "Manwath",
+    "Partur",
+    "Sangole",
+    "Mangrulpir",
+    "Risod",
+    "Shirur",
+    "Savner",
+    "Sasvad",
+    "Pandharkaoda",
+    "Talode",
+    "Shrigonda",
+    "Shirdi",
+    "Raver",
+    "Mukhed",
+    "Rajura",
+    "Vadgaon Kasba",
+    "Tirora",
+    "Mahad",
+    "Lonar",
+    "Sawantwadi",
+    "Pathardi",
+    "Pauni",
+    "Ramtek",
+    "Mul",
+    "Soyagaon",
+    "Mangalvedhe",
+    "Narkhed",
+    "Shendurjana",
+    "Patur",
+    "Mhaswad",
+    "Loha",
+    "Nandgaon",
+    "Warud",
+  ],
+  Goa: ["Marmagao", "Panaji", "Margao", "Mapusa"],
+  "West Bengal": [
+    "Kolkata",
+    "Siliguri",
+    "Asansol",
+    "Raghunathganj",
+    "Kharagpur",
+    "Naihati",
+    "English Bazar",
+    "Baharampur",
+    "Hugli-Chinsurah",
+    "Raiganj",
+    "Jalpaiguri",
+    "Santipur",
+    "Balurghat",
+    "Medinipur",
+    "Habra",
+    "Ranaghat",
+    "Bankura",
+    "Nabadwip",
+    "Darjiling",
+    "Purulia",
+    "Arambagh",
+    "Tamluk",
+    "AlipurdUrban Agglomerationr",
+    "Suri",
+    "Jhargram",
+    "Gangarampur",
+    "Rampurhat",
+    "Kalimpong",
+    "Sainthia",
+    "Taki",
+    "Murshidabad",
+    "Memari",
+    "Paschim Punropara",
+    "Tarakeswar",
+    "Sonamukhi",
+    "PandUrban Agglomeration",
+    "Mainaguri",
+    "Malda",
+    "Panchla",
+    "Raghunathpur",
+    "Mathabhanga",
+    "Monoharpur",
+    "Srirampore",
+    "Adra",
+  ],
+};
+
+export const uploadDataZone = async (req, res) => {
+  try {
+    for (const [zoneName, cities] of Object.entries(cityData)) {
+      // Create a new document for each zone
+      const newZone = new zonesModel({
+        name: zoneName,
+        cities: cities, // Cities is directly assigned as an array
+        status: "true", // Status can be set to any value you want
+      });
+
+      // Save the document to MongoDB
+      await newZone.save();
+    }
+
+    console.log("Data uploaded successfully!");
+  } catch (error) {
+    console.error("Error uploading data:", error);
+  }
+};
+
+// Controller to delete all entries in zonesModel
+export const deleteAllZones = async (req, res) => {
+  try {
+    // Delete all documents from the collection
+    await zonesModel.deleteMany({});
+
+    console.log("All entries in the zonesModel collection have been deleted.");
+    res.status(200).send({ message: "All entries deleted successfully!" });
+  } catch (error) {
+    console.error("Error deleting all entries:", error);
+    res.status(500).send({ error: "Failed to delete all entries." });
+  }
+};
+
+
 export const AuthUserByID = async (req, res) => {
   try {
     const { id, token } = req.body;
@@ -3124,10 +4375,14 @@ export const AuthUserByID = async (req, res) => {
             username: existingUser.username,
             phone: existingUser.phone,
             email: existingUser.email,
-            address: existingUser.address,
-            pincode: existingUser.pincode,
+            type: existingUser.type,
             state: existingUser.state,
-            verified: existingUser.verified,
+          statename: existingUser.statename,
+           city: existingUser.city,
+           address:  existingUser.address,
+          verified: existingUser.verified,
+          pincode: existingUser.pincode,
+          DOB: existingUser.DOB,
           },
         });
       } else {
@@ -3197,6 +4452,53 @@ export const updateProfileUser = async (req, res) => {
         success: true,
       });
     }
+  } catch (error) {
+    return res.status(400).json({
+      message: `Error while updating Promo code: ${error}`,
+      success: false,
+      error,
+    });
+  }
+};
+
+export const updateDetailsUser = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const {
+      username,
+      address,
+      password,
+      gender,
+      state,
+      statename,
+      city,
+      confirm_password,
+      about,
+    } = req.body;
+
+    let updateFields = {
+      username,
+      address,
+      gender,
+      state,
+      statename,
+      city,
+      about,
+    };
+
+    if (password.length > 0 && confirm_password.length > 0) {
+      const hashedPassword = await bcrypt.hash(password, 10);
+      updateFields.password = hashedPassword;
+    }
+
+    const user = await userModel.findByIdAndUpdate(id, updateFields, {
+      new: true,
+    });
+
+    return res.status(200).json({
+      message: "user Updated!",
+      success: true,
+    });
   } catch (error) {
     return res.status(400).json({
       message: `Error while updating Promo code: ${error}`,
@@ -3316,6 +4618,121 @@ export const cancelOrderUser = async (req, res) => {
   } catch (error) {
     return res.status(400).json({
       message: `Error while updating Rating: ${error}`,
+      success: false,
+      error,
+    });
+  }
+};
+
+
+
+export const getAllPlanCategoryController = async (req, res) => {
+  try {
+    const plan = await planCategoryModel.find({});
+    if (!plan) {
+      return res.status(200).send({
+        message: "NO plan Find",
+        success: false,
+      });
+    }
+    return res.status(200).send({
+      message: "All plan List ",
+      planCount: plan.length,
+      success: true,
+      plan,
+    });
+  } catch (error) {
+    return res.status(500).send({
+      message: `error while getting plan ${error}`,
+      success: false,
+      error,
+    });
+  }
+};
+
+
+
+// all plan & buy plan
+
+export const getAllPlanUser = async (req, res) => {
+  const { id } = req.params;
+  
+  try {
+ 
+    const lastBuy = await buyPlanModel.findOne({userId:id}).sort({ _id: -1 }).limit(1).populate('planId'); 
+
+    const plan = await planModel
+      .find({}).lean(); // Convert documents to plain JavaScript objects
+
+      if (!plan || plan.length === 0) { // Check if no users found
+        return res.status(404).send({ // Send 404 Not Found response
+          message: "No Plan",
+          success: false,
+        });
+      }
+
+      
+      const planDetails = lastBuy?.planId;
+      const planValidityInDays = planDetails?.validity; // Number of days the plan is valid for
+      const purchaseDate = lastBuy?.createdAt; // Date when the plan was purchased
+  
+      // Calculate validTill date by adding validity days to the purchase date
+      const validTill = new Date(purchaseDate);
+      validTill.setDate(validTill.getDate() + planValidityInDays);
+  
+      // Calculate days left
+      const currentDate = new Date();
+      const daysLeft = Math.floor((validTill - currentDate) / (1000 * 60 * 60 * 24)); // Difference in days
+    
+      
+ 
+    return res.status(200).send({ // Send successful response
+      message: "All Plan ",
+       success: true,
+      plan, // Return users array
+      lastBuy: { ...lastBuy?.toObject(), daysLeft }, // Spread lastBuy object and add daysLeft      
+    });
+  } catch (error) {
+    return res.status(500).send({ // Send 500 Internal Server Error response
+      message: `Error while plan: ${error.message}`,
+      success: false,
+      error,
+    });
+  }
+};
+
+
+export const BuyPlanUser = async (req, res) => {
+  
+  try {
+    const { totalAmount,planId,userId} = req.body;
+ 
+    // Create a new buy plan record
+    const newBuyPlan = new buyPlanModel({
+      userId,
+      planId,
+      totalAmount,
+      note:'payment succesfully added',
+      payment: 1,  // Assuming payment is the same as totalAmount initially, but could be adjusted as needed
+      Local: 0,  // You can modify this based on your actual requirements
+    });
+    await newBuyPlan.save();
+
+    if (!newBuyPlan || newBuyPlan.length === 0) { // Check if no users found
+      return res.status(404).send({ // Send 404 Not Found response
+        message: "No Plan",
+        success: false,
+      });
+    }
+
+    return res.status(200).send({ // Send successful response
+      message: "All Plan ",
+       success: true,
+       newBuyPlan, // Return users array
+    });
+  } catch (error) {
+    return res.status(500).send({ // Send 500 Internal Server Error response
+      message: `Error while plan: ${error.message}`,
       success: false,
       error,
     });
