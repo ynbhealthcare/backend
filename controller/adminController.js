@@ -35,7 +35,7 @@ import jwt from 'jsonwebtoken';
 import wishlistModel from "../models/wishlistModel.js";
 import compareModel from "../models/compareModel.js";
 import enquireModel from "../models/enquireModel.js";
-import planCategoryModel from "../models/PlanCategoryModel.js";
+import planCategoryModel from "../models/planCategoryModel.js";
 import planModel from "../models/planModel.js";
 
 

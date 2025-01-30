@@ -28,7 +28,7 @@ import axios from "axios";
 import { cpSync } from "fs";
 import enquireModel from "../models/enquireModel.js";
 import planModel from "../models/planModel.js";
-import planCategoryModel from "../models/PlanCategoryModel.js";
+import planCategoryModel from "../models/planCategoryModel.js";
 import buyPlanModel from "../models/buyPlanModel.js";
 
 
