@@ -30,10 +30,32 @@ import enquireModel from "../models/enquireModel.js";
 import planModel from "../models/planModel.js";
 import planCategoryModel from "../models/planCategoryModel.js";
 import buyPlanModel from "../models/buyPlanModel.js";
-
-
+import departmentsModel from "../models/departmentsModel.js";
+import { type } from "os";
+import paymentModel from "../models/paymentModel.js";
+import puppeteer from "puppeteer";
+import path from "path";
+import fs from "fs/promises";
+import multer from "multer";
 
 dotenv.config();
+
+const storage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    // Define the destination folder where uploaded images will be saved
+    cb(null, "public/uploads/new");
+  },
+  filename: function (req, file, cb) {
+    // Define the filename for the uploaded image
+    cb(
+      null,
+      file.fieldname + "-" + Date.now() + path.extname(file.originalname)
+    );
+  },
+});
+
+const upload = multer({ storage: storage });
+
 
 // Function to pad the plaintext
 function pkcs5_pad(text, blocksize) {
@@ -186,6 +208,8 @@ export const SignupUser = async (req, res) => {
       expiresIn: "1h",
     });
     user.token = token; // Update the user's token field with the generated token
+    user.type = 2; // Update the user's token field with the generated token
+
     await user.save();
 
     // Generate JWT token
@@ -364,7 +388,7 @@ export const SignupUserType = async (req, res) => {
       city,
     } = req.body;
 
- 
+
     // const {
     //   profile,
 
@@ -400,7 +424,7 @@ export const SignupUserType = async (req, res) => {
       statename,
       country,
       city,
-       
+
       userId,
     });
 
@@ -1262,12 +1286,12 @@ async function sendOrderConfirmationEmail(email, username, userId, newOrder) {
       <img width="200" src="https://backend-9mwl.onrender.com/uploads/new/image-1712823999415.png" />
  </th>
         <th style="text-align:right;font-weight:400;"> ${new Date(
-          newOrder.createdAt
-        ).toLocaleDateString("en-US", {
-          year: "numeric",
-          month: "short",
-          day: "numeric",
-        })} </th>
+        newOrder.createdAt
+      ).toLocaleDateString("en-US", {
+        year: "numeric",
+        month: "short",
+        day: "numeric",
+      })} </th>
       </tr>
     </thead>
     <tbody>
@@ -1277,15 +1301,12 @@ async function sendOrderConfirmationEmail(email, username, userId, newOrder) {
       <tr>
         <td colspan="2" style="border: solid 1px #ddd; padding:10px 20px;">
           <p style="font-size:14px;margin:0 0 6px 0;"><span style="font-weight:bold;display:inline-block;min-width:150px">Order status</span><b style="color:green;font-weight:normal;margin:0">Placed</b></p>
-          <p style="font-size:14px;margin:0 0 6px 0;"><span style="font-weight:bold;display:inline-block;min-width:146px">Order ID</span> ${
-            newOrder.orderId
-          }</p>
-          <p style="font-size:14px;margin:0 0 0 0;"><span style="font-weight:bold;display:inline-block;min-width:146px">Order amount</span> Rs. ${
-            newOrder.totalAmount
-          }</p>
-          <p style="font-size:14px;margin:0 0 0 0;"><span style="font-weight:bold;display:inline-block;min-width:146px">Payment Mode</span> ${
-            newOrder.mode
-          }</p>
+          <p style="font-size:14px;margin:0 0 6px 0;"><span style="font-weight:bold;display:inline-block;min-width:146px">Order ID</span> ${newOrder.orderId
+        }</p>
+          <p style="font-size:14px;margin:0 0 0 0;"><span style="font-weight:bold;display:inline-block;min-width:146px">Order amount</span> Rs. ${newOrder.totalAmount
+        }</p>
+          <p style="font-size:14px;margin:0 0 0 0;"><span style="font-weight:bold;display:inline-block;min-width:146px">Payment Mode</span> ${newOrder.mode
+        }</p>
         </td>
       </tr>
       <tr>
@@ -1293,22 +1314,18 @@ async function sendOrderConfirmationEmail(email, username, userId, newOrder) {
       </tr>
       <tr>
         <td  style="width:50%;padding:20px;vertical-align:top">
-          <p style="margin:0 0 10px 0;padding:0;font-size:14px;"><span style="display:block;font-weight:bold;font-size:13px">Name</span> ${
-            newOrder.details[0].username
-          } </p>
-          <p style="margin:0 0 10px 0;padding:0;font-size:14px;"><span style="display:block;font-weight:bold;font-size:13px;">Email</span>  ${
-            newOrder.details[0].email
-          }  </p>
+          <p style="margin:0 0 10px 0;padding:0;font-size:14px;"><span style="display:block;font-weight:bold;font-size:13px">Name</span> ${newOrder.details[0].username
+        } </p>
+          <p style="margin:0 0 10px 0;padding:0;font-size:14px;"><span style="display:block;font-weight:bold;font-size:13px;">Email</span>  ${newOrder.details[0].email
+        }  </p>
       
           
         </td>
         <td style="width:50%;padding:20px;vertical-align:top">
-            <p style="margin:0 0 10px 0;padding:0;font-size:14px;"><span style="display:block;font-weight:bold;font-size:13px;">Phone</span> +91-${
-              newOrder.details[0].phone
-            }</p>
-          <p style="margin:0 0 10px 0;padding:0;font-size:14px;"><span style="display:block;font-weight:bold;font-size:13px;">Address</span> ${
-            newOrder.details[0].address
-          } </p>
+            <p style="margin:0 0 10px 0;padding:0;font-size:14px;"><span style="display:block;font-weight:bold;font-size:13px;">Phone</span> +91-${newOrder.details[0].phone
+        }</p>
+          <p style="margin:0 0 10px 0;padding:0;font-size:14px;"><span style="display:block;font-weight:bold;font-size:13px;">Address</span> ${newOrder.details[0].address
+        } </p>
            
           
         </td>
@@ -1328,8 +1345,8 @@ async function sendOrderConfirmationEmail(email, username, userId, newOrder) {
       </tr>
 
       ${newOrder.items
-        .map(
-          (Pro) => `
+          .map(
+            (Pro) => `
         <tr>
           <td  style="padding: .75rem; vertical-align: top; border-top: 1px solid #dee2e6;" >
             <div className="d-flex mb-2">
@@ -1358,26 +1375,25 @@ async function sendOrderConfirmationEmail(email, username, userId, newOrder) {
           <td  style="padding: .75rem; vertical-align: top; border-top: 1px solid #dee2e6;text-align: right;" >₹ ${Pro.price}</td>
         </tr>
         `
-        )
-        .join("")}
+          )
+          .join("")}
 
     </tbody>
     <tfoot>
         <tr>
             <td colspan="2" style="padding: .75rem; vertical-align: top; border-top: 1px solid #dee2e6;">Subtotal</td>
-            <td  colspan="2"  class="text-end" style="padding: .75rem; vertical-align: top; border-top: 1px solid #dee2e6;text-align: right;">₹${
-              newOrder.items.reduce(
-                (total, item) => total + item.quantity * item.price,
-                0
-              ) -
-              Math.floor(
-                newOrder.items.reduce((acc, item) => {
-                  const itemPrice = item.quantity * item.price;
-                  const itemGST = (itemPrice * item.gst) / 100;
-                  return acc + itemGST;
-                }, 0)
-              )
-            }</td>
+            <td  colspan="2"  class="text-end" style="padding: .75rem; vertical-align: top; border-top: 1px solid #dee2e6;text-align: right;">₹${newOrder.items.reduce(
+            (total, item) => total + item.quantity * item.price,
+            0
+          ) -
+        Math.floor(
+          newOrder.items.reduce((acc, item) => {
+            const itemPrice = item.quantity * item.price;
+            const itemGST = (itemPrice * item.gst) / 100;
+            return acc + itemGST;
+          }, 0)
+        )
+        }</td>
         </tr>
 
        
@@ -1395,30 +1411,27 @@ async function sendOrderConfirmationEmail(email, username, userId, newOrder) {
 
         <tr>
             <td colspan="2" style="padding: .75rem; vertical-align: top; border-top: 1px solid #dee2e6;">Shipping</td>
-            <td colspan="2"  class="text-end" style="padding: .75rem; vertical-align: top; border-top: 1px solid #dee2e6;text-align: right;">₹${
-              newOrder.shipping
-            }</td>
+            <td colspan="2"  class="text-end" style="padding: .75rem; vertical-align: top; border-top: 1px solid #dee2e6;text-align: right;">₹${newOrder.shipping
+        }</td>
         </tr>
         <tr>
             <td colspan="2" style="padding: .75rem; vertical-align: top; border-top: 1px solid #dee2e6;">Discount</td>
             <td colspan="2"  class="text-danger text-end" style="padding: .75rem; vertical-align: top; border-top: 1px solid #dee2e6; text-align: right;">
-           - ${
-             newOrder.items.reduce(
-               (total, item) => total + item.quantity * item.price,
-               0
-             ) -
-               Math.abs(newOrder.discount) ===
-             0
-               ? "0"
-               : Math.abs(newOrder.discount)
-           }
+           - ${newOrder.items.reduce(
+          (total, item) => total + item.quantity * item.price,
+          0
+        ) -
+          Math.abs(newOrder.discount) ===
+          0
+          ? "0"
+          : Math.abs(newOrder.discount)
+        }
           </td>
         </tr>
         <tr class="fw-bold">
             <td colspan="2" style="padding: .75rem; vertical-align: top; border-top: 1px solid #dee2e6;">TOTAL</td>
-            <td colspan="2"  class="text-end" style="padding: .75rem; vertical-align: top; border-top: 1px solid #dee2e6;text-align: right;">₹${
-              newOrder.totalAmount
-            }</td>
+            <td colspan="2"  class="text-end" style="padding: .75rem; vertical-align: top; border-top: 1px solid #dee2e6;text-align: right;">₹${newOrder.totalAmount
+        }</td>
         </tr>
     </tfoot>
 </table>
@@ -1498,8 +1511,9 @@ export const EmailVerify = async (req, res) => {
   });
 };
 
-export const HomeSendEnquire = async (req, res) => {
-  const { fullname, email, phone, service, QTY } = req.body;
+export const HomeSendEnquire_old = async (req, res) => {
+  const { fullname, email, phone, service, QTY, userId,
+    userEmail, } = req.body;
 
   try {
     // Save data to the database
@@ -1509,6 +1523,8 @@ export const HomeSendEnquire = async (req, res) => {
       phone,
       service,
       QTY,
+      userId,
+      userEmail,
     });
 
     await newEnquire.save();
@@ -1525,10 +1541,14 @@ export const HomeSendEnquire = async (req, res) => {
       },
     });
 
+    const recipients = userEmail
+      ? `${userEmail}, ${process.env.MAIL_TO_ADDRESS}`
+      : process.env.MAIL_TO_ADDRESS;
+
     // Email message
     const mailOptions = {
       from: process.env.MAIL_FROM_ADDRESS, // Update with your email address
-      to: process.env.MAIL_TO_ADDRESS, // Update with your email address
+      to: recipients, // Update with your email address
       subject: "New Enquire Form Submission",
       text: `Name: ${fullname}\nEmail: ${email}\nPhone: ${phone}\nService: ${service}\nQTY:${QTY}`,
     };
@@ -1551,6 +1571,91 @@ export const HomeSendEnquire = async (req, res) => {
     });
   }
 };
+
+
+
+export const HomeSendEnquire = async (req, res) => {
+  const {
+    fullname,
+    email,
+    phone,
+    service,
+    QTY,
+    userId,
+    userEmail,
+    type,
+    Requirement,
+    name,
+    organizationName,
+    designation,
+    interested,
+  } = req.body;
+  console.log(userId, userEmail);
+
+  try {
+    // Save data to the database
+    const newEnquire = new enquireModel({
+      fullname,
+      email,
+      phone,
+      service,
+      QTY,
+      Requirement,
+      userId,
+      userEmail,
+      type,
+      name,
+      organizationName,
+      designation,
+      interested,
+    });
+
+    await newEnquire.save();
+
+    // Configure nodemailer transporter
+    const transporter = nodemailer.createTransport({
+      // SMTP configuration
+      host: process.env.MAIL_HOST, // Update with your SMTP host
+      port: process.env.MAIL_PORT, // Update with your SMTP port
+      secure: process.env.MAIL_ENCRYPTION, // Set to true if using SSL/TLS
+      auth: {
+        user: process.env.MAIL_USERNAME, // Update with your email address
+        pass: process.env.MAIL_PASSWORD, // Update with your email password
+      },
+    });
+
+    // Conditional recipient list
+    const recipients = userEmail
+      ? `${userEmail}, ${process.env.MAIL_TO_ADDRESS}`
+      : process.env.MAIL_TO_ADDRESS;
+
+    // Email message
+    const mailOptions = {
+      from: process.env.MAIL_FROM_ADDRESS, // Update with your email address
+      to: recipients, // Update with your email address
+      subject: "New Enquire Form Submission",
+      text: `Name: ${fullname}\nEmail: ${email}\nPhone: ${phone}\nService: ${service}\nQTY:${QTY}`,
+    };
+
+    // Send email
+    transporter.sendMail(mailOptions, (error, info) => {
+      if (error) {
+        console.error(error);
+        res.status(500).send("Failed to send email");
+      } else {
+        console.log("Email sent: " + info.response);
+        res.status(200).send("Email sent successfully");
+      }
+    });
+  } catch (error) {
+    console.error("Error in send data:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Internal Server Error",
+    });
+  }
+};
+
 
 export const contactSendEnquire = async (req, res) => {
   const { name, email, phone, message } = req.body;
@@ -2830,9 +2935,12 @@ export const SignupLoginUser = async (req, res) => {
             username: existingUser.username,
             phone: existingUser.phone,
             email: existingUser.email,
+            type: existingUser.type,
           },
           token: existingUser.token,
           otp: ecryptOTP,
+          type: 2,
+
         });
       }
     } else {
@@ -2881,6 +2989,8 @@ export const SignupNewUser = async (req, res) => {
       expiresIn: "1h",
     });
     user.token = token; // Update the user's token field with the generated token
+    user.type = 2; // Update the user's token field with the generated token
+
     await user.save();
 
     // Hash the OTP
@@ -2894,9 +3004,11 @@ export const SignupNewUser = async (req, res) => {
         username: user.username,
         phone: user.phone,
         email: user.email,
+        type: user.type,
       },
       otp: ecryptOTP,
       token,
+      type: 2,
     });
   } catch (error) {
     console.error("Error on signup:", error);
@@ -2931,7 +3043,7 @@ export const LoginUserWithOTP = async (req, res) => {
       });
     }
 
-    const existingUser = await userModel.findOne({ phone, status: "1" });
+    const existingUser = await userModel.findOne({ phone, status: "1", type: 2 });
 
     if (existingUser) {
       // Hash the OTP
@@ -2949,9 +3061,12 @@ export const LoginUserWithOTP = async (req, res) => {
           username: existingUser.username,
           phone: existingUser.phone,
           email: existingUser.email,
+          type: existingUser.type,
         },
         token: existingUser.token,
         otp: ecryptOTP,
+        type: 2,
+
       });
     }
   } catch (error) {
@@ -2977,7 +3092,7 @@ export const LoginUserWithPass = async (req, res) => {
         message: "please fill all fields",
       });
     }
-    const user = await userModel.findOne({ phone });
+    const user = await userModel.findOne({ phone, status: "1", type: 2 });
 
     // password check
 
@@ -3000,9 +3115,12 @@ export const LoginUserWithPass = async (req, res) => {
         username: user.username,
         phone: user.phone,
         email: user.email,
+        type: user.type,
       },
       token: user.token,
       checkpass: true,
+      type: 2,
+
     });
   } catch (error) {
     return res.status(500).send({
@@ -4361,36 +4479,37 @@ export const deleteAllZones = async (req, res) => {
 
 export const AuthUserByID = async (req, res) => {
   try {
-    const { id, token } = req.body;
+    const { id } = req.body;
 
     const existingUser = await userModel.findById(id);
 
     if (existingUser) {
-      if (existingUser.token === token) {
-        return res.status(200).json({
-          success: true,
-          message: "login sucesssfully with password",
-          existingUser: {
-            _id: existingUser._id,
-            username: existingUser.username,
-            phone: existingUser.phone,
-            email: existingUser.email,
-            type: existingUser.type,
-            state: existingUser.state,
+
+      return res.status(200).json({
+        success: true,
+        message: "login sucesssfully with password",
+        existingUser: {
+          _id: existingUser._id,
+          username: existingUser.username,
+          phone: existingUser.phone,
+          email: existingUser.email,
+          type: existingUser.type,
+          state: existingUser.state,
           statename: existingUser.statename,
-           city: existingUser.city,
-           address:  existingUser.address,
+          city: existingUser.city,
+          address: existingUser.address,
           verified: existingUser.verified,
           pincode: existingUser.pincode,
           DOB: existingUser.DOB,
-          },
-        });
-      } else {
-        return res.status(401).send({
-          success: false,
-          message: "token is not incorrect",
-        });
-      }
+          about: existingUser.about,
+          department: existingUser.department,
+          Doc1: existingUser.Doc1,
+          Doc2: existingUser.Doc2,
+          Doc3: existingUser.Doc3,
+          profile: existingUser.profile,
+        },
+      });
+
     } else {
       return res.status(401).send({
         success: false,
@@ -4467,6 +4586,8 @@ export const updateDetailsUser = async (req, res) => {
     const {
       username,
       address,
+      email,
+      pincode,
       password,
       gender,
       state,
@@ -4484,6 +4605,8 @@ export const updateDetailsUser = async (req, res) => {
       statename,
       city,
       about,
+      email,
+      pincode,
     };
 
     if (password.length > 0 && confirm_password.length > 0) {
@@ -4656,39 +4779,312 @@ export const getAllPlanCategoryController = async (req, res) => {
 
 export const getAllPlanUser = async (req, res) => {
   const { id } = req.params;
-  
+
   try {
- 
-    const lastBuy = await buyPlanModel.findOne({userId:id}).sort({ _id: -1 }).limit(1).populate('planId'); 
+
+    const lastBuy = await buyPlanModel.findOne({ userId: id }).sort({ _id: -1 }).limit(1).populate('planId');
+    const User = await userModel.findById(id);
+    let Local;
+    if (!User.state) {
+      return res.status(200).send({ // Send 500 Internal Server Error response
+        message: `Error`,
+        success: false,
+        state: false,
+        plan: []
+      });
+    } else {
+      const State = await zonesModel.findById(User.state);
+      if (State.primary === 'true') {
+        Local = 1;
+      } else {
+        Local = 0;
+      }
+    }
+
+
+    const plan = await planModel
+      .find({}).populate('Category').lean(); // Convert documents to plain JavaScript objects
+
+    if (!plan || plan.length === 0) { // Check if no users found
+      return res.status(404).send({ // Send 404 Not Found response
+        message: "No Plan",
+        success: false,
+      });
+    }
+
+
+    const planDetails = lastBuy?.planId;
+    const planValidityInDays = planDetails?.validity; // Number of days the plan is valid for
+    const purchaseDate = lastBuy?.createdAt; // Date when the plan was purchased
+
+    // Calculate validTill date by adding validity days to the purchase date
+    const validTill = new Date(purchaseDate);
+    validTill.setDate(validTill.getDate() + planValidityInDays);
+
+    // Calculate days left
+    const currentDate = new Date();
+    const daysLeft = Math.floor((validTill - currentDate) / (1000 * 60 * 60 * 24)); // Difference in days
+
+
+
+    return res.status(200).send({ // Send successful response
+      message: "All Plan ",
+      success: true,
+      plan, // Return users array
+      lastBuy: { ...lastBuy?.toObject(), daysLeft }, // Spread lastBuy object and add daysLeft  
+      Local
+    });
+  } catch (error) {
+    return res.status(500).send({ // Send 500 Internal Server Error response
+      message: `Error while plan: ${error.message}`,
+      success: false,
+      error,
+    });
+  }
+};
+
+
+export const BuyPlanUser = async (req, res) => {
+
+  try {
+    const { totalAmount, planId, userId, Local } = req.body;
+
+    if (!userId) {
+      return res.status(500).send({ // Send successful response
+        message: req.body,
+        success: false,
+      });
+    }
+
+    const lastLead = await buyPlanModel.findOne().sort({ _id: -1 }).limit(1);
+    let paymentId;
+
+    if (lastLead) {
+      if (lastLead.paymentId === undefined) {
+        paymentId = 1;
+      } else {
+        // Convert lastOrder.orderId to a number before adding 1
+        const lastOrderId = parseInt(lastLead.paymentId);
+        paymentId = lastOrderId + 1;
+      }
+    } else {
+      paymentId = 1;
+    }
+
+
+    // Create a new buy plan record
+    const newBuyPlan = new buyPlanModel({
+      userId,
+      planId,
+      totalAmount,
+      paymentId,
+      note: 'payment succesfully added',
+      payment: 1,  // Assuming payment is the same as totalAmount initially, but could be adjusted as needed
+      Local,  // You can modify this based on your actual requirements
+    });
+    await newBuyPlan.save();
+
+    if (!newBuyPlan || newBuyPlan.length === 0) { // Check if no users found
+      return res.status(404).send({ // Send 404 Not Found response
+        message: "No Plan",
+        success: false,
+      });
+    }
+
+    return res.status(200).send({ // Send successful response
+      message: "All Plan ",
+      success: true,
+      newBuyPlan, // Return users array
+    });
+  } catch (error) {
+    return res.status(500).send({ // Send 500 Internal Server Error response
+      message: `Error while plan: ${error.message}`,
+      success: false,
+      error,
+    });
+  }
+};
+
+
+export const getAllVendor = async (req, res) => {
+  try {
+    const page = parseInt(req.query.page) || 1; // Current page, default is 1
+    const limit = parseInt(req.query.limit) || 10; // Number of documents per page, default is 10
+    const state = req.query.state || ""; // Get search term from the query parameters
+    const city = req.query.city || ""; // Get search term from the query parameters
+    const department = req.query.department || ""; // Get search term from the query parameters
+
+    // Get startDate and endDate from query parameters
+    const startDate = req.query.startDate
+      ? new Date(req.query.startDate)
+      : null;
+    const endDate = req.query.endDate ? new Date(req.query.endDate) : null;
+
+    // console.log(startDate, endDate)
+    const skip = (page - 1) * limit;
+
+    const query = {};
+
+
+    if (state.length > 0) {
+      query.state = { $in: state }; // Use $in operator to match any of the values in the array
+    }
+    if (city.length > 0) {
+      query.city = { $in: city }; // Use $in operator to match any of the values in the array
+    }
+    if (department.length > 0) {
+      query.department = { $in: department }; // Use $in operator to match any of the values in the array
+    }
+
+    query.type = { $in: 1 }; // Use $in operator to match any of the values in the array
+    // query.verified = { $in: 1 };  
+
+    // Add date range filtering to the query
+    if (startDate && endDate) {
+      query.createdAt = { $gte: startDate, $lte: endDate };
+    } else if (startDate) {
+      query.createdAt = { $gte: startDate };
+    } else if (endDate) {
+      query.createdAt = { $lte: endDate };
+    }
+
+    const totalUser = await userModel.countDocuments(query); // Count total documents matching the query
+
+    const users = await userModel
+      .find(query)
+      .sort({ _id: -1 }) // Sort by _id in descending order
+      .skip(skip)
+      .limit(limit)
+      .lean(); // Convert documents to plain JavaScript objects
+
+    if (!users || users.length === 0) {
+      // Check if no users found
+      return res.status(401).send({
+        // Send 404 Not Found response
+        message: "No users found",
+        success: false,
+      });
+    }
+
+    return res.status(200).send({
+      // Send successful response
+      message: "All user list",
+      userCount: users.length,
+      currentPage: page,
+      totalPages: Math.ceil(totalUser / limit),
+      success: true,
+      users: users, // Return users array
+    });
+  } catch (error) {
+    return res.status(500).send({
+      // Send 500 Internal Server Error response
+      message: `Error while getting users: ${error.message}`,
+      success: false,
+      error,
+    });
+  }
+};
+
+
+
+export const getAllDepartment = async (req, res) => {
+  try {
+    const Department = await departmentsModel.find({}).lean();
+    if (!Department) {
+      return res.status(200).send({
+        message: "NO Department Find",
+        success: false,
+      });
+    }
+    return res.status(200).send({
+      message: "All Department List ",
+      success: true,
+      Department,
+    });
+  } catch (error) {
+    return res.status(500).send({
+      message: `error while getting Department ${error}`,
+      success: false,
+      error,
+    });
+  }
+};
+
+
+export const ViewAllZonesDepartment = async (req, res) => {
+  try {
+    // Query the database for all ratings where status is 1
+    const Zones = await zonesModel.find({ status: "true" });
+    const Department = await departmentsModel.find({}).lean();
+
+    res.status(200).json({ success: true, Zones, Department });
+  } catch (error) {
+    console.error("Error fetching ratings:", error);
+    res.status(500).json({ success: false, message: "Internal Server Error" });
+  }
+};
+
+
+
+export const getVendorById = async (req, res) => {
+  try {
+    const { slug } = req.params;
+    const Mpage = await userModel.findOne({ _id: slug, type: 1 });
+    if (!Mpage) {
+      return res.status(200).send({
+        message: "user not found",
+        success: false,
+      });
+    }
+    return res.status(200).json({
+      message: "fetch user Page!",
+      success: true,
+      Mpage,
+    });
+  } catch (error) {
+    return res.status(400).json({
+      message: `Error while get Page: ${error}`,
+      success: false,
+      error,
+    });
+  }
+};
+
+export const getAllPdlanUser = async (req, res) => {
+  const { id } = req.params;
+
+  try {
+
+    const lastBuy = await buyPlanModel.findOne({ userId: id }).sort({ _id: -1 }).limit(1).populate('planId');
 
     const plan = await planModel
       .find({}).lean(); // Convert documents to plain JavaScript objects
 
-      if (!plan || plan.length === 0) { // Check if no users found
-        return res.status(404).send({ // Send 404 Not Found response
-          message: "No Plan",
-          success: false,
-        });
-      }
+    if (!plan || plan.length === 0) { // Check if no users found
+      return res.status(404).send({ // Send 404 Not Found response
+        message: "No Plan",
+        success: false,
+      });
+    }
 
-      
-      const planDetails = lastBuy?.planId;
-      const planValidityInDays = planDetails?.validity; // Number of days the plan is valid for
-      const purchaseDate = lastBuy?.createdAt; // Date when the plan was purchased
-  
-      // Calculate validTill date by adding validity days to the purchase date
-      const validTill = new Date(purchaseDate);
-      validTill.setDate(validTill.getDate() + planValidityInDays);
-  
-      // Calculate days left
-      const currentDate = new Date();
-      const daysLeft = Math.floor((validTill - currentDate) / (1000 * 60 * 60 * 24)); // Difference in days
-    
-      
- 
+
+    const planDetails = lastBuy?.planId;
+    const planValidityInDays = planDetails?.validity; // Number of days the plan is valid for
+    const purchaseDate = lastBuy?.createdAt; // Date when the plan was purchased
+
+    // Calculate validTill date by adding validity days to the purchase date
+    const validTill = new Date(purchaseDate);
+    validTill.setDate(validTill.getDate() + planValidityInDays);
+
+    // Calculate days left
+    const currentDate = new Date();
+    const daysLeft = Math.floor((validTill - currentDate) / (1000 * 60 * 60 * 24)); // Difference in days
+
+
+
     return res.status(200).send({ // Send successful response
       message: "All Plan ",
-       success: true,
+      success: true,
       plan, // Return users array
       lastBuy: { ...lastBuy?.toObject(), daysLeft }, // Spread lastBuy object and add daysLeft      
     });
@@ -4702,37 +5098,942 @@ export const getAllPlanUser = async (req, res) => {
 };
 
 
-export const BuyPlanUser = async (req, res) => {
-  
-  try {
-    const { totalAmount,planId,userId} = req.body;
- 
-    // Create a new buy plan record
-    const newBuyPlan = new buyPlanModel({
-      userId,
-      planId,
-      totalAmount,
-      note:'payment succesfully added',
-      payment: 1,  // Assuming payment is the same as totalAmount initially, but could be adjusted as needed
-      Local: 0,  // You can modify this based on your actual requirements
-    });
-    await newBuyPlan.save();
 
-    if (!newBuyPlan || newBuyPlan.length === 0) { // Check if no users found
-      return res.status(404).send({ // Send 404 Not Found response
-        message: "No Plan",
+export const HomeSendvendorEnquire = async (req, res) => {
+
+
+  const { fullname, email, phone, service, QTY, userId, senderId,
+    userEmail, requirement } = req.body;
+
+  if (!senderId || !userId) {
+    return res.status(500).json({
+      success: false,
+      message: "user Not found",
+    });
+  }
+  const lastBuy = await buyPlanModel.findOne({ userId: senderId }).sort({ _id: -1 }).limit(1).populate('planId');
+
+  try {
+
+    if (lastBuy) {
+      const planDetails = lastBuy?.planId;
+      const planValidityInDays = planDetails?.validity; // Number of days the plan is valid for
+      const purchaseDate = lastBuy?.createdAt; // Date when the plan was purchased
+
+      // Calculate validTill date by adding validity days to the purchase date
+      const validTill = new Date(purchaseDate);
+      validTill.setDate(validTill.getDate() + planValidityInDays);
+
+      // Calculate days left
+      const currentDate = new Date();
+      const daysLeft = Math.floor((validTill - currentDate) / (1000 * 60 * 60 * 24)); // Difference in days
+      if (daysLeft > 0) {
+
+      } else {
+        return res.status(200).json({
+          success: false,
+          message: "Sorry your plan has expired",
+        });
+      }
+    } else {
+      return res.status(200).json({
+        success: false,
+        message: "Sorry, you don't have any plans.",
+      });
+    }
+
+
+    // Save data to the database
+    const newEnquire = new enquireModel({
+      fullname,
+      email,
+      phone,
+      service,
+      QTY,
+      userId,
+      userEmail,
+      type: 1,
+      senderId,
+      requirement
+    });
+
+    await newEnquire.save();
+
+    // Configure nodemailer transporter
+    const transporter = nodemailer.createTransport({
+      // SMTP configuration
+      host: process.env.MAIL_HOST, // Update with your SMTP host
+      port: process.env.MAIL_PORT, // Update with your SMTP port
+      secure: process.env.MAIL_ENCRYPTION, // Set to true if using SSL/TLS
+      auth: {
+        user: process.env.MAIL_USERNAME, // Update with your email address
+        pass: process.env.MAIL_PASSWORD, // Update with your email password
+      },
+    });
+
+    const recipients = userEmail
+      ? `${userEmail}, ${process.env.MAIL_TO_ADDRESS}`
+      : process.env.MAIL_TO_ADDRESS;
+
+    // Email message
+    const mailOptions = {
+      from: process.env.MAIL_FROM_ADDRESS, // Update with your email address
+      to: recipients, // Update with your email address
+      subject: "New Enquire Form Submission",
+      text: `Name: ${fullname}\nEmail: ${email}\nPhone: ${phone}\nService: ${service}\nQTY:${QTY}`,
+    };
+
+    // Send email
+    transporter.sendMail(mailOptions, (error, info) => {
+      if (error) {
+        console.error(error);
+        res.status(500).send("Failed to send email");
+      } else {
+        console.log("Email sent: " + info.response);
+        return res.status(200).json({
+          success: true,
+          message: "Email sent successfully",
+        });
+      }
+    });
+  } catch (error) {
+    console.error("Error in send data:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Internal Server Error",
+    });
+  }
+};
+
+
+export const ApplyEnquireStatus = async (req, res) => {
+  try {
+    const page = parseInt(req.query.page) || 1; // Current page, default is 1
+    const limit = parseInt(req.query.limit) || 10; // Number of documents per page, default is 10
+    const searchTerm = req.query.search || ""; // Get search term from the query parameters
+    const userId = req.query.userId; // Directly access userId from query parameters
+
+    if (!userId) {
+      return res.status(400).send({
+        message: "userId is required",
         success: false,
       });
     }
 
-    return res.status(200).send({ // Send successful response
-      message: "All Plan ",
-       success: true,
-       newBuyPlan, // Return users array
+    const skip = (page - 1) * limit;
+
+    const query = {
+      senderId: userId, // Filter by senderId matching userId
+    };
+
+    // If there's a search term, you can apply it to a specific field in the enquire model (like 'title' or 'content')
+    if (searchTerm) {
+      query.$text = { $search: searchTerm }; // Assuming your model has text indexes for search
+    }
+
+    const total = await enquireModel.countDocuments(query); // Count only the documents matching the query
+
+    const Enquire = await enquireModel
+      .find(query)
+      .sort({ _id: -1 }) // Sort by _id in descending order
+      .skip(skip)
+      .limit(limit)
+      .populate('userId', 'username email phone address') // Populate userId with username and address only
+      .populate('senderId', 'username email phone address') // Populate senderId with username and address only
+      .lean();
+
+    if (!Enquire || Enquire.length === 0) {
+      return res.status(200).send({
+        message: "No Enquires found for the given user.",
+        success: false,
+      });
+    }
+
+    return res.status(200).send({
+      message: "Enquire list retrieved successfully",
+      EnquireCount: Enquire.length,
+      currentPage: page,
+      totalPages: Math.ceil(total / limit),
+      success: true,
+      Enquire,
+    });
+
+  } catch (error) {
+    return res.status(500).send({
+      message: `Error while getting Enquire data: ${error}`,
+      success: false,
+      error,
+    });
+  }
+};
+
+
+export const AllPayment = async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const transactions = await buyPlanModel.find({ userId: userId }).lean();
+
+    return res.status(200).send({
+      success: true,
+      message: "payments fetched successfully",
+      transactions,
     });
   } catch (error) {
-    return res.status(500).send({ // Send 500 Internal Server Error response
-      message: `Error while plan: ${error.message}`,
+    return res.status(500).send({
+      message: `Error payments fetched: ${error}`,
+      success: false,
+      error,
+    });
+  }
+};
+
+
+const generateUserInvoicePDF = async (invoiceData) => {
+  // console.log(invoiceData);
+
+  const browser = await puppeteer.launch();
+  const page = await browser.newPage();
+  const gstRate = 0.18;
+
+  const totalWithGST = invoiceData.totalAmount;
+  const amountWithoutGST = totalWithGST / (1 + gstRate);
+
+  const CSGT = invoiceData.totalAmount - amountWithoutGST.toFixed(2);
+
+  const TotalLocal = CSGT / 2;
+
+  const formatDate = (dateString) => {
+    const options = { year: "numeric", month: "long", day: "numeric" };
+    return new Date(dateString).toLocaleDateString(undefined, options);
+  };
+
+  const formatTime = (dateString) => {
+    const options = { hour: "2-digit", minute: "2-digit" };
+    return new Date(dateString).toLocaleTimeString(undefined, options);
+  };
+
+  // Define the HTML content
+  const htmlContent = `
+    <div class="invoice">
+      <div class="invoice-header">
+        <div class="invoice-header-left">
+          <img 
+          src="data:image/jpeg;base64,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NHpa9XGmbUUVCaiJ3M5kjD7eC2S/aAr4rbazbqTlZ2Q7lU1hAw7nzxPHiSM9wK3G+6Ud8p567hnDK7Ywdr6/ldP16Gdq9qloiBFNS1FQ7oyAwHx8/mWsXXaZeq9ro6RsdDGelnZP8p9gWs3C2VlqnEFdDyMuM7m+0kDu4JwvKq08m3s+h3MXguBFKcVzfr1/6OyeaWpldNPK+WR3xnvcXE+MrrRFVO4oqC0gsjZLHW3+uFJRszji+Q/FjHWfuWW01oe4357ZpWmlo+B5V44vH6I9vN31LNos1DY6JtJQwhjB8Z35Tz1k9JVynGlPrLojzvFOOV46ddPWf9kdNgsFJp+3Clpm5cTvSyEdlI7rKyqIuqkktI8DZZKyTnN7bOURFJgEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAFwuUQGuX7RNovpMskXuepP++h4E98cx8aj+77Ob5bi51LG2vhH5UR3XeNp9hKmNcLROiE+6OricXysXpGW17MrpPBPTScnUQSQvH5MjS0+Qr4ViKijpquMx1MEczDztewOB8qwlRoTTVScutrIz/wAp7meYHCqSwn6M9DT8UQ/8sH/sRpoepdR30VMlaaSjhYX1JLsNcOgY6ST4+dbpLrmhv9HW2+iqJKGqc0imlkO6JDjoPQT5eK7pdl9ie7LJKqMdQkB9IK+G7LbI1wJmq3DqMgHoC2wrthHlRRyszh2Ta7ZbT6a6e3v7kTyb7pXmRznPLjvF3PnpyuY43yyNjjY573HAa0ZJ7wU0U+z7TVMd73v5R3XJI5w8hOFmaO2UNvbu0dJBTt6o4w30LUsOT7svT+Jaox1VBv8AXp+5EFp0FfroWufSmjhPO+o7E/u8632xbPLTad2WpzXVA/Llb2LT3G/flbaitQx64ehwcvjWXk9HLS9kcAAc3BcoisHHOUXC5QBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREB//Z" 
+          alt="Company Logo" width="250">
+          
+          <p>WZ 10C, A-2 Block, Asalatpur Near Mata Chanan Devi Hospital, Janakpuri, New Delhi, 110058</p>
+          <p>Email: info@travelintrip.com</p>
+          <p>Phone: +91 8100188188</p>
+        </div>
+        <div class="invoice-header-right">
+          <h2>Invoice</h2>
+          <p   >Invoice Number: #${invoiceData?.paymentId}</p>
+          <p>Date: ${formatDate(invoiceData?.createdAt)}     </p>
+           <p>Full Name: ${invoiceData.userId?.username}</p>
+            <p>Email Id: ${invoiceData.userId?.email}</p>
+            <p>Phone No.: ${invoiceData.userId?.phone}</p>
+
+          <p style=" color:${(() => {
+      if (invoiceData.payment === 0) {
+        return "orange";
+      } else if (invoiceData.payment === 1) {
+        return "green";
+      } else if (invoiceData.payment === 2) {
+        return "red";
+      }
+    })()}"
+          > Payment Status : 
+          ${(() => {
+      if (invoiceData.payment === 0) {
+        return "Pending";
+      } else if (invoiceData.payment === 1) {
+        return "Success";
+      } else if (invoiceData.payment === 2) {
+        return "failed";
+      }
+    })()}
+          
+         </p> 
+                         
+        </div>
+      </div>
+
+      <table class="invoice-table">
+        <thead>
+          <tr >
+            <th >Item</th>
+           
+            <th>Total</th>
+          </tr>
+        </thead>
+        <tbody>
+ 
+            <tr>
+              <td> ${invoiceData.planId?.name}</td>
+             
+              <td> ₹${parseFloat(amountWithoutGST.toFixed(2))}</td>
+            </tr>
+          
+            
+        </tbody>
+      </table>
+
+      <div class="invoice-total">
+        <p>Subtotal: ₹${parseFloat(amountWithoutGST.toFixed(2))}</p>
+        ${(() => {
+      if (invoiceData.Local === 1) {
+        return `<p>
+                CGST:  ₹${parseFloat(TotalLocal.toFixed(2))}
+              </p><p>
+                SGST:  ₹${parseFloat(TotalLocal.toFixed(2))}
+              </p>`;
+      } else if (invoiceData.Local === 0) {
+        return `<p>
+IGST: ₹${(parseFloat(invoiceData?.totalAmount.toFixed(2)) - parseFloat(amountWithoutGST.toFixed(2))).toFixed(2)}
+          </p>`;
+      }
+    })()}
+        <p>Total: ₹${invoiceData?.totalAmount.toFixed(2)}</p>
+      </div>
+
+      <div class="invoice-footer">
+        <div class="text-center mt-3">
+          <p>Thank you for your support</p>
+        </div>
+      </div>
+    </div>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+      }
+      h2 {
+        font-weight: 800;
+      }
+      .invoice {
+        width: 95%;
+        margin: 10px auto;
+        padding: 20px;
+      }
+      .invoice-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 20px;
+      }
+      .invoice-header-left {
+        flex: 1;
+      }
+      .invoice-header-right {
+        flex: 1;
+        text-align: right;
+      }
+      .invoice-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-bottom: 10%;
+      }
+      .invoice-table th,
+      .invoice-table td {
+        border: 1px solid #000;
+        padding: 10px;
+        text-align: center;
+      }
+      .invoice-table th {
+      
+        color:green;
+    
+      }
+      .invoice-total {
+        float: right;
+      }
+    </style>
+  `;
+
+  await page.setContent(htmlContent);
+  const pdfBuffer = await page.pdf({ format: "A4" });
+
+  await browser.close();
+
+  return pdfBuffer;
+};
+
+export const downloadUserInvoice = async (req, res) => {
+  try {
+    const { invoiceId } = req.body; // Assuming invoiceData is sent in the request body
+    if (!invoiceId) {
+      return res.status(400).send("Invoice ID is required");
+    }
+    // Fetch invoice data from the database
+    const invoiceData = await buyPlanModel
+      .findById(invoiceId)
+      .populate("userId")
+      .populate("planId");
+
+    const pdfBuffer = await generateUserInvoicePDF(invoiceData);
+
+    res.setHeader("Content-Disposition", "attachment; filename=invoice.pdf");
+    res.setHeader("Content-Type", "application/pdf");
+    res.send(pdfBuffer);
+  } catch (error) {
+    console.error("Error generating invoice PDF:", error);
+    res.status(500).send("Internal Server Error");
+  }
+};
+
+
+export const checkUserPlan = async (req, res) => {
+  const { userId } = req.params;
+
+  try {
+    // Ensure that userId is in correct format (ObjectId)
+    if (!mongoose.Types.ObjectId.isValid(userId)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid User ID format",
+      });
+    }
+
+    // Retrieve the most recent plan purchase for the user
+    const lastBuy = await buyPlanModel
+      .findOne({ userId })
+      .sort({ _id: -1 })
+      .limit(1)
+      .populate('planId');  // Ensure that 'planId' is populated with the plan details
+
+    if (lastBuy) {
+      const planDetails = lastBuy?.planId;
+      const planValidityInDays = planDetails?.validity; // Ensure validity exists
+      const purchaseDate = new Date(lastBuy?.createdAt); // Convert to Date object
+
+      // Check if planValidityInDays is a valid number
+      if (isNaN(planValidityInDays) || planValidityInDays <= 0) {
+        return res.status(500).json({
+          success: false,
+          message: "Invalid plan validity period",
+        });
+      }
+
+      // Calculate the validTill date
+      const validTill = new Date(purchaseDate);
+      validTill.setDate(validTill.getDate() + planValidityInDays);
+
+      // Calculate the number of days left
+      const currentDate = new Date();
+      const daysLeft = Math.floor((validTill - currentDate) / (1000 * 60 * 60 * 24)); // Difference in days
+
+      if (daysLeft > 0) {
+        return res.status(200).json({
+          success: true,
+          message: `Your plan is active. ${daysLeft} day(s) remaining.`,
+        });
+      } else {
+        return res.status(200).json({
+          success: false,
+          message: "Sorry, your plan has expired.",
+        });
+      }
+    } else {
+      return res.status(200).json({
+        success: false,
+        message: "Sorry, you don't have any plans.",
+      });
+    }
+  } catch (error) {
+    console.error(`Error getting plan: ${error.message}`);
+    return res.status(500).json({
+      success: false,
+      message: `Error getting plan: ${error.message}`,
+      error,
+    });
+  }
+};
+
+
+
+export const GetPlanUser = async (req, res) => {
+
+
+  try {
+    const plan = await planModel.find({}).populate('Category').lean();
+    return res.status(200).send({
+      success: true,
+      message: "All plans",
+      plan,
+    });
+  } catch (error) {
+    return res.status(500).send({
+      message: `Error plan fetched: ${error}`,
+      success: false,
+      error,
+    });
+  }
+};
+
+export const BuyPlanAddUser_old = async (req, res) => {
+
+  try {
+    const {
+      type,
+      username,
+      phone,
+      email,
+      state,
+      statename,
+      country,
+      password,
+      pincode,
+      Gender,
+      DOB,
+      address,
+      city,
+      planId,
+      totalAmount
+    } = req.body;
+
+
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    // Calculate the auto-increment ID
+    const lastUser = await userModel.findOne().sort({ _id: -1 }).limit(1);
+    let userId;
+
+    if (lastUser) {
+      // Convert lastOrder.orderId to a number before adding 1
+      const lastUserId = parseInt(lastUser.userId || 1);
+      userId = lastUserId + 1;
+    } else {
+      userId = 1;
+    }
+
+    const newUser = new userModel({
+      type: 2,
+      username,
+      phone,
+      email,
+      password: hashedPassword,
+      pincode,
+      gender: Gender,
+      DOB,
+      address,
+      state,
+      statename,
+      country,
+      city,
+      userId
+    });
+
+    await newUser.save();
+
+    let Local;
+    if (!newUser.state) {
+      Local = 0;
+    } else {
+      const State = await zonesModel.findById(newUser.state);
+      if (State && State.primary === 'true') {
+        Local = 1;
+      } else {
+        Local = 0;
+      }
+    }
+
+
+
+    const lastLead = await buyPlanModel.findOne().sort({ _id: -1 }).limit(1);
+    let paymentId;
+
+
+    if (lastLead) {
+      if (lastLead.paymentId === undefined) {
+        paymentId = 1;
+      } else {
+        // Convert lastOrder.orderId to a number before adding 1
+        const lastOrderId = parseInt(lastLead.paymentId);
+        paymentId = lastOrderId + 1;
+      }
+    } else {
+      paymentId = 1;
+    }
+
+    // Create a new buy plan record
+    const newBuyPlan = new buyPlanModel({
+      userId: newUser._id,
+      planId,
+      totalAmount,
+      paymentId,
+      note: 'payment succesfully added',
+      payment: 1,  // Assuming payment is the same as totalAmount initially, but could be adjusted as needed
+      Local,  // You can modify this based on your actual requirements
+    });
+
+
+    await newBuyPlan.save();
+
+    res.status(201).json({
+      success: true,
+      user: newUser,
+      message: "User signed up successfully",
+    });
+  } catch (error) {
+    console.log(error);
+    return res.status(500).send({
+      message: `Error occurred during user signup ${error}`,
+      success: false,
+      error,
+    });
+  }
+
+
+
+}
+
+export const BuyPlanAddUser = async (req, res) => {
+  try {
+    const {
+      type,
+      username,
+      phone,
+      email,
+      state,
+      statename,
+      country,
+      password,
+      pincode,
+      Gender,
+      DOB,
+      address,
+      city,
+      planId,
+      totalAmount,
+    } = req.body;
+
+    if (!password) {
+      return res.status(400).json({ success: false, message: "Password is required" });
+    }
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    // Check if user already exists by email or phone
+    const existingUser = await userModel.findOne({ $or: [{ email }, { phone }] });
+    if (existingUser) {
+      return res.status(400).json({ success: false, message: "User with this email or phone already exists" });
+    }
+
+    // Calculate the auto-increment ID for userId
+    const lastUser = await userModel.findOne().sort({ _id: -1 }).limit(1);
+    let userId = 1;
+    if (lastUser) {
+      userId = parseInt(lastUser.userId || 1) + 1;
+    }
+
+    const newUser = new userModel({
+      type: 2,
+      username,
+      phone,
+      email,
+      password: hashedPassword,
+      pincode,
+      gender: Gender,
+      DOB,
+      address,
+      state,
+      statename,
+      country,
+      city,
+      userId,
+    });
+
+    await newUser.save();
+
+    // Determine 'Local' based on the state
+    let Local = 0;
+    if (newUser.state) {
+      const State = await zonesModel.findById(newUser.state);
+      if (State && State.primary === 'true') {
+        Local = 1;
+      }
+    }
+
+    // Calculate the auto-increment ID for paymentId
+    const lastLead = await buyPlanModel.findOne().sort({ _id: -1 }).limit(1);
+    let paymentId = 1;
+    if (lastLead) {
+      paymentId = parseInt(lastLead.paymentId || 1) + 1;
+    }
+
+    const newBuyPlan = new buyPlanModel({
+      userId: newUser._id,
+      planId,
+      totalAmount,
+      paymentId,
+      note: 'Payment successfully added',
+      payment: 1, // Placeholder for actual payment value
+      Local,
+    });
+
+    await newBuyPlan.save();
+
+    res.status(201).json({
+      success: true,
+      user: newUser,
+      buyPlan: newBuyPlan, // Include the newly created buy plan in the response
+      message: "User signed up successfully and plan added.",
+    });
+  } catch (error) {
+    console.log(error);
+    return res.status(500).send({
+      message: `Error occurred during user signup: ${error.message}`,
+      success: false,
+      error,
+    });
+  }
+};
+
+export const BuyPlanByUser = async (req, res) => {
+  try {
+    const {
+      UserData,
+      planId,
+      totalAmount,
+    } = req.body;
+
+
+    // Determine 'Local' based on the state
+    let Local = 0;
+    if (UserData.state) {
+      const State = await zonesModel.findById(UserData.state);
+      if (State && State.primary === 'true') {
+        Local = 1;
+      }
+    }
+
+    // Calculate the auto-increment ID for paymentId
+    const lastLead = await buyPlanModel.findOne().sort({ _id: -1 }).limit(1);
+    let paymentId = 1;
+    if (lastLead) {
+      paymentId = parseInt(lastLead.paymentId || 1) + 1;
+    }
+
+    const newBuyPlan = new buyPlanModel({
+      userId: UserData._id,
+      planId,
+      totalAmount,
+      paymentId,
+      note: 'Payment successfully added',
+      payment: 1, // Placeholder for actual payment value
+      Local,
+    });
+
+    await newBuyPlan.save();
+
+    res.status(201).json({
+      success: true,
+      buyPlan: newBuyPlan, // Include the newly created buy plan in the response
+      message: "pPan buy sucessfully.",
+    });
+  } catch (error) {
+    console.log(error);
+    return res.status(500).send({
+      message: `Error occurred during user signup: ${error.message}`,
+      success: false,
+      error,
+    });
+  }
+};
+
+
+
+export const userPlanIdController = async (req, res) => {
+  try {
+
+
+    const PlanCat = await buyPlanModel.findById(req.params.id).populate('userId', 'username phone email address').populate('planId')  // Populating user info from the 'userId' field
+    const Plan = await planModel.findById(PlanCat.planId)
+      .populate('Category')  // This can be removed if Category is not directly in buyPlanModel.
+
+    let PlanValidity;
+    if (PlanCat) {
+      const planDetails = PlanCat?.planId;
+      const planValidityInDays = planDetails?.validity; // Number of days the plan is valid for
+      const purchaseDate = PlanCat?.createdAt; // Date when the plan was purchased
+
+      // Calculate validTill date by adding validity days to the purchase date
+      const validTill = new Date(purchaseDate);
+      validTill.setDate(validTill.getDate() + planValidityInDays);
+
+      // Calculate days left
+      const currentDate = new Date();
+      const daysLeft = Math.floor((validTill - currentDate) / (1000 * 60 * 60 * 24)); // Difference in days
+      if (daysLeft > 0) {
+        PlanValidity = daysLeft;
+      } else {
+        PlanValidity = 0;
+      }
+    }
+
+    if (!Plan || !PlanCat) {
+      return res.status(200).send({
+        message: "Plan Not Found By Id",
+        success: false,
+      });
+    }
+
+    return res.status(200).json({
+      message: "Plan Found!",
+      success: true,
+      Plan,
+      PlanCat,
+      PlanValidity
+    });
+
+  } catch (error) {
+    console.log(error);
+    return res.status(500).send({
+      success: false,
+      message: "Erorr WHile Deleteing BLog",
+      error,
+    });
+  }
+};
+
+export const profileVendorImage = upload.fields([
+  { name: "Doc1", maxCount: 1 },
+  { name: "Doc2", maxCount: 1 },
+  { name: "Doc3", maxCount: 1 },
+  { name: "profile", maxCount: 1 },
+]);
+
+export const updateVendorProfileUser = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const {
+      username,
+      address,
+      email,
+      pincode,
+      password,
+      gender,
+      state,
+      statename,
+      city,
+      confirm_password,
+      about,
+      department
+    } = req.body;
+    console.log("Uploaded files:", req.files);
+
+    const Doc1 = req.files ? req.files.Doc1 : undefined;
+    const Doc2 = req.files ? req.files.Doc2 : undefined;
+    const Doc3 = req.files ? req.files.Doc3 : undefined;
+    const profileImg = req.files ? req.files.profile : undefined;
+
+    console.log("req.body", req.body, profileImg);
+
+    let updateFields = {
+      username,
+      address,
+      email,
+      pincode,
+      gender,
+      state,
+      statename,
+      city,
+      about,
+      department,
+    };
+
+    if (password.length > 0 && confirm_password.length > 0) {
+      const hashedPassword = await bcrypt.hash(password, 10);
+      updateFields.password = hashedPassword;
+    }
+    // If the files exist, update the corresponding fields
+    if (Doc1 && Doc1[0]) {
+      updateFields.Doc1 = Doc1[0].path;
+    }
+    if (Doc2 && Doc2[0]) {
+      updateFields.Doc2 = Doc2[0].path;
+    }
+    if (Doc3 && Doc3[0]) {
+      updateFields.Doc3 = Doc3[0].path;
+    }
+    if (profileImg && profileImg[0]) {
+      updateFields.profile = profileImg[0].path;
+    }
+
+    const user = await userModel.findByIdAndUpdate(id, updateFields, {
+      new: true,
+    });
+
+    return res.status(200).json({
+      message: "user Updated!",
+      success: true,
+    });
+  } catch (error) {
+    return res.status(400).json({
+      message: `Error while updating Promo code: ${error}`,
+      success: false,
+      error,
+    });
+  }
+};
+
+
+export const SenderEnquireStatus = async (req, res) => {
+  try {
+    const page = parseInt(req.query.page) || 1; // Current page, default is 1
+    const limit = parseInt(req.query.limit) || 10; // Number of documents per page, default is 10
+    const searchTerm = req.query.search || ""; // Get search term from the query parameters
+    const userId = req.query.userId; // Directly access userId from query parameters
+
+    if (!userId) {
+      return res.status(400).send({
+        message: "userId is required",
+        success: false,
+      });
+    }
+
+    const skip = (page - 1) * limit;
+
+    const query = {
+      userId: userId, // Filter by senderId matching userId
+    };
+
+    if (searchTerm) {
+      query.$or = [
+        { 'phone': { $regex: searchTerm, $options: 'i' } }, // Case-insensitive regex search for phone
+        { 'email': { $regex: searchTerm, $options: 'i' } }, // Case-insensitive regex search for email
+        { 'userId.username': { $regex: searchTerm, $options: 'i' } } // Case-insensitive regex search for username
+      ];
+    }
+    const total = await enquireModel.countDocuments(query); // Count only the documents matching the query
+
+    const Enquire = await enquireModel
+      .find(query)
+      .sort({ _id: -1 }) // Sort by _id in descending order
+      .skip(skip)
+      .limit(limit)
+      .populate('userId', 'username email phone address') // Populate userId with username and address only
+      .lean();
+
+    if (!Enquire || Enquire.length === 0) {
+      return res.status(200).send({
+        message: "No Enquires found for the given user.",
+        success: false,
+      });
+    }
+
+    return res.status(200).send({
+      message: "Enquire list retrieved successfully",
+      EnquireCount: Enquire.length,
+      currentPage: page,
+      totalPages: Math.ceil(total / limit),
+      success: true,
+      Enquire,
+    });
+
+  } catch (error) {
+    return res.status(500).send({
+      message: `Error while getting Enquire data: ${error}`,
       success: false,
       error,
     });

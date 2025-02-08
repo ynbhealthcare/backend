@@ -21,17 +21,17 @@ const userSchema = mongoose.Schema({
   type: {
     type: Number,
   },
-   token: {
+  token: {
     type: String,
-   },
+  },
   pincode: {
     type: String,
   },
   state: {
     type: String,
-  },statename: {
+  }, statename: {
     type: String,
-  },city: {
+  }, city: {
     type: String,
   },
   address: {
@@ -47,12 +47,34 @@ const userSchema = mongoose.Schema({
     type: String,
     default: 1
   },
-  verified:{
+  verified: {
     type: Number,
     default: 0
-  }, profile: {
+  },
+  profile: {
     type: String,
     default: "",
+  },
+  profile: {
+    type: String,
+    default: "",
+  },
+
+  about: {
+    type: String,
+    default: "",
+  },
+  Doc2: {
+    type: String,
+    default: "",
+  },
+  Doc3: {
+    type: String,
+    default: "",
+  },
+  department: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Departments', // Reference to the User model for the sender
   },
 },
   { timestamps: true }

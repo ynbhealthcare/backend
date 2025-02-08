@@ -37,6 +37,7 @@ import compareModel from "../models/compareModel.js";
 import enquireModel from "../models/enquireModel.js";
 import planCategoryModel from "../models/planCategoryModel.js";
 import planModel from "../models/planModel.js";
+import departmentsModel from "../models/departmentsModel.js";
 
 
 const storage = multer.diskStorage({
@@ -3672,7 +3673,7 @@ export const getAllPlanCategoryAdmin = async (req, res) => {
 
 export const AddPlanController = async (req, res) => {
   try {
-    const { name ,price,Category} = req.body;
+    const { name, price, Category } = req.body;
 
     // Validation
 
@@ -3687,7 +3688,7 @@ export const AddPlanController = async (req, res) => {
 
     // Create a new category with the specified parent
     const plan = new planModel({
-      name,price,Category
+      name, price, Category
     });
     await plan.save();
 
@@ -3759,13 +3760,13 @@ export const getAllPlanAdmin = async (req, res) => {
 };
 
 export const updatePlanAdmin = async (req, res) => {
-  const { name, price, Category,validity } = req.body;
-  console.log('Category',Category);
+  const { name, price, Category, validity } = req.body;
+  console.log('Category', Category);
 
   try {
     const { id } = req.params;
     let updateFields = {
-      name, price,Category,validity
+      name, price, Category, validity
     };
 
     const plan = await planModel.findByIdAndUpdate(id, updateFields, {
@@ -3865,6 +3866,282 @@ export const UserloginAll = async (req, res) => {
   } catch (error) {
     return res.status(500).send({
       message: `error on login ${error}`,
+      success: false,
+      error,
+    });
+  }
+};
+
+
+// for department model
+export const AddAdminDepartmentController = async (req, res) => {
+  try {
+    const { name, status } = req.body;
+
+    // Validation
+    if (!name) {
+      return res.status(400).send({
+        success: false,
+        message: "Please Provide name",
+      });
+    }
+
+    // Create a new category with the specified parent
+    const newDepartment = new departmentsModel({
+      name,
+      status,
+    });
+    await newDepartment.save();
+
+    return res.status(201).send({
+      success: true,
+      message: "Department Created!",
+      newDepartment,
+    });
+  } catch (error) {
+    console.error("Error while creating Department:", error);
+    return res.status(400).send({
+      success: false,
+      message: "Error while creating Department",
+      error,
+    });
+  }
+};
+
+export const getAllDepartmentFillAdmin = async (req, res) => {
+  try {
+    const page = parseInt(req.query.page) || 1; // Current page, default is 1
+    const limit = parseInt(req.query.limit) || 10; // Number of documents per page, default is 10
+    const searchTerm = req.query.search || ""; // Get search term from the query parameters
+
+    const skip = (page - 1) * limit;
+
+    const query = {};
+    if (searchTerm) {
+      // If search term is provided, add it to the query
+      query.$or = [
+        { name: { $regex: searchTerm, $options: "i" } }, // Case-insensitive username search
+        { value: { $regex: searchTerm, $options: "i" } }, // Case-insensitive email search
+      ];
+    }
+
+    const totalDepartment = await departmentsModel.countDocuments();
+
+    const Department = await departmentsModel
+      .find(query)
+      .sort({ _id: -1 }) // Sort by _id in descending order
+      .skip(skip)
+      .limit(limit)
+      .lean();
+
+    if (!Department) {
+      return res.status(200).send({
+        message: "NO Department found",
+        success: false,
+      });
+    }
+    return res.status(200).send({
+      message: "All Department list ",
+      DepartmentCount: Department.length,
+      currentPage: page,
+      totalPages: Math.ceil(totalDepartment / limit),
+      success: true,
+      Department,
+    });
+  } catch (error) {
+    return res.status(500).send({
+      message: `Error while getting Department ${error}`,
+      success: false,
+      error,
+    });
+  }
+};
+
+export const updateDepartmentAdmin = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const { name, status } = req.body;
+
+    let updateFields = {
+      name,
+      status,
+    };
+
+    const Department = await departmentsModel.findByIdAndUpdate(
+      id,
+      updateFields,
+      {
+        new: true,
+      }
+    );
+
+    return res.status(200).json({
+      message: "Department Updated!",
+      success: true,
+      Department,
+    });
+  } catch (error) {
+    return res.status(400).json({
+      message: `Error while updating Department: ${error}`,
+      success: false,
+      error,
+    });
+  }
+};
+
+export const getDepartmentIdAdmin = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const Department = await departmentsModel.findById(id);
+    if (!Department) {
+      return res.status(200).send({
+        message: "Department Not Found By Id",
+        success: false,
+      });
+    }
+    return res.status(200).json({
+      message: "fetch Single Department!",
+      success: true,
+      Department,
+    });
+  } catch (error) {
+    return res.status(400).json({
+      message: `Error while get Department: ${error}`,
+      success: false,
+      error,
+    });
+  }
+};
+
+export const deleteDepartmentAdmin = async (req, res) => {
+  try {
+    await departmentsModel.findByIdAndDelete(req.params.id);
+
+    return res.status(200).send({
+      success: true,
+      message: "Department Deleted!",
+    });
+  } catch (error) {
+    console.log(error);
+    return res.status(400).send({
+      success: false,
+      message: "Erorr WHile Deleteing Department",
+      error,
+    });
+  }
+};
+
+
+
+
+export const editUserVerifyAdmin = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const { status } = req.body;
+
+    let updateFields = {
+      verified: status,
+    };
+
+    const user = await userModel.findByIdAndUpdate(id, updateFields, {
+      new: true,
+    });
+    if (!user) {
+      return res.status(200).send({
+        message: "NO User found",
+        success: false,
+      });
+    }
+
+    return res.status(200).json({
+      message: "User Updated!",
+      success: true,
+      user,
+    });
+  } catch (error) {
+    return res.status(400).json({
+      message: `Error while updating User: ${error}`,
+      success: false,
+      error,
+    });
+  }
+};
+
+export const profileVendorImage = upload.fields([
+  { name: "Doc1", maxCount: 1 },
+  { name: "Doc2", maxCount: 1 },
+  { name: "Doc3", maxCount: 1 },
+  { name: "ProfileFile", maxCount: 1 },
+]);
+
+export const updateVendorProfileUser = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const {
+      username,
+      address,
+      email,
+      pincode,
+      password,
+      gender,
+      state,
+      statename,
+      city,
+      confirm_password,
+      about,
+      department
+    } = req.body;
+
+    const Doc1 = req.files ? req.files.Doc1 : undefined;
+    const Doc2 = req.files ? req.files.Doc2 : undefined;
+    const Doc3 = req.files ? req.files.Doc3 : undefined;
+
+    const profileImg = req.files ? req.files.ProfileFile : undefined;
+
+    console.log("req.body", req.body, profileImg);
+
+    let updateFields = {
+      username,
+      address,
+      email,
+      pincode,
+      gender,
+      state,
+      statename,
+      city,
+      about,
+      department,
+    };
+
+    if (password.length > 0 && confirm_password.length > 0) {
+      const hashedPassword = await bcrypt.hash(password, 10);
+      updateFields.password = hashedPassword;
+    }
+    if (Doc1 && Doc1[0]) {
+      updateFields.Doc1 = Doc1[0].path; // Assumes profile[0] is the uploaded file
+    }
+    if (Doc2 && Doc2[0]) {
+      updateFields.Doc2 = Doc2[0].path; // Assumes profile[0] is the uploaded file
+    } if (Doc3 && Doc3[0]) {
+      updateFields.Doc3 = Doc3[0].path; // Assumes profile[0] is the uploaded file
+    }
+    if (profileImg && profileImg[0]) {
+      updateFields.profile = profileImg[0].path; // Assumes profile[0] is the uploaded file
+    }
+
+    const user = await userModel.findByIdAndUpdate(id, updateFields, {
+      new: true,
+    });
+
+    return res.status(200).json({
+      message: "user Updated!",
+      success: true,
+    });
+  } catch (error) {
+    return res.status(400).json({
+      message: `Error while updating Promo code: ${error}`,
       success: false,
       error,
     });

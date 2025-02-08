@@ -16,6 +16,20 @@ const enquireSchema = mongoose.Schema({
   service: {
     type: String,
   },
+  type: {
+    type: Number,
+  },
+  userId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "User",  
+  },
+  senderId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "User", 
+  },
+  requirement : {
+    type: String,
+  },
 },
   { timestamps: true }
 );
