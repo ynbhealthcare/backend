@@ -38,6 +38,7 @@ import enquireModel from "../models/enquireModel.js";
 import planCategoryModel from "../models/planCategoryModel.js";
 import planModel from "../models/planModel.js";
 import departmentsModel from "../models/departmentsModel.js";
+import buyPlanModel from "../models/buyPlanModel.js";
 
 
 const storage = multer.diskStorage({
@@ -4147,3 +4148,91 @@ export const updateVendorProfileUser = async (req, res) => {
     });
   }
 };
+
+
+export const AllPaymentAdmin = async (req, res) => {
+  try {
+    const transactions = await buyPlanModel.find({ payment: 1 }).populate('userId', 'phone email username').sort({ createdAt: -1 }).lean();
+
+    return res.status(200).send({
+      success: true,
+      message: "payments fetched successfully",
+      transactions,
+    });
+  } catch (error) {
+    return res.status(500).send({
+      message: `Error payments fetched: ${error}`,
+      success: false,
+      error,
+    });
+  }
+};
+
+
+export const AdminAllEnquireStatus = async (req, res) => {
+  try {
+    const page = parseInt(req.query.page) || 1; // Current page, default is 1
+    const limit = parseInt(req.query.limit) || 10; // Number of documents per page, default is 10
+    const searchTerm = req.query.search || ""; // Get search term from the query parameters
+    const userId = req.query.userId; // Directly access userId from query parameters
+
+    const skip = (page - 1) * limit;
+
+    // Initialize the query object
+    let query = {};
+
+    // If userId is provided, filter by userId
+    if (userId) {
+      query.userId = userId; // Filter by userId
+    }
+
+    query.type = 1; // Filter by userId
+
+
+    // If there's a search term, apply it to a specific field (assuming a text index exists on the model)
+    if (searchTerm) {
+      query.$text = { $search: searchTerm }; // Assuming your model has text indexes for search
+    }
+
+    // Count the total documents matching the query
+    const total = await enquireModel.countDocuments(query);
+
+    // Retrieve the data
+    const Enquire = await enquireModel
+      .find(query)
+      .sort({ _id: -1 }) // Sort by _id in descending order
+      .skip(skip)
+      .limit(limit)
+      .populate('userId', 'username email phone address') // Populate userId with username, email, phone, and address
+      .populate('senderId', 'username email phone address') // Populate senderId with username, email, phone, and address
+      .lean();
+
+    const allvendor = await userModel.find({ type: 1 }).lean();
+
+    if (!Enquire || Enquire.length === 0) {
+      return res.status(200).send({
+        message: "No Enquiries found for the given criteria.",
+        success: false,
+      });
+    }
+
+    return res.status(200).send({
+      message: "Enquiry list retrieved successfully",
+      EnquireCount: Enquire.length,
+      currentPage: page,
+      totalPages: Math.ceil(total / limit),
+      success: true,
+      total,
+      Enquire,
+      allvendor
+    });
+
+  } catch (error) {
+    return res.status(500).send({
+      message: `Error while getting Enquire data: ${error.message || error}`,
+      success: false,
+      error,
+    });
+  }
+};
+

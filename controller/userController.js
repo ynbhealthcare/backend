@@ -6039,3 +6039,43 @@ export const SenderEnquireStatus = async (req, res) => {
     });
   }
 };
+
+
+export const GetWebsiteData = async (req, res) => {
+  try {
+    const browser = await puppeteer.launch();
+    const page = await browser.newPage();
+
+    // Navigate to the page you want to scrape
+    await page.goto('https://ynbhealthcare.com', { waitUntil: 'domcontentloaded' });
+
+
+    // Get the HTML content after JavaScript is executed
+    const content = await page.content();
+
+    // Close the browser after scraping the content
+    await browser.close();
+
+    // Wrap the content in a basic HTML structure
+    const htmlResponse = content;
+
+    // Return the wrapped HTML content in the response
+    return res.status(200).send(htmlResponse);
+
+  } catch (error) {
+    return res.status(500).send(`
+      <html>
+        <head>
+          <title>Error</title>
+        </head>
+        <body>
+          <h1>Error while getting data</h1>
+          <p>${error.message}</p>
+        </body>
+      </html>
+    `);
+  }
+};
+
+
+

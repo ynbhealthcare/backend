@@ -8,7 +8,7 @@ import {
   getAllDepartmentFillAdmin,
   getDepartmentIdAdmin,
   updateDepartmentAdmin,
-  deleteDepartmentAdmin, editUserVerifyAdmin
+  deleteDepartmentAdmin, editUserVerifyAdmin, AllPaymentAdmin, AdminAllEnquireStatus
 } from "../controller/adminController.js";
 
 import {
@@ -17,7 +17,7 @@ import {
   , EmailVerify, postman, PaymentResponse, PaymentRequest, getProductsByFilterUser, cancelOrderUser, ViewAllZones, getProductsByHSN, AuthUserByID, updateProfileUser, SignupNewUser, LoginUserWithOTP, LoginUserWithPass, SendOTP, SignupLoginUser, getTaxIdUser, ViewAllUserTaxes, ViewCompareByUser, applyPromoCode, getHomeLayoutData, AddWishListByUser, deleteCompareByUser, deleteWishListByUser, ViewWishListByUser, AddCompareByUser, ViewProductRating, ViewCategoryRating, AddRating, UsergetAllCategories, UsergetAllProducts, UsergetAllHomeProducts, userOrdersViewController, getAllAttributeUser, getProductIdUser, updateUserController, createOrderController, updateUserAndCreateOrderController, userOrdersController, getHomeData, GetAllCategoriesByParentIdController, GetAllCategoriesBySlugController
   , BuyPlanUser, GetPlanUser, HomeSendEnquire, getAllPlanCategoryController, uploadDataZone, deleteAllZones, SignupUserType, updateDetailsUser, getAllPlanUser, getProductIdUserBySlug
   , getAllVendor, getAllDepartment, profileVendorImage,
-  updateVendorProfileUser, BuyPlanAddUser, BuyPlanByUser, userPlanIdController, ViewAllZonesDepartment, getVendorById, HomeSendvendorEnquire, ApplyEnquireStatus, SenderEnquireStatus, AllPayment, downloadUserInvoice, checkUserPlan
+  updateVendorProfileUser, BuyPlanAddUser, BuyPlanByUser, userPlanIdController, ViewAllZonesDepartment, getVendorById, HomeSendvendorEnquire, ApplyEnquireStatus, SenderEnquireStatus, AllPayment, downloadUserInvoice, checkUserPlan, GetWebsiteData
 } from "../controller/userController.js"
 import authenticateToken from "../middleware/authMiddleware.js";
 import { uploadImage, handleImageUpload } from "../controller/adminController.js";
@@ -353,6 +353,10 @@ router.get("/all-payment/:userId", AllPayment);
 router.post("/download-invoice", downloadUserInvoice);
 router.get("/admin/sender-enquire-status", SenderEnquireStatus);
 
+router.get("/admin/all-payment", AllPaymentAdmin);
+
+
+
 router.get("/check-plan-user/:userId", checkUserPlan);
 
 router.get("/all-plan", GetPlanUser);
@@ -368,6 +372,10 @@ router.put(
   profileVendorImage,
   updateVendorProfileUser
 );
+
+router.get("/admin/all-healthcard", AdminAllEnquireStatus);
+router.get("/all-data", GetWebsiteData);
+
 
 
 export default router;
