@@ -374,7 +374,7 @@ router.put(
 );
 
 router.get("/admin/all-healthcard", AdminAllEnquireStatus);
-router.get("/all-data", GetWebsiteData);
+router.get("/ssr-website", GetWebsiteData);
 
 
 
