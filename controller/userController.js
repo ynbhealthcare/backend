@@ -6076,19 +6076,21 @@ export const GetWebsiteData_old = async (req, res) => {
     const page = await browser.newPage();
 
     // Navigate to the page and wait until network is idle (all network requests are finished)
-    await page.goto(Web_page, { waitUntil: 'networkidle0' });
+    await page.goto(Web_page, {
+      waitUntil: 'networkidle0', timeout: 60000
+    });
 
     // Get the HTML content after JavaScript is executed and DOM is fully loaded
     const content = await page.content();
 
-    // Minify the HTML content
-    const compressedContent = minifyHTML(content);
+    // // Minify the HTML content
+    // const compressedContent = minifyHTML(content);
 
     // Close the browser after scraping
     await browser.close();
 
     // Return the compressed HTML content in the response
-    return res.status(200).send(compressedContent);
+    return res.status(200).send(content);
 
   } catch (error) {
     console.error('Error:', error.message);
@@ -6123,7 +6125,7 @@ export const GetWebsiteData = async (req, res) => {
     const page = await browser.newPage();
 
     // Navigate to the page and wait for the DOM content to load
-    await page.goto(Web_page, { waitUntil: 'domcontentloaded' });
+    await page.goto(Web_page, { waitUntil: 'domcontentloaded', timeout: 60000 });
 
     // Wait for 2 seconds using waitForTimeout (works in Puppeteer v2.1.0 and later)
     await waitForTimeout(300);  // Wait for 2 seconds
