@@ -374,7 +374,7 @@ router.put(
 );
 
 router.get("/admin/all-healthcard", AdminAllEnquireStatus);
-router.get("/ssr-website", GetWebsiteData);
+router.get("/product/spine-surgery", GetWebsiteData);
 
 
 

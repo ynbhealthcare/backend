@@ -6040,20 +6040,28 @@ export const SenderEnquireStatus = async (req, res) => {
   }
 };
 
+// Custom waitForTimeout function
+const waitForTimeout = (milliseconds) => {
+  return new Promise(resolve => setTimeout(resolve, milliseconds));
+};
+
 
 export const GetWebsiteData = async (req, res) => {
-
   const Web_page = req.query.web;
 
   try {
     if (!Web_page) {
-      return res.status(200).send('');
+      return res.status(200).send('No webpage URL provided.');
     }
+
     const browser = await puppeteer.launch();
     const page = await browser.newPage();
 
-    // Navigate to the page you want to scrape
+    // Navigate to the page and wait for the DOM content to load
     await page.goto(Web_page, { waitUntil: 'domcontentloaded' });
+
+    // Wait for 2 seconds using waitForTimeout (works in Puppeteer v2.1.0 and later)
+    await waitForTimeout(2000);  // Wait for 2 seconds
 
     // Get the HTML content after JavaScript is executed
     const content = await page.content();
@@ -6061,14 +6069,11 @@ export const GetWebsiteData = async (req, res) => {
     // Close the browser after scraping the content
     await browser.close();
 
-    // Wrap the content in a basic HTML structure
-    const htmlResponse = content;
-
     // Return the wrapped HTML content in the response
-    return res.status(200).send(htmlResponse);
+    return res.status(200).send(content);
 
   } catch (error) {
-
+    console.error('Error:', error.message);
     return res.status(500).send(`
       <html>
         <head>

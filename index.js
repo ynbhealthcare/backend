@@ -70,9 +70,9 @@ io.on("connection", (socket) => {
 });
 
 
-app.get('/', (req, res) => {
-  res.send('You are not authorized for this action');
-});
+// app.get('/', (req, res) => {
+//   res.send('You are not authorized for this action');
+// });
 
 const PORT = 3050;
 server.listen(PORT, () =>
