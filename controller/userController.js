@@ -1853,7 +1853,7 @@ export const GetAllCategoriesByParentIdController_old = async (req, res) => {
     const categories = await getAllCategoriesByParentId(parentId);
     const MainCat = await categoryModel
       .findById(parentId)
-      .select("title description")
+      .select("title description slug")
       .lean();
 
     const filters = { Category: parentId }; // Initialize filters with parent category filter
@@ -6045,6 +6045,64 @@ const waitForTimeout = (milliseconds) => {
   return new Promise(resolve => setTimeout(resolve, milliseconds));
 };
 
+// Function to minify HTML content manually
+const minifyHTML = (html) => {
+  return html
+    .replace(/\n+/g, '') // Remove newlines
+    .replace(/\s+/g, ' ') // Replace multiple spaces with a single space
+    .replace(/<!--[\s\S]*?-->/g, '') // Remove HTML comments
+    .replace(/\s{2,}/g, ' ') // Replace multiple spaces with a single space
+    .replace(/>\s+</g, '><'); // Remove spaces between tags
+};
+
+export const GetWebsiteData_old = async (req, res) => {
+  const Web_page = req.query.web;
+
+  try {
+    if (!Web_page) {
+      return res.status(200).send('No webpage URL provided.');
+    }
+
+    // Launch browser with headless mode and optimized settings
+    const browser = await puppeteer.launch({
+      headless: true, // Run in headless mode
+      args: ['--no-sandbox', '--disable-setuid-sandbox'],
+    });
+
+    const page = await browser.newPage();
+
+    // Navigate to the page and wait until network is idle (all network requests are finished)
+    await page.goto(Web_page, { waitUntil: 'networkidle0' });
+
+    // Get the HTML content after JavaScript is executed and DOM is fully loaded
+    const content = await page.content();
+
+    // Minify the HTML content
+    const compressedContent = minifyHTML(content);
+
+    // Close the browser after scraping
+    await browser.close();
+
+    // Return the compressed HTML content in the response
+    return res.status(200).send(compressedContent);
+
+  } catch (error) {
+    console.error('Error:', error.message);
+    return res.status(500).send(`
+      <html>
+        <head>
+          <title>Error</title>
+        </head>
+        <body>
+          <h1>Error while getting data</h1>
+          <p>${error.message}</p>
+        </body>
+      </html>
+    `);
+  }
+};
+
+
 
 export const GetWebsiteData = async (req, res) => {
   const Web_page = req.query.web;
@@ -6054,14 +6112,17 @@ export const GetWebsiteData = async (req, res) => {
       return res.status(200).send('No webpage URL provided.');
     }
 
-    const browser = await puppeteer.launch();
+    const browser = await puppeteer.launch({
+      headless: true, // Run in headless mode
+      args: ['--no-sandbox', '--disable-setuid-sandbox'],
+    });
     const page = await browser.newPage();
 
     // Navigate to the page and wait for the DOM content to load
     await page.goto(Web_page, { waitUntil: 'domcontentloaded' });
 
     // Wait for 2 seconds using waitForTimeout (works in Puppeteer v2.1.0 and later)
-    await waitForTimeout(2000);  // Wait for 2 seconds
+    await waitForTimeout(300);  // Wait for 2 seconds
 
     // Get the HTML content after JavaScript is executed
     const content = await page.content();
