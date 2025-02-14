@@ -6068,18 +6068,18 @@ export const GetWebsiteData = async (req, res) => {
     return res.status(200).send(htmlResponse);
 
   } catch (error) {
-    return res.status(200).send('');
-    // return res.status(500).send(`
-    //   <html>
-    //     <head>
-    //       <title>Error</title>
-    //     </head>
-    //     <body>
-    //       <h1>Error while getting data</h1>
-    //       <p>${error.message}</p>
-    //     </body>
-    //   </html>
-    // `);
+
+    return res.status(500).send(`
+      <html>
+        <head>
+          <title>Error</title>
+        </head>
+        <body>
+          <h1>Error while getting data</h1>
+          <p>${error.message}</p>
+        </body>
+      </html>
+    `);
   }
 };
 
