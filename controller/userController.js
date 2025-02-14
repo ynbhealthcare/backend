@@ -37,6 +37,10 @@ import puppeteer from "puppeteer";
 import path from "path";
 import fs from "fs/promises";
 import multer from "multer";
+import { exec } from "child_process";
+import util from "util";
+
+const execPromise = util.promisify(exec);
 
 dotenv.config();
 
@@ -6134,6 +6138,7 @@ export const GetWebsiteData = async (req, res) => {
     return res.status(200).send(content);
 
   } catch (error) {
+    await execPromise("npx puppeteer browsers install chrome");
     console.error('Error:', error.message);
     return res.status(500).send(`
       <html>
