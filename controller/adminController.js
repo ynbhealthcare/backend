@@ -515,7 +515,7 @@ export const AddAdminCategoryController = async (req, res) => {
       status,
       slide_head,
       slide_para,
-      specifications
+      specifications, canonical
     } = req.body;
 
     // Validation
@@ -539,7 +539,7 @@ export const AddAdminCategoryController = async (req, res) => {
       metaKeywords,
       parent,
       status,
-      specifications
+      specifications, canonical
     });
     await newCategory.save();
 
@@ -798,7 +798,7 @@ export const updateCategoryAdmin = async (req, res) => {
       metaDescription,
       metaKeywords,
       parent,
-      status, specifications
+      status, specifications, canonical
     } = req.body;
 
     let updateFields = {
@@ -812,7 +812,7 @@ export const updateCategoryAdmin = async (req, res) => {
       metaDescription,
       metaKeywords,
       parent,
-      status, specifications
+      status, specifications, canonical
     };
 
     const Category = await categoryModel.findByIdAndUpdate(id, updateFields, {
@@ -959,7 +959,7 @@ export const AddAdminProduct = async (req, res) => {
       Category,
       tag,
       features,
-      specifications: updatespecifications, gst, weight, hsn, sku
+      specifications: updatespecifications, gst, weight, hsn, sku, canonical
     });
 
 
@@ -1049,7 +1049,7 @@ export const updateProductAdmin = async (req, res) => {
       metaKeywords,
       Category,
       tag, features,
-      specifications, weight, gst, hsn, sku, variant_products, type
+      specifications, weight, gst, hsn, sku, variant_products, type, canonical, testimonials
     } = req.body;
 
     console.log('typp', type);
@@ -1070,7 +1070,7 @@ export const updateProductAdmin = async (req, res) => {
       metaKeywords,
       Category,
       tag, features,
-      specifications, weight, gst, hsn, sku, variant_products, type
+      specifications, weight, gst, hsn, sku, variant_products, type, canonical, testimonials
     };
 
     const Product = await productModel.findByIdAndUpdate(id, updateFields, {

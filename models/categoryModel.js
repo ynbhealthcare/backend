@@ -50,6 +50,10 @@ const categorySchema = new mongoose.Schema(
       type: mongoose.Types.ObjectId,
       ref: "category", // Reference to the same "Category" model
     },
+    canonical: {
+      type: String,
+    },
+
   },
   { timestamps: true }
 );

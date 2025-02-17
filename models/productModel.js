@@ -53,7 +53,7 @@ const productSchema = new mongoose.Schema(
         },
         variations: {
             type: Object,
-        }, 
+        },
         variant_products: {
             type: Object,
         },
@@ -91,7 +91,12 @@ const productSchema = new mongoose.Schema(
         sku: {
             type: String,
         },
-
+        canonical: {
+            type: String,
+        },
+        testimonials: {
+            type: Object,
+        },
     },
     { timestamps: true }
 );
