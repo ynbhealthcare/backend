@@ -2036,7 +2036,7 @@ export const GetAllCategoriesBySlugController = async (req, res) => {
     const MainCat = await categoryModel
       .findOne({ slug: parentSlug, status: "true" })
       .select(
-        "title metaTitle metaDescription metaKeywords image description specifications slide_head slide_para filter slug"
+        "title metaTitle metaDescription metaKeywords image description specifications slide_head slide_para filter slug canonical"
       )
       .lean();
 
