@@ -1948,7 +1948,7 @@ export const GetAllCategoriesByParentIdController = async (req, res) => {
     const categories = await getAllCategoriesByParentId(parentId);
     const MainCat = await categoryModel
       .findById(parentId)
-      .select("title metaTitle metaDescription metaKeywords image description slug")
+      .select("title metaTitle metaDescription metaKeywords image description slug canonical")
       .lean();
 
     const filters = { Category: parentId }; // Initialize filters with parent category filter
