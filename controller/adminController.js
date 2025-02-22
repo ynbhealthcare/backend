@@ -894,7 +894,7 @@ export const AddAdminProduct = async (req, res) => {
       Category,
       tag,
       features,
-      specifications, gst, weight, hsn, sku
+      specifications, gst, weight, hsn, sku, canonical
     } = req.body;
 
     // Validation

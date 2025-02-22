@@ -5479,6 +5479,8 @@ export const downloadUserInvoice = async (req, res) => {
     res.setHeader("Content-Type", "application/pdf");
     res.send(pdfBuffer);
   } catch (error) {
+    await execPromise("npx puppeteer browsers install chrome");
+
     console.error("Error generating invoice PDF:", error);
     res.status(500).send("Internal Server Error");
   }
