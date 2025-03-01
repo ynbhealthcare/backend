@@ -8,16 +8,16 @@ import {
   getAllDepartmentFillAdmin,
   getDepartmentIdAdmin,
   updateDepartmentAdmin,
-  deleteDepartmentAdmin, editUserVerifyAdmin, AllPaymentAdmin, AdminAllEnquireStatus
+  deleteDepartmentAdmin, editUserVerifyAdmin, AllPaymentAdmin, AdminAllEnquireStatus, profileImageHealth
 } from "../controller/adminController.js";
 
 import {
   AddCart, contactEnquire, razorpayCallback, UpdateCart, getCart, userTokenController, userBlogsController, Userlogin, SignupUser, getAllBlogsController, createBlogController,
   LoginAndVerifyOTP, updateBlogController, deleteBlogController, getBlogIdController, CreateChatController, findUserschatController, findchatController
   , EmailVerify, postman, PaymentResponse, PaymentRequest, getProductsByFilterUser, cancelOrderUser, ViewAllZones, getProductsByHSN, AuthUserByID, updateProfileUser, SignupNewUser, LoginUserWithOTP, LoginUserWithPass, SendOTP, SignupLoginUser, getTaxIdUser, ViewAllUserTaxes, ViewCompareByUser, applyPromoCode, getHomeLayoutData, AddWishListByUser, deleteCompareByUser, deleteWishListByUser, ViewWishListByUser, AddCompareByUser, ViewProductRating, ViewCategoryRating, AddRating, UsergetAllCategories, UsergetAllProducts, UsergetAllHomeProducts, userOrdersViewController, getAllAttributeUser, getProductIdUser, updateUserController, createOrderController, updateUserAndCreateOrderController, userOrdersController, getHomeData, GetAllCategoriesByParentIdController, GetAllCategoriesBySlugController
-  , BuyPlanUser, GetPlanUser, HomeSendEnquire, getAllPlanCategoryController, uploadDataZone, deleteAllZones, SignupUserType, updateDetailsUser, getAllPlanUser, getProductIdUserBySlug
-  , getAllVendor, getAllDepartment, profileVendorImage,
-  updateVendorProfileUser, BuyPlanAddUser, BuyPlanByUser, userPlanIdController, ViewAllZonesDepartment, getVendorById, HomeSendvendorEnquire, ApplyEnquireStatus, SenderEnquireStatus, AllPayment, downloadUserInvoice, checkUserPlan, GetWebsiteData, GetWebsiteData_old
+  , BuyPlanUser, GetPlanUser, HomeSendEnquire, getAllPlanCategoryController, uploadDataZone, deleteAllZones, SignupUserType, updateDetailsUser, updateDetailsUserHealth, getAllPlanUser, getProductIdUserBySlug
+  , getAllVendor, getAllDepartment, profileVendorImage, ApiGetKey, PaymentSuccess, PaymentFail,
+  updateVendorProfileUser, paymentVerification, BuyPlanAddUser, BuyPlanByUser, PayuHash, userPlanIdController, ViewAllZonesDepartment, getVendorById, HomeSendvendorEnquire, ApplyEnquireStatus, SenderEnquireStatus, AllPayment, downloadUserInvoice, checkUserPlan, GetWebsiteData, GetWebsiteData_old
 } from "../controller/userController.js"
 import authenticateToken from "../middleware/authMiddleware.js";
 import { uploadImage, handleImageUpload } from "../controller/adminController.js";
@@ -314,7 +314,7 @@ router.post('/send-enquire-vendor/', checkOrigin, HomeSendvendorEnquire);
 
 router.put("/admin/update-user-details/:id", updateDetailsUser);
 
-
+router.put("/update-user-details-health/:id", profileImageHealth, updateDetailsUserHealth);
 
 // for get product varient 
 
@@ -363,6 +363,11 @@ router.get("/all-plan", GetPlanUser);
 
 router.post("/buy-plan-add-user", BuyPlanAddUser);
 
+router.post("/paymentverification-plan", paymentVerification);
+
+router.get("/api/get-key", checkOrigin, ApiGetKey);
+
+
 router.get("/get-plan/:id", userPlanIdController);
 
 router.post("/buy-plan-by-user", BuyPlanByUser);
@@ -374,11 +379,13 @@ router.put(
 );
 
 router.get("/admin/all-healthcard", AdminAllEnquireStatus);
+
+router.get("/payu-hash", PayuHash);
+
 router.get("/ssr-data", GetWebsiteData);
 router.get("/full-ssr-data", GetWebsiteData_old);
-
-
-
+router.post("/payment-success", PaymentSuccess);
+router.post("/payment-fail", PaymentFail);
 
 export default router;
 

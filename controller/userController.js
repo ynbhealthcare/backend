@@ -39,6 +39,7 @@ import fs from "fs/promises";
 import multer from "multer";
 import { exec } from "child_process";
 import util from "util";
+import crypto from "crypto";  // Ensure you require the crypto module if you haven't
 
 const execPromise = util.promisify(exec);
 
@@ -1758,7 +1759,7 @@ export const updateUserAndCreateOrderController_old = async (req, res) => {
       });
     }
 
-    const order = await razorpay.orders.create(options);
+    const order = await Razorpay.orders.create(options);
     const apiKey = process.env.RAZORPAY_API_KEY;
 
     const newOrder = new orderModel({
@@ -4511,6 +4512,9 @@ export const AuthUserByID = async (req, res) => {
           Doc2: existingUser.Doc2,
           Doc3: existingUser.Doc3,
           profile: existingUser.profile,
+          aadharno: existingUser.aadharno,
+          pHealthHistory: existingUser.pHealthHistory,
+          cHealthStatus: existingUser.cHealthStatus,
         },
       });
 
@@ -4634,6 +4638,51 @@ export const updateDetailsUser = async (req, res) => {
     });
   }
 };
+
+
+export const updateDetailsUserHealth = async (req, res) => {
+
+  try {
+    const { id } = req.params;
+    const {
+      username,
+      aadharno,
+      DOB,
+      pHealthHistory,
+      cHealthStatus,
+    } = req.body;
+    console.log('aadharno', aadharno)
+    const profileImg = req.files ? req.files.profile : undefined;
+
+    let updateFields = {
+      username,
+      aadharno,
+      DOB,
+      pHealthHistory,
+      cHealthStatus,
+    };
+
+    if (profileImg && profileImg[0]) {
+      updateFields.profile = profileImg[0].path; // Assumes profile[0] is the uploaded file
+    }
+
+    const user = await userModel.findByIdAndUpdate(id, updateFields, {
+      new: true,
+    });
+
+    return res.status(200).json({
+      message: "user Updated!",
+      success: true,
+    });
+  } catch (error) {
+    return res.status(400).json({
+      message: `Error while updating Promo code: ${error}`,
+      success: false,
+      error,
+    });
+  }
+};
+
 
 export const contactEnquire = async (req, res) => {
   const { name, email, message } = req.body;
@@ -5326,7 +5375,7 @@ const generateUserInvoicePDF = async (invoiceData) => {
           alt="Company Logo" width="250">
           
           <p>WZ 10C, A-2 Block, Asalatpur Near Mata Chanan Devi Hospital, Janakpuri, New Delhi, 110058</p>
-          <p>Email: info@travelintrip.com</p>
+          <p>Email: info@ynbhealthcare.com</p>
           <p>Phone: +91 8100188188</p>
         </div>
         <div class="invoice-header-right">
@@ -5693,6 +5742,13 @@ export const BuyPlanAddUser_old = async (req, res) => {
 
 }
 
+
+// const instance = new razorpay({
+//   key_id: process.env.LIVEKEY,
+//   key_secret: process.env.LIVESECRET,
+// });
+// Wallet functionality
+
 export const BuyPlanAddUser = async (req, res) => {
   try {
     const {
@@ -5731,6 +5787,13 @@ export const BuyPlanAddUser = async (req, res) => {
     if (lastUser) {
       userId = parseInt(lastUser.userId || 1) + 1;
     }
+
+    const options = {
+      amount: Number(finalAmount * 100),
+      currency: "INR",
+    };
+    const order = await instance.orders.create(options);
+
 
     const newUser = new userModel({
       type: 2,
@@ -5775,6 +5838,7 @@ export const BuyPlanAddUser = async (req, res) => {
       note: 'Payment successfully added',
       payment: 1, // Placeholder for actual payment value
       Local,
+      razorpay_order_id: order.id,
     });
 
     await newBuyPlan.save();
@@ -5795,6 +5859,200 @@ export const BuyPlanAddUser = async (req, res) => {
   }
 };
 
+export const ApiGetKey = async (req, res) => {
+  return res
+    .status(200)
+    .json({ key: encrypt(process.env.LIVEKEY, process.env.APIKEY) });
+};
+
+
+export const paymentVerification_old = async (req, res) => {
+
+  const { razorpay_order_id, razorpay_payment_id, razorpay_signature } = req.body;
+
+  const body = razorpay_order_id + "|" + razorpay_payment_id;
+  const expectedsgnature = crypto
+    .createHmac("sha256", process.env.LIVESECRET)
+    .update(body.toString())
+    .digest("hex");
+  const isauth = expectedsgnature === razorpay_signature;
+  if (isauth) {
+    // await Payment.create({
+    //   razorpay_order_id,
+    //   razorpay_payment_id,
+    //   razorpay_signature,
+    // });
+
+    const payment = await buyPlanModel.findOneAndUpdate(
+      { razorpay_order_id: razorpay_order_id },
+      {
+        razorpay_payment_id,
+        razorpay_signature,
+        payment: 1,
+      },
+      { new: true } // This option returns the updated document
+    );
+
+    console.log(
+      "razorpay_order_id, razorpay_payment_id, razorpay_signature",
+      razorpay_order_id,
+      razorpay_payment_id,
+      razorpay_signature
+    );
+
+    console.log("razorpay_signature", payment, req.body);
+
+    res.redirect(
+      `${process.env.LIVEWEB}paymentsuccess?reference=${razorpay_payment_id}`
+    );
+
+  } else {
+    await buyPlanModel.findOneAndUpdate(
+      { razorpay_order_id },
+      {
+        payment: 2,
+      },
+      { new: true } // This option returns the updated document
+    );
+
+    res.status(400).json({ success: false });
+  }
+};
+
+export const paymentVerification = async (req, res) => {
+  const { razorpay_order_id, razorpay_payment_id, razorpay_signature } = req.body;
+
+  const body = razorpay_order_id + "|" + razorpay_payment_id;
+  const expectedSignature = crypto
+    .createHmac("sha256", process.env.LIVESECRET)
+    .update(body.toString())
+    .digest("hex");
+  const isAuth = expectedSignature === razorpay_signature;
+
+  if (isAuth) {
+    // Update payment status in the database
+    const payment = await buyPlanModel.findOneAndUpdate(
+      { razorpay_order_id: razorpay_order_id },
+      {
+        razorpay_payment_id,
+        razorpay_signature,
+        payment: 1,
+      },
+      { new: true }
+    );
+
+    if (payment) {
+      // Populate userId to fetch the email
+      const user = await payment.populate('userId'); // Assuming userId is populated
+
+      if (user) {
+        const userEmail = user.email;
+
+        // Send payment ID to the user's email using nodemailer
+        const transporter = nodemailer.createTransport({
+          host: process.env.MAIL_HOST, // Your SMTP host
+          port: process.env.MAIL_PORT, // Your SMTP port
+          secure: process.env.MAIL_ENCRYPTION === 'true', // If using SSL/TLS
+          auth: {
+            user: process.env.MAIL_USERNAME, // Your email address
+            pass: process.env.MAIL_PASSWORD, // Your email password
+          },
+        });
+
+        const mailOptions = {
+          from: process.env.MAIL_FROM_ADDRESS, // Your email address
+          to: userEmail, // User's email
+          subject: "Payment Successful - Your Payment ID",
+          text: `Hello, \n\nYour payment has been successfully processed. Your payment ID is: ${razorpay_payment_id}. \n\nThank you for choosing us!`,
+        };
+
+        // Send email
+        transporter.sendMail(mailOptions, (error, info) => {
+          if (error) {
+            console.error(error);
+            res.status(500).send("Failed to send email");
+          } else {
+            console.log("Payment ID sent to user email: " + info.response);
+          }
+        });
+      } else {
+        console.error("User not found for payment ID:", razorpay_order_id);
+      }
+
+      res.redirect(
+        `${process.env.LIVEWEB}paymentsuccess?reference=${razorpay_payment_id}`
+      );
+    } else {
+      res.status(404).send("Payment not found");
+    }
+  } else {
+    // Update payment status as failed
+    await buyPlanModel.findOneAndUpdate(
+      { razorpay_order_id },
+      {
+        payment: 2, // Assuming 2 indicates failed payment
+      },
+      { new: true }
+    );
+
+    res.status(400).json({ success: false });
+  }
+};
+
+
+
+const generateHash = (data, salt) => {
+  // Concatenate the parameters in the correct order
+  const hashString = `${data.key}|${data.txnid}|${data.amount}|${data.productinfo}|${data.firstname}|${data.email}|${data.udf1 || ''}|${data.udf2 || ''}|${data.udf3 || ''}|${data.udf4 || ''}|${data.udf5 || ''}||||||${salt}`;
+
+  // Log the concatenated string for debugging
+  console.log("Concatenated Hash String: ", hashString);
+
+  // Generate SHA512 hash using CryptoJS
+  const hash = CryptoJS.SHA512(hashString).toString(CryptoJS.enc.Hex);  // Output hash as a hexadecimal string
+
+  // Log the generated hash to verify
+  console.log("Generated Hash: ", hash);
+
+  return hash;
+};
+
+// Function to create the sha512 hash
+export const sha512 = (str) => {
+  return CryptoJS.SHA512(str).toString(CryptoJS.enc.Hex);  // Generate and return the hash as a hex string
+}
+
+
+
+export const PayuHash = (amount, firstName, email, phone, transactionId) => {
+
+  // Prepare data for the PayU request
+  const data = {
+    key: process.env.MERCHANTKEY,
+    txnid: transactionId,                   // Unique Transaction ID
+    amount: amount,                         // Amount to be paid
+    productinfo: 'Buy Plan',                // Product info
+    firstname: firstName,                   // Customer's First Name
+    email: email,                           // Customer's Email
+    phone: phone,                           // Customer's Phone Number
+    surl: process.env.SUCCESSURL,                       // Success URL
+    furl: process.env.FAILURL,
+    udf1: '', udf2: '', udf3: '', udf4: '', udf5: '', // Optional fields
+  };
+
+  // Generate the correct hash
+  const hash = generateHash(data, process.env.MERCHANSALT);
+
+  // Add the generated hash to the data object
+  data.hash = hash;
+
+  // Log the data to verify
+  console.log('Generated Data:', data);
+
+  return data;  // Return the generated data with hash for payment
+};
+
+
 export const BuyPlanByUser = async (req, res) => {
   try {
     const {
@@ -5803,6 +6061,9 @@ export const BuyPlanByUser = async (req, res) => {
       totalAmount,
     } = req.body;
 
+    const transactionId = `${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+
+    const paymentData = PayuHash(totalAmount, UserData.username, UserData.email, UserData.phone, transactionId);
 
     // Determine 'Local' based on the state
     let Local = 0;
@@ -5826,16 +6087,18 @@ export const BuyPlanByUser = async (req, res) => {
       totalAmount,
       paymentId,
       note: 'Payment successfully added',
-      payment: 1, // Placeholder for actual payment value
+      payment: 0, // Placeholder for actual payment value
       Local,
+      razorpay_order_id: transactionId
     });
 
     await newBuyPlan.save();
 
-    res.status(201).json({
+    res.status(200).json({
       success: true,
       buyPlan: newBuyPlan, // Include the newly created buy plan in the response
-      message: "pPan buy sucessfully.",
+      message: "plan buy sucessfully.",
+      paymentData
     });
   } catch (error) {
     console.log(error);
@@ -5848,6 +6111,36 @@ export const BuyPlanByUser = async (req, res) => {
 };
 
 
+export const PaymentSuccess = async (req, res) => {
+  // Extract the PayU response params sent to successUrl
+  const { txnid, status } = req.body;
+
+  if (status === 'success') {
+    // Update the payment status if the transaction exists, or create a new one
+    const updatedTransaction = await buyPlanModel.findOneAndUpdate(
+      { razorpay_order_id: txnid }, // Find the transaction by txnid
+      {
+        $set: {
+          payment: 1, // Payment successful
+        },
+      },
+      { new: true, upsert: true } // `new: true` returns the updated document, `upsert: true` creates a new document if not found
+    );
+
+    if (!updatedTransaction) {
+      res.redirect(process.env.RFAILURL);
+    }
+    res.redirect(`${process.env.RSUCCESSURL}/${txnid}`);
+
+  } else {
+    res.redirect(process.env.RFAILURL);
+  }
+
+};
+
+export const PaymentFail = async (req, res) => {
+  res.redirect(process.env.RFAILURL);
+};
 
 export const userPlanIdController = async (req, res) => {
   try {
@@ -6157,6 +6450,4 @@ export const GetWebsiteData = async (req, res) => {
     `);
   }
 };
-
-
 

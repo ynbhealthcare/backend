@@ -4236,3 +4236,6 @@ export const AdminAllEnquireStatus = async (req, res) => {
   }
 };
 
+export const profileImageHealth = upload.fields([
+  { name: "profile", maxCount: 1 },
+]);

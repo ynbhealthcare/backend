@@ -76,6 +76,20 @@ const userSchema = mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Departments', // Reference to the User model for the sender
   },
+  pHealthHistory: {
+    type: String,
+    default: "",
+  },
+  cHealthStatus: {
+    type: String,
+    default: "",
+  },
+  aadharno: {
+    type: String,
+  },
+  DOB: {
+    type: Date,
+  },
 },
   { timestamps: true }
 );
