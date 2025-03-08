@@ -2953,7 +2953,7 @@ export const SignupLoginUser = async (req, res) => {
 
       // block
       console.log(otp);
-      // await sendRegOTP(phone, otp);
+      await sendLogOTP(phone, otp);
       return res.status(200).json({
         success: true,
         message: "New User found",
