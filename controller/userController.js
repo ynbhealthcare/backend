@@ -2790,12 +2790,12 @@ const sendLogOTP = async (phone, otp) => {
   try {
     // Construct the request URL with query parameters
     const queryParams = querystring.stringify({
-      username: "cayro.trans",
-      password: "CsgUK",
+      username: "ynbhealth.trans",
+      password: "qEX1P",
       unicode: false,
-      from: "CAYROE",
+      from: "YNBHLT",
       to: phone,
-      text: `Here is OTP ${otp} for mobile no verification in website cayroshop.com`,
+      text: `OTP is ${otp} for your account Login-Register in YNB Healthcare`,
     });
     const url = `https://pgapi.smartping.ai/fe/api/v1/send?${queryParams}`;
 
@@ -2930,7 +2930,7 @@ export const SignupLoginUser = async (req, res) => {
 
         // block
         console.log(otp);
-        //  await sendLogOTP(phone, otp);
+         await sendLogOTP(phone, otp);
 
         return res.status(201).json({
           success: true,
@@ -3056,7 +3056,7 @@ export const LoginUserWithOTP = async (req, res) => {
 
       // block
       console.log(otp);
-      //   await sendLogOTP(phone, otp);
+        await sendLogOTP(phone, otp);
 
       return res.status(201).json({
         success: true,
@@ -5749,115 +5749,7 @@ export const BuyPlanAddUser_old = async (req, res) => {
 // });
 // Wallet functionality
 
-export const BuyPlanAddUser = async (req, res) => {
-  try {
-    const {
-      type,
-      username,
-      phone,
-      email,
-      state,
-      statename,
-      country,
-      password,
-      pincode,
-      Gender,
-      DOB,
-      address,
-      city,
-      planId,
-      totalAmount,
-    } = req.body;
 
-    if (!password) {
-      return res.status(400).json({ success: false, message: "Password is required" });
-    }
-
-    const hashedPassword = await bcrypt.hash(password, 10);
-
-    // Check if user already exists by email or phone
-    const existingUser = await userModel.findOne({ $or: [{ email }, { phone }] });
-    if (existingUser) {
-      return res.status(400).json({ success: false, message: "User with this email or phone already exists" });
-    }
-
-    // Calculate the auto-increment ID for userId
-    const lastUser = await userModel.findOne().sort({ _id: -1 }).limit(1);
-    let userId = 1;
-    if (lastUser) {
-      userId = parseInt(lastUser.userId || 1) + 1;
-    }
-
-    const options = {
-      amount: Number(finalAmount * 100),
-      currency: "INR",
-    };
-    const order = await instance.orders.create(options);
-
-
-    const newUser = new userModel({
-      type: 2,
-      username,
-      phone,
-      email,
-      password: hashedPassword,
-      pincode,
-      gender: Gender,
-      DOB,
-      address,
-      state,
-      statename,
-      country,
-      city,
-      userId,
-    });
-
-    await newUser.save();
-
-    // Determine 'Local' based on the state
-    let Local = 0;
-    if (newUser.state) {
-      const State = await zonesModel.findById(newUser.state);
-      if (State && State.primary === 'true') {
-        Local = 1;
-      }
-    }
-
-    // Calculate the auto-increment ID for paymentId
-    const lastLead = await buyPlanModel.findOne().sort({ _id: -1 }).limit(1);
-    let paymentId = 1;
-    if (lastLead) {
-      paymentId = parseInt(lastLead.paymentId || 1) + 1;
-    }
-
-    const newBuyPlan = new buyPlanModel({
-      userId: newUser._id,
-      planId,
-      totalAmount,
-      paymentId,
-      note: 'Payment successfully added',
-      payment: 1, // Placeholder for actual payment value
-      Local,
-      razorpay_order_id: order.id,
-    });
-
-    await newBuyPlan.save();
-
-    res.status(201).json({
-      success: true,
-      user: newUser,
-      buyPlan: newBuyPlan, // Include the newly created buy plan in the response
-      message: "User signed up successfully and plan added.",
-    });
-  } catch (error) {
-    console.log(error);
-    return res.status(500).send({
-      message: `Error occurred during user signup: ${error.message}`,
-      success: false,
-      error,
-    });
-  }
-};
 
 export const ApiGetKey = async (req, res) => {
   return res
@@ -6055,6 +5947,7 @@ export const PayuHash = (amount, firstName, email, phone, transactionId) => {
 
 export const BuyPlanByUser = async (req, res) => {
   try {
+
     const {
       UserData,
       planId,
@@ -6098,6 +5991,132 @@ export const BuyPlanByUser = async (req, res) => {
       success: true,
       buyPlan: newBuyPlan, // Include the newly created buy plan in the response
       message: "plan buy sucessfully.",
+      paymentData
+    });
+  } catch (error) {
+    console.log(error);
+    return res.status(500).send({
+      message: `Error occurred during user signup: ${error.message}`,
+      success: false,
+      error,
+    });
+  }
+};
+
+export const BuyPlanAddUser = async (req, res) => {
+  try {
+    const {
+       
+      username,
+      phone,
+      email,
+      state,
+      statename,
+      country,
+      password,
+      pincode,
+      Gender,
+      DOB,
+      address,
+      city,
+      planId,
+      totalAmount,
+      pHealthHistory,
+      cHealthStatus,
+      aadharno,finalAmount
+     } = req.body;
+
+     const tttt = req.body;
+
+    if (!password) {
+      return res.status(400).json({ success: false, message: "Password is required" , tttt});
+    }
+    const profileImg = req.files ? req.files.profile : undefined;
+
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    // Check if user already exists by email or phone
+    const existingUser = await userModel.findOne({ $or: [{ email }, { phone }] });
+    if (existingUser) {
+      return res.status(400).json({ success: false, message: "User with this email or phone already exists" });
+    }
+
+    // Calculate the auto-increment ID for userId
+    const lastUser = await userModel.findOne().sort({ _id: -1 }).limit(1);
+    let userId = 1;
+    if (lastUser) {
+      userId = parseInt(lastUser.userId || 1) + 1;
+    }
+
+
+    const transactionId = `${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+
+    const paymentData = PayuHash(totalAmount, username, email, phone, transactionId);
+	 
+    let updateField = {
+      type: 2,
+      username,
+      phone,
+      email,
+      password: hashedPassword,
+      pincode,
+      gender: Gender,
+      DOB,
+      address,
+      state,
+      statename,
+      country,
+      city,
+      userId,
+      pHealthHistory,
+      cHealthStatus,
+      aadharno
+    };
+    if (profileImg && profileImg[0]) {
+      updateField.profile = profileImg[0].path; // Assumes profile[0] is the uploaded file
+    }
+
+    const newUser = new userModel(updateField);
+
+    	 
+
+    await newUser.save();
+
+    // Determine 'Local' based on the state
+    let Local = 0;
+    if (newUser.state) {
+      const State = await zonesModel.findById(newUser.state);
+      if (State && State.primary === 'true') {
+        Local = 1;
+      }
+    }
+
+    // Calculate the auto-increment ID for paymentId
+    const lastLead = await buyPlanModel.findOne().sort({ _id: -1 }).limit(1);
+    let paymentId = 1;
+    if (lastLead) {
+      paymentId = parseInt(lastLead.paymentId || 1) + 1;
+    }
+
+    const newBuyPlan = new buyPlanModel({
+      userId: newUser._id,
+      planId,
+      totalAmount,
+      paymentId,
+      note: 'Payment successfully added',
+      payment: 0, // Placeholder for actual payment value
+      Local,
+      razorpay_order_id: transactionId
+    });
+
+    await newBuyPlan.save();
+
+    res.status(201).json({
+      success: true,
+      user: newUser,
+      buyPlan: newBuyPlan, // Include the newly created buy plan in the response
+      message: "User signed up successfully and plan added.",
       paymentData
     });
   } catch (error) {
