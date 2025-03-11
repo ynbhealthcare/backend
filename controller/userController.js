@@ -18,25 +18,40 @@ import compareModel from "../models/compareModel.js";
 import zonesModel from "../models/zonesModel.js";
 import promoModel from "../models/promoModel.js";
 import taxModel from "../models/taxModel.js";
-import Razorpay from "razorpay";
+import notificationModel from "../models/notificationModel.js";
+import messageModel from "../models/messageModel.js";
+import razorpay from "razorpay";
 import nodemailer from "nodemailer";
 import { createServer } from "http";
 import querystring from "querystring";
 import https from "https";
 import CryptoJS from "crypto-js"; // Import the crypto module
 import axios from "axios";
-import { cpSync } from "fs";
-import enquireModel from "../models/enquireModel.js";
-import planModel from "../models/planModel.js";
-import planCategoryModel from "../models/planCategoryModel.js";
-import buyPlanModel from "../models/buyPlanModel.js";
-import departmentsModel from "../models/departmentsModel.js";
-import { type } from "os";
-import paymentModel from "../models/paymentModel.js";
-import puppeteer from "puppeteer";
-import path from "path";
-import fs from "fs/promises";
+import transactionModel from "../models/transactionModel.js";
+import valetModel from "../models/valetModel.js";
 import multer from "multer";
+import path from "path";
+import { profile } from "console";
+import valetRideModel from "../models/valetRideModel.js";
+import { type } from "os";
+import LeadModel from "../models/LeadModel.js";
+// import { sendMessage } from "../utils/whatsappClient.js";
+import crypto from "crypto";
+import paymentModel from "../models/paymentModel.js";
+import PDFDocument from "pdfkit";
+import { PassThrough } from "stream";
+import puppeteer from "puppeteer";
+import { OAuth2Client } from "google-auth-library";
+import buyModel from "../models/buyModel.js";
+import { exec } from "child_process";
+import util from "util";
+import sha256 from "sha256";
+import uniqid from "uniqid";
+import screenModel from "../models/screenModel.js";
+
+const execPromise = util.promisify(exec);
+
+const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
 dotenv.config();
 
@@ -56,6 +71,7 @@ const storage = multer.diskStorage({
 
 const upload = multer({ storage: storage });
 
+export const uploadImage = upload.single("image");
 
 // Function to pad the plaintext
 function pkcs5_pad(text, blocksize) {
@@ -66,30 +82,10 @@ function pkcs5_pad(text, blocksize) {
   return text;
 }
 
-// Function to encrypt plaintext
-function encrypt(plainText, key) {
-  // Convert key to MD5 and then to binary
-  const secretKey = CryptoJS.enc.Hex.parse(
-    CryptoJS.MD5(key).toString(CryptoJS.enc.Hex)
-  );
-  // Initialize the initialization vector
-  const initVector = CryptoJS.enc.Utf8.parse(
-    Array(16)
-      .fill(0)
-      .map((_, i) => String.fromCharCode(i))
-      .join("")
-  );
-  // Pad the plaintext
-  const plainPad = pkcs5_pad(plainText, 16);
-  // Encrypt using AES-128 in CBC mode
-  const encryptedText = CryptoJS.AES.encrypt(plainPad, secretKey, {
-    iv: initVector,
-    mode: CryptoJS.mode.CBC,
-    padding: CryptoJS.pad.NoPadding,
-  });
-  // Convert the ciphertext to hexadecimal
-  return encryptedText.ciphertext.toString(CryptoJS.enc.Hex);
-}
+const encrypt = (data, key) => {
+  const ciphertext = CryptoJS.AES.encrypt(JSON.stringify(data), key).toString();
+  return ciphertext;
+};
 
 // Function to decrypt ciphertext
 function decrypt(encryptedText, key) {
@@ -130,7 +126,1980 @@ function decryptURL(encryptedText, key) {
   return decryptedText.toString(CryptoJS.enc.Utf8);
 }
 
+function md5(input) {
+  return CryptoJS.MD5(input).toString(CryptoJS.enc.Hex);
+}
+
 const secretKey = process.env.SECRET_KEY;
+
+// signup user
+
+export const SignupUserImage = upload.fields([
+  { name: "profile", maxCount: 1 },
+  { name: "DLfile", maxCount: 1 },
+  { name: "AadhaarFront", maxCount: 1 },
+  { name: "AadhaarBack", maxCount: 1 },
+  { name: "PoliceVerification", maxCount: 1 },
+  { name: "PassPort", maxCount: 1 },
+  { name: "Electricity", maxCount: 1 },
+  { name: "WaterBill", maxCount: 1 },
+]);
+
+export const profileUserImage = upload.fields([
+  { name: "profile", maxCount: 1 },
+]);
+
+// Utility function to compress and save the image
+const compressImage = async (inputPath, outputPath) => {
+  await sharp(inputPath)
+    .resize({ width: 800 }) // Resize image to a maximum width of 800px
+    .jpeg({ quality: 80 }) // Compress to JPEG format with 80% quality
+    .toFile(outputPath); // Save the processed image
+};
+
+// Middleware function to handle image compression
+export const handleImageCompression = async (req, res, next) => {
+  try {
+    const files = req.files;
+    if (!files) return next(); // No files to process, continue to the next middleware
+
+    for (const [fieldname, fileArray] of Object.entries(files)) {
+      for (const file of fileArray) {
+        const tempPath = file.path;
+        const outputPath = tempPath.replace(
+          /-(\d+)\.(\w+)$/,
+          (match, p1, ext) => `-${p1}-compressed.${ext}`
+        );
+
+        // Compress the image
+        await compressImage(tempPath, outputPath);
+
+        // Replace the file path with the compressed file path
+        file.path = outputPath;
+
+        // Optionally remove the original uncompressed file
+        fs.unlinkSync(tempPath);
+      }
+    }
+    next();
+  } catch (error) {
+    console.error("Error processing images:", error);
+    res.status(500).send("Error processing images.");
+  }
+};
+
+// for Leads
+
+// export const AddAdminLeadController = async (req, res) => {
+//   try {
+//     const {
+//       PickupLocation,
+//       DropLocation,
+//       startDate,
+//       endDate,
+//       count,
+//       name,
+//       email,
+//       phone,
+//       CPC,
+//       type,
+//       userId,
+//       source,
+//     } = req.body;
+
+//     // Validation
+//     if (
+//       !PickupLocation ||
+//       !DropLocation ||
+//       !startDate ||
+//       !endDate ||
+//       !count ||
+//       !name ||
+//       !email ||
+//       !phone ||
+//       !CPC ||
+//       !type
+//     ) {
+//       return res.status(400).send({
+//         success: false,
+//         message: "Please Provide All Fields",
+//       });
+//     }
+
+//     // Calculate the auto-increment ID
+//     const lastLead = await LeadModel.findOne().sort({ _id: -1 }).limit(1);
+//     let LeadId;
+
+//     if (lastLead) {
+//       // Convert lastOrder.orderId to a number before adding 1
+//       const lastOrderId = parseInt(lastLead.LeadId);
+//       LeadId = lastOrderId + 1;
+//     } else {
+//       LeadId = 1;
+//     }
+
+//     // Create a new category with the specified parent
+//     const newLead = new LeadModel({
+//       PickupLocation,
+//       DropLocation,
+//       startDate,
+//       endDate,
+//       count,
+//       LeadId,
+//       name,
+//       email,
+//       phone,
+//       CPC,
+//       type,
+//       VendorId: userId,
+//       source,
+//     });
+//     await newLead.save();
+
+//     return res.status(200).send({
+//       success: true,
+//       message: "Leads Creating Successfully!",
+//     });
+//   } catch (error) {
+//     console.error("Error while creating Leads:", error);
+//     return res.status(400).send({
+//       success: false,
+//       message: "Error while creating Leads",
+//       error,
+//     });
+//   }
+// };
+
+export const userBuyLeadController = async (req, res) => {
+  const { BuyId, leadId } = req.body;
+
+  if (!BuyId || !leadId) {
+    return res
+      .status(400)
+      .json({ message: "BuyId and leadId are required", success: false });
+  }
+
+  try {
+    // Find the lead by leadId
+    const lead = await LeadModel.findById(leadId);
+
+    if (!lead) {
+      return res
+        .status(404)
+        .json({ message: "Lead not found", success: false });
+    }
+
+    if (lead.BuyId.includes(BuyId)) {
+      return res
+        .status(400)
+        .json({ message: "Lead already purchased", success: false });
+    }
+
+    if (lead.count < lead.BuyId.length + 1) {
+      return res.status(400).json({
+        message: "Cannot add more BuyIds, limit reached",
+        success: false,
+      });
+    }
+
+    // Update user wallet
+    const user = await userModel.findById(BuyId);
+    if (user.status === 2) {
+      return res.status(400).json({
+        message: "Account Suspended",
+        success: false,
+      });
+    }
+    console.log(user.wallet, lead.CPC);
+
+    if (user.wallet < lead.CPC || user.wallet === lead.CPC) {
+      if (user.wallet === lead.CPC) {
+      } else {
+        return res.status(400).json({
+          message: "You do not have enough funds to accept this lead",
+          success: false,
+        });
+      }
+    }
+
+    user.wallet -= lead.CPC;
+    user.Leads.push(lead._id);
+    lead.BuyId.push(BuyId);
+
+    // for create trasaction id
+
+    const lastTrans = await transactionModel
+      .findOne()
+      .sort({ _id: -1 })
+      .limit(1);
+    let lastTransId;
+
+    if (lastTrans) {
+      // Convert lastOrder.orderId to a number before adding 1
+      const lastOrderId = parseInt(lastTrans.t_no || 0);
+      lastTransId = lastOrderId + 1;
+    } else {
+      lastTransId = 1;
+    }
+
+    // Calculate the auto-increment ID
+    const t_id = "tt00" + lastTransId;
+
+    // Create a new transaction
+    const transaction = new transactionModel({
+      userId: BuyId, // Use BuyId instead of lead.BuyId
+      type: 1,
+      note: `Lead Id #${lead?.LeadId} Purchase by user`,
+      amount: -lead.CPC,
+      t_id,
+      t_no: lastTransId,
+    });
+
+    // Create a new transaction
+    const buymodel = new buyModel({
+      userId: BuyId,
+      leadId,
+    });
+
+    await Promise.all([
+      lead.save(),
+      transaction.save(),
+      user.save(),
+      buymodel.save(),
+    ]);
+
+    return res.status(200).json({
+      message: "BuyId successfully added to lead",
+      success: true,
+      lead,
+    });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({
+      message: `Error occurred during processing: ${error.message}`,
+      success: false,
+      error,
+    });
+  }
+};
+
+// export const userAllLeadController = async (req, res) => {
+//   try {
+//     // Extract pagination parameters from the request query
+//     const {
+//       skip = 0,
+//       limit = 50,
+//       sortOrder,
+//       status,
+//       type,
+//       searchTerm,
+//       userId,
+//     } = req.query;
+
+//     // Convert skip and limit to integers
+//     const skipNumber = parseInt(skip, 10);
+//     const limitNumber = parseInt(limit, 10);
+
+//     const query = {};
+//     if (searchTerm) {
+//       const regex = new RegExp(searchTerm, "i"); // Case-insensitive regex pattern for the search term
+
+//       // Add regex pattern to search both username and email fields for the full name
+//       query.$or = [{ PickupLocation: regex }, { DropLocation: regex }];
+
+//       // if (!isNaN(Number(searchTerm))) {
+//       //   query.$or.push({ phone: Number(searchTerm) });
+//       // }
+//       // if (!isNaN(Number(searchTerm))) {
+//       //   query.$or.push({ LeadId: Number(searchTerm) });
+//       // }
+//     }
+
+//     console.log("sortOrder", sortOrder);
+
+//     if (status.length > 0) {
+//       if (status === "open") {
+//         query.status = { $in: 0 }; // Use $in operator to match any of the values in the array
+//       } else if (status === "closed") {
+//         query.status = { $in: 1 }; // Use $in operator to match any of the values in the array
+//       }
+//     }
+
+//     if (type.length > 0) {
+//       if (type === "ride") {
+//         query.type = { $in: 1 }; // Use $in operator to match any of the values in the array
+//       } else if (type === "tour") {
+//         query.type = { $in: 0 }; // Use $in operator to match any of the values in the array
+//       }
+//     }
+
+//     // Add userId filtering
+//     if (userId) {
+//       query.BuyId = { $nin: [userId] }; // Exclude leads where BuyId contains userId
+//     }
+//     // Check if count is greater than the length of BuyId
+//     query.$expr = {
+//       $gt: [
+//         { $size: "$BuyId" }, // Size of BuyId array
+//         "$count", // Value of count
+//       ],
+//     };
+
+//     // Logging the constructed query
+//     console.log("MongoDB Query:", JSON.stringify(query, null, 2));
+//     // // Add date range filtering to the query
+//     // if (startDate && endDate) {
+//     //   query.createdAt = { $gte: startDate, $lte: endDate };
+//     // } else if (startDate) {
+//     //   query.createdAt = { $gte: startDate };
+//     // } else if (endDate) {
+//     //   query.createdAt = { $lte: endDate };
+//     // }
+
+//     const sortOptions = {};
+
+//     // Conditionally add price (CPC) sorting
+//     if (sortOrder) {
+//       if (sortOrder === "highest") {
+//         sortOptions["CPC"] = -1; // Sort by CPC in descending order
+//       } else if (sortOrder === "lowest") {
+//         sortOptions["CPC"] = 1; // Sort by CPC in ascending order
+//       } else if (sortOrder === "latest") {
+//         sortOptions["_id"] = -1; // Sort by CPC in descending order
+//       } else if (sortOrder === "old") {
+//         sortOptions["_id"] = 1; // Sort by CPC in descending order
+//       }
+//     }
+
+//     console.log("sortOptions", sortOptions);
+
+//     // Fetch leads with pagination
+//     const leads = await LeadModel.find(query)
+//       .sort(sortOptions)
+//       .skip(skipNumber)
+//       .limit(limitNumber);
+
+//     // Fetch total count of leads for client-side pagination handling
+//     const totalLeadsCount = await LeadModel.find(query).countDocuments();
+
+//     return res.status(200).send({
+//       success: true,
+//       message: "Leads Found Successfully!",
+//       data: {
+//         leads,
+//         totalCount: totalLeadsCount,
+//       },
+//     });
+//   } catch (error) {
+//     console.log(error);
+//     return res.status(500).send({
+//       message: `Error Occurred During Fetching Leads ${error}`,
+//       success: false,
+//       error,
+//     });
+//   }
+// };
+
+export const userAllLeadController = async (req, res) => {
+  try {
+    // Extract pagination parameters from the request query
+    const {
+      skip = 0,
+      limit = 50,
+      sortOrder,
+      status,
+      type,
+      searchTerm,
+      userId,
+      startDate,
+      endDate,
+    } = req.query;
+
+    // Convert skip and limit to integers
+    const skipNumber = parseInt(skip, 10);
+    const limitNumber = parseInt(limit, 10);
+
+    const matchStage = {};
+
+    // Build the match stage
+    if (searchTerm) {
+      const regex = new RegExp(searchTerm, "i");
+      matchStage.$or = [{ PickupLocation: regex }, { DropLocation: regex }];
+    }
+
+    if (status && status.length > 0) {
+      if (status === "open") {
+        matchStage.status = 0; // Open leads
+      } else if (status === "closed") {
+        matchStage.status = 1; // Closed leads
+      }
+    }
+
+    if (type && type.length > 0) {
+      if (type === "ride") {
+        matchStage.type = 1; // Ride type
+      } else if (type === "tour") {
+        matchStage.type = 0; // Tour type
+      }
+    }
+
+    // Parse startDate and endDate as Date objects
+    if (startDate) {
+      matchStage.createdAt = { $gte: new Date(startDate) }; // Ensure startDate is a Date object
+    }
+
+    if (endDate) {
+      matchStage.createdAt = {
+        ...matchStage.createdAt,
+        $lte: new Date(endDate),
+      }; // Ensure endDate is a Date object
+    }
+
+    if (userId) {
+      const userIdObject = new mongoose.Types.ObjectId(userId); // Correct usage
+      matchStage.BuyId = { $nin: [userIdObject] }; // Exclude leads with this userId
+    }
+
+    // Create the aggregation pipeline
+    const pipeline = [
+      {
+        $match: matchStage, // Match stage
+      },
+      {
+        $addFields: {
+          BuyIdSize: { $size: "$BuyId" }, // Add a field for the size of BuyId
+        },
+      },
+      {
+        $match: {
+          $expr: { $gt: ["$count", "$BuyIdSize"] }, // Filter where count is greater than BuyId size
+        },
+      },
+      {
+        $sort: {
+          _id: sortOrder === "latest" ? -1 : 1, // Sort by _id based on sortOrder
+        },
+      },
+      {
+        $skip: skipNumber, // Skip for pagination
+      },
+      {
+        $limit: limitNumber, // Limit for pagination
+      },
+    ];
+
+    // Fetch leads using aggregation
+    const leads = await LeadModel.aggregate(pipeline);
+
+    // Fetch total count of leads for client-side pagination handling
+    const totalLeadsCount = await LeadModel.countDocuments(matchStage);
+
+    return res.status(200).send({
+      success: true,
+      message: "Leads Found Successfully!",
+      data: {
+        leads: encrypt(leads, process.env.APIKEY),
+        totalCount: totalLeadsCount,
+      },
+    });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).send({
+      message: `Error Occurred During Fetching Leads: ${error}`,
+      success: false,
+      error,
+    });
+  }
+};
+
+export const userByIdLeadController = async (req, res) => {
+  // Extract pagination parameters and BuyId from the request query
+  const { skip = 0, limit = 50, buyId } = req.query;
+
+  // Convert skip and limit to integers
+  const skipNumber = parseInt(skip, 10);
+  const limitNumber = parseInt(limit, 10);
+
+  // Ensure buyId is a valid ObjectId
+  if (!mongoose.Types.ObjectId.isValid(buyId)) {
+    return res.status(400).send({
+      message: "Invalid BuyId",
+      success: false,
+    });
+  }
+
+  // Convert buyId to mongoose ObjectId
+  const buyIdObjectId = new mongoose.Types.ObjectId(buyId);
+
+  try {
+    const totalLeadsCount = await LeadModel.find({
+      BuyId: buyIdObjectId,
+    }).countDocuments();
+
+    // Query to find leads by BuyId
+    const leads = await LeadModel.find({ BuyId: buyIdObjectId })
+      .skip(skipNumber)
+      .limit(limitNumber);
+
+    // Send the response with the leads
+    return res.status(200).json({
+      message: "Leads fetched successfully",
+      success: true,
+      data: {
+        leads,
+        totalCount: totalLeadsCount,
+      },
+    });
+  } catch (error) {
+    console.log(error);
+    return res.status(500).send({
+      message: `Error occurred while fetching leads: ${error.message}`,
+      success: false,
+      error,
+    });
+  }
+};
+
+export const userByLeadController_old = async (req, res) => {
+  // Extract pagination parameters and BuyId from the request query
+  const { skip = 0, limit = 50, buyId } = req.query;
+
+  // Convert skip and limit to integers
+  const skipNumber = parseInt(skip, 10);
+  const limitNumber = parseInt(limit, 10);
+
+  // Ensure buyId is a valid ObjectId
+  if (!mongoose.Types.ObjectId.isValid(buyId)) {
+    return res.status(400).send({
+      message: "Invalid BuyId",
+      success: false,
+    });
+  }
+
+  // Convert buyId to mongoose ObjectId
+  const buyIdObjectId = new mongoose.Types.ObjectId(buyId);
+
+  try {
+    const totalLeadsCount = await buyModel
+      .find({ userId: buyIdObjectId })
+      .populate("leadId")
+      .sort({ createdAt: -1 });
+
+    // Query to find leads by BuyId
+    const leads = await buyModel
+      .find({ userId: buyIdObjectId })
+      .skip(skipNumber)
+      .limit(limitNumber)
+      .populate("leadId")
+      .sort({ createdAt: -1 }); // Sort by creation date in descending order
+
+    // Filter out any leads where leadId could not be populated
+    const filteredLeads = leads.filter((lead) => lead.leadId !== null);
+    // Filter out any leads where leadId could not be populated
+    const totalLeadsCountLength = totalLeadsCount.filter(
+      (lead) => lead.leadId !== null
+    );
+    // Send the response with the leads
+    console.log(totalLeadsCount.length);
+
+    return res.status(200).json({
+      message: "Leads fetched successfully",
+      success: true,
+      data: {
+        leads: encrypt(filteredLeads, process.env.APIKEY),
+        totalCount: totalLeadsCountLength.length,
+      },
+    });
+  } catch (error) {
+    console.log(error);
+    return res.status(500).send({
+      message: `Error occurred while fetching leads: ${error.message}`,
+      success: false,
+      error,
+    });
+  }
+};
+
+ 
+export const userByLeadController = async (req, res) => {
+  try {
+    // Extract pagination parameters from the request query
+    const {
+      skip = 0,
+      limit = 50,
+      sortOrder,
+      status,
+      type,
+      searchTerm,
+      buyId,
+      startDate,
+      endDate,
+    } = req.query;
+
+    // Convert skip and limit to integers
+    const skipNumber = parseInt(skip, 10);
+    const limitNumber = parseInt(limit, 10);
+
+    const matchStage = {};
+
+    // Build the match stage for LeadModel
+    if (searchTerm) {
+      const regex = new RegExp(searchTerm, "i");
+      matchStage.$or = [{ PickupLocation: regex }, { DropLocation: regex }];
+    }
+
+    if (status && status.length > 0) {
+      if (status === "open") {
+        matchStage.status = 0; // Open leads
+      } else if (status === "closed") {
+        matchStage.status = 1; // Closed leads
+      }
+    }
+
+    if (type && type.length > 0) {
+      if (type === "ride") {
+        matchStage.type = 1; // Ride type
+      } else if (type === "tour") {
+        matchStage.type = 0; // Tour type
+      }
+    }
+
+    // Parse startDate and endDate as Date objects
+    if (startDate) {
+      matchStage.createdAt = { $gte: new Date(startDate) }; // Ensure startDate is a Date object
+    }
+
+    if (endDate) {
+      matchStage.createdAt = {
+        ...matchStage.createdAt,
+        $lte: new Date(endDate),
+      }; // Ensure endDate is a Date object
+    }
+
+    // Fix: Use 'new' to instantiate ObjectId correctly
+    if (buyId) {
+      const buyIdObject = new mongoose.Types.ObjectId(buyId); // Correct instantiation of ObjectId
+      matchStage.BuyId = { $in: [buyIdObject] }; // Match against BuyId array
+    }
+
+    const pipeline = [
+      {
+        $match: matchStage, // Match stage for LeadModel
+      },
+      {
+        $lookup: {
+          from: "buys",  // The collection name for BuyModel
+          localField: "_id", // Match Lead's _id to Buy's leadId
+          foreignField: "leadId", // Reference to leadId in BuyModel
+          as: "purchase", // The resulting field name containing purchase data
+        },
+      },
+      {
+        $unwind: {
+          path: "$purchase", // Unwind the purchase array to get individual purchase data
+          preserveNullAndEmptyArrays: true, // Keep leads even if no purchase is found
+        },
+      },
+      {
+        $sort: {
+          "purchase.createdAt": -1, // Sort by purchase's createdAt to get the latest purchase
+        },
+      },
+      {
+        $addFields: {
+          purchaseDate: "$purchase.createdAt", // Add the purchase date to the result
+        },
+      },
+      {
+        $group: {
+          _id: "$_id", // Group by the Lead _id
+          PickupLocation: { $first: "$PickupLocation" },
+          DropLocation: { $first: "$DropLocation" },
+          LeadId: { $first: "$LeadId" },
+          startDate: { $first: "$startDate" },
+          endDate: { $first: "$endDate" },
+          BuyId: { $first: "$BuyId" },
+          count: { $first: "$count" },
+          CPC: { $first: "$CPC" },
+          name: { $first: "$name" },
+          phone: { $first: "$phone" },
+          email: { $first: "$email" },
+          type: { $first: "$type" },
+          typeRange: { $first: "$typeRange" },
+          traveller: { $first: "$traveller" },
+          status: { $first: "$status" },
+          createdAt: { $first: "$createdAt" },
+          updatedAt: { $first: "$updatedAt" },
+          purchaseDate: { $first: "$purchaseDate" }, // Return the latest purchase date
+        },
+      },
+      {
+        $sort: {
+          _id: sortOrder === "latest" ? -1 : 1, // Sort by _id based on sortOrder
+        },
+      },
+      {
+        $skip: skipNumber, // Skip for pagination
+      },
+      {
+        $limit: limitNumber, // Limit for pagination
+      },
+    ];
+    
+    const leads = await LeadModel.aggregate(pipeline);
+    
+    // Fetch total count of leads for client-side pagination handling
+    const totalLeadsCount = await LeadModel.countDocuments(matchStage);
+
+    return res.status(200).send({
+      success: true,
+      message: "Leads Found Successfully!",
+      data: {
+        leads: encrypt(leads, process.env.APIKEY),
+        totalCount: totalLeadsCount,
+      },
+    });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).send({
+      message: `Error Occurred During Fetching Leads: ${error}`,
+      success: false,
+      error,
+    });
+  }
+};
+
+
+
+
+export const userByIdReportLeadController = async (req, res) => {
+  // Extract pagination parameters and BuyId from the request query
+  const { buyId } = req.query;
+
+  // Ensure buyId is a valid ObjectId
+  if (!mongoose.Types.ObjectId.isValid(buyId)) {
+    return res.status(400).send({
+      message: "Invalid BuyId",
+      success: false,
+    });
+  }
+
+  // Convert buyId to mongoose ObjectId
+  const buyIdObjectId = new mongoose.Types.ObjectId(buyId);
+
+  try {
+    const totalLeadsCount = await LeadModel.find({
+      BuyId: buyIdObjectId,
+    }).countDocuments();
+
+    // Query to find leads by BuyId
+    const leads = await LeadModel.find({ BuyId: buyIdObjectId });
+
+    // Send the response with the leads
+    return res.status(200).json({
+      message: "Leads fetched successfully",
+      success: true,
+      data: {
+        leads,
+        totalCount: totalLeadsCount,
+      },
+    });
+  } catch (error) {
+    console.log(error);
+    return res.status(500).send({
+      message: `Error occurred while fetching leads: ${error.message}`,
+      success: false,
+      error,
+    });
+  }
+};
+
+export const SignupUserType = async (req, res) => {
+  try {
+    const {
+      type,
+      username,
+      phone,
+      email,
+      password,
+      pincode,
+      Gender,
+      DOB,
+      address,
+    } = req.body;
+
+    const {
+      profile,
+      DLfile,
+      AadhaarFront,
+      AadhaarBack,
+      PoliceVerification,
+      PassPort,
+      Electricity,
+      WaterBill,
+    } = req.files;
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    console.log("Request Body:", req.body);
+    console.log("Uploaded Files:", req.files);
+
+    console.log("Uploaded profile:", profile[0].path);
+
+    // Calculate the auto-increment ID
+    const lastUser = await userModel.findOne().sort({ _id: -1 }).limit(1);
+    let userId;
+
+    if (lastUser) {
+      // Convert lastOrder.orderId to a number before adding 1
+      const lastUserId = parseInt(lastUser.userId || 126325);
+      userId = lastUserId + 1;
+    } else {
+      userId = 126325;
+    }
+
+    const newUser = new userModel({
+      type,
+      username,
+      phone,
+      email,
+      password: hashedPassword,
+      pincode,
+      Gender,
+      DOB,
+      address,
+      profile: profile ? profile[0].path : "",
+      DL: DLfile ? DLfile[0].path : "",
+      AadhaarFront: AadhaarFront ? AadhaarFront[0].path : "",
+      AadhaarBack: AadhaarBack ? AadhaarBack[0].path : "",
+      PoliceVerification: PoliceVerification ? PoliceVerification[0].path : "",
+      PassPort: PassPort ? PassPort[0].path : "",
+      Electricity: Electricity ? Electricity[0].path : "",
+      WaterBill: WaterBill ? WaterBill[0].path : "",
+      userId,
+    });
+
+    await newUser.save();
+    res.status(201).json({
+      success: true,
+      message: "User signed up successfully",
+    });
+  } catch (error) {
+    console.log(error);
+    return res.status(500).send({
+      message: `Error occurred during user signup ${error}`,
+      success: false,
+      error,
+    });
+  }
+};
+
+export const SignupUserCarImage = upload.fields([
+  { name: "carImage", maxCount: 1 },
+]);
+
+export const SignupUserValetType = async (req, res) => {
+  try {
+    const {
+      username,
+      phone,
+      carNumber,
+      carName,
+      VendorId,
+      driverId,
+      Valet_Model,
+      mode,
+      payment,
+    } = req.body;
+
+    const { carImage } = req.files;
+
+    let existingUser = await userModel.findOne({ phone });
+
+    if (existingUser) {
+      // Update existing user details
+      existingUser.username = username;
+      existingUser.carNumber = carNumber;
+      existingUser.carName = carName;
+      if (carImage && carImage.length > 0) {
+        existingUser.carImage = carImage[0].path;
+      }
+      await existingUser.save();
+    } else {
+      // Create new user
+      existingUser = await userModel.create({
+        username,
+        phone,
+        carImage: carImage && carImage.length > 0 ? carImage[0].path : "",
+        carNumber,
+        carName,
+      });
+    }
+
+    const lastvaletRide = await valetRideModel
+      .findOne()
+      .sort({ ValetRide_Id: -1 })
+      .limit(1);
+    let ValetRide_Id = 1; // Default to 1 if no orders exist yet
+
+    if (lastvaletRide) {
+      ValetRide_Id = lastvaletRide.ValetRide_Id + 1;
+    }
+
+    const valetRideData = {
+      userId: existingUser._id,
+      VendorId,
+      driverId,
+      Valet_Model,
+      ValetRide_Id,
+    };
+
+    if (mode !== "") {
+      valetRideData.mode = mode; // Add mode if not empty
+    }
+
+    if (payment !== "") {
+      valetRideData.payment = payment; // Add mode if not empty
+    }
+
+    const valetRide = new valetRideModel(valetRideData);
+
+    await valetRide.save();
+
+    await valetModel.findByIdAndUpdate(
+      Valet_Model, // Find by Valet_Model _id
+      {
+        $push: { Valetride_Model: valetRide._id }, // Add valetRide _id to Valetride_Model array
+      },
+      {
+        upsert: true, // Create the document if it doesn't exist
+        new: true, // Return the updated document after update
+      }
+    );
+
+    res.status(201).json({
+      success: true,
+      message: "User signed up successfully",
+    });
+  } catch (error) {
+    console.error("Error occurred during user signup:", error);
+    return res.status(500).json({
+      success: false,
+      message: `Error occurred during user signup: ${error.message}`,
+      error: error.message,
+    });
+  }
+};
+
+export const CreateValetRide = async (req, res) => {
+  try {
+    const {
+      username,
+      userId,
+      email,
+      carNumber,
+      carName,
+      VendorId,
+      Valet_Model,
+      discount,
+      total,
+      date,
+      time,
+      mode,
+      // payment
+    } = req.body;
+
+    let existingUser = await userModel.findById(userId);
+
+    // Update existing user details
+    if (username) {
+      existingUser.username = username;
+    }
+    if (email) {
+      existingUser.email = email;
+    }
+
+    existingUser.carNumber = carNumber;
+    existingUser.carName = carName;
+
+    await existingUser.save();
+
+    const lastvaletRide = await valetRideModel
+      .findOne()
+      .sort({ ValetRide_Id: -1 })
+      .limit(1);
+    let ValetRide_Id = 1; // Default to 1 if no orders exist yet
+
+    if (lastvaletRide) {
+      ValetRide_Id = lastvaletRide.ValetRide_Id + 1;
+    }
+
+    const valetRideData = {
+      userId: existingUser._id,
+      VendorId,
+      Valet_Model,
+      ValetRide_Id,
+      discount,
+      total,
+      date,
+      time,
+      payment: 1,
+      type: 1,
+    };
+
+    if (mode !== "") {
+      valetRideData.mode = mode; // Add mode if not empty
+    }
+
+    // Create a new valet ride entry
+    const valetRide = new valetRideModel(valetRideData);
+
+    await valetRide.save();
+
+    await valetModel.findByIdAndUpdate(
+      Valet_Model, // Find by Valet_Model _id
+      {
+        $push: { Valetride_Model: valetRide._id }, // Add valetRide _id to Valetride_Model array
+      },
+      {
+        upsert: true, // Create the document if it doesn't exist
+        new: true, // Return the updated document after update
+      }
+    );
+
+    res.status(201).json({
+      success: true,
+      message: "Create Valet Ride Successfully",
+    });
+  } catch (error) {
+    console.error("Error occurred during creating valet ride", error);
+    return res.status(500).json({
+      success: false,
+      message: `Error occurred during creating valet ride: ${error.message}`,
+      error: error.message,
+    });
+  }
+};
+
+export const userAdminValet = async (req, res) => {
+  try {
+    const valet = await valetModel.find({ type: 1 });
+    if (!valet) {
+      res.status(400).json({
+        success: false,
+        message: "Admin Valet Not Found",
+      });
+    } else {
+      res.status(200).json({
+        success: true,
+        message: "Admin Valet Not Found",
+        valet: valet,
+      });
+    }
+  } catch (error) {
+    console.error("Error occurred during user signup:", error);
+    return res.status(500).json({
+      success: false,
+      message: `Error occurred during user signup: ${error.message}`,
+      error: error.message,
+    });
+  }
+};
+
+export const userAdminValetId = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // Check if the provided id is a valid ObjectId
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid Valet ID",
+      });
+    }
+
+    const valet = await valetModel.findById(id);
+
+    if (!valet) {
+      return res.status(404).json({
+        success: false,
+        message: "Admin Valet Not Found",
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: "Admin Valet Found",
+      valet: valet,
+    });
+  } catch (error) {
+    console.error("Error occurred during user admin valet lookup:", error);
+    return res.status(500).json({
+      success: false,
+      message: `Error occurred during user admin valet lookup: ${error.message}`,
+      error: error.message,
+    });
+  }
+};
+
+export const UpdateUserValetType = async (req, res) => {
+  try {
+    const { username, phone, carNumber, carName } = req.body;
+
+    const { carImage } = req.files;
+
+    // Check if the phone number exists in the request body
+    if (!phone) {
+      return res.status(400).json({
+        success: false,
+        message: "Phone number is required for updating user.",
+      });
+    }
+
+    // Prepare the update object based on provided fields
+    let updateFields = {
+      username,
+      carNumber,
+      carName,
+    };
+
+    // Add carImage to updateFields if it exists in the request
+    if (carImage) {
+      updateFields.carImage = carImage[0].path;
+    }
+
+    // Find and update the user based on the phone number
+    let updatedUser = await userModel.findOneAndUpdate(
+      { phone: phone },
+      updateFields,
+      { new: true } // To return the updated document
+    );
+
+    // Check if user was found and updated
+    if (!updatedUser) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found with the provided phone number.",
+      });
+    }
+
+    // const sendphone = updatedUser.phone;
+    // const whatsappNumber = `91${sendphone}@c.us`;
+
+    // const whastappmsg = `Thankyou ${updatedUser.username}, driver has updated your details  `;
+
+    //  await sendMessage(whatsappNumber, whastappmsg);
+
+    // Success response
+    res.status(200).json({
+      success: true,
+      message: "User updated successfully",
+      updatedUser: updatedUser, // Optionally send back the updated user object
+    });
+  } catch (error) {
+    console.error("Error occurred during user update:", error);
+    return res.status(500).json({
+      success: false,
+      message: `Error occurred during user update: ${error.message}`,
+      error: error,
+    });
+  }
+};
+
+export const userValetRideUserController = async (req, res) => {
+  try {
+    const { driverId, valetId } = req.params;
+
+    // Assuming you want to find a valet record based on userId and valetId
+    const valet = await valetRideModel
+      .find({ driverId, Valet_Model: valetId })
+      .populate(
+        "userId",
+        "_id username email phone carImage carNumber carName PickupStartLocation PickupEndLocation DropStartLocation DropEndLocation mode"
+      ) // Populate userId with specified fields
+      .populate("VendorId", "_id username email phone "); // Populate VendorId with specified fields
+
+    const fixvalet = await valetRideModel
+      .find({ Valet_Model: valetId, type: 1 })
+      .populate(
+        "userId",
+        "_id username email phone carImage carNumber carName PickupStartLocation PickupEndLocation DropStartLocation DropEndLocation mode"
+      ) // Populate userId with specified fields
+      .populate("VendorId", "_id username email phone "); // Populate VendorId with specified fields
+
+    if (!valet) {
+      return res.status(404).json({
+        success: false,
+        message: "Valet not found",
+      });
+    }
+
+    return res.status(200).json({
+      message: "Single Valet Found By user ID and Order ID",
+      success: true,
+      valet: valet,
+      fixvalet: fixvalet,
+    });
+  } catch (error) {
+    console.log(error);
+    return res.status(500).json({
+      success: false,
+      message: "Error while getting Valet",
+      error: error.message,
+    });
+  }
+};
+
+export const userValetParkingUserController = async (req, res) => {
+  try {
+    const { userId, valetId } = req.params;
+
+    // Assuming you want to find a valet record based on userId and valetId
+    const valet = await valetRideModel
+      .find({ userId, Valet_Model: valetId })
+      .populate(
+        "userId",
+        "_id username email phone carImage carNumber carName PickupStartLocation PickupEndLocation DropStartLocation DropEndLocation"
+      ) // Populate userId with specified fields
+      .populate("VendorId", "_id username email phone "); // Populate VendorId with specified fields
+
+    if (!valet) {
+      return res.status(404).json({
+        success: false,
+        message: "Valet not found",
+      });
+    }
+
+    return res.status(200).json({
+      message: "Single Valet Found By user ID and Order ID",
+      success: true,
+      valet: valet,
+    });
+  } catch (error) {
+    console.log(error);
+    return res.status(500).json({
+      success: false,
+      message: "Error while getting Valet",
+      error: error.message,
+    });
+  }
+};
+
+// notification functions
+
+export const AddNotification = async (req, res) => {
+  try {
+    const { text, userId } = req.body;
+
+    console.log(text, userId, senderId);
+    // Create a new Message document
+    const notifications = new notificationModel({
+      text,
+      receiver: userId,
+    });
+
+    // Save the message to the database
+    await notifications.save();
+    await userModel.findByIdAndUpdate(
+      userId,
+      { $inc: { notifications: 1 } }, // Increment the notifications count by 1
+      { new: true } // Return the updated user document
+    );
+
+    return res.status(200).send({
+      success: true,
+      message: "Notifications Send successfully",
+    });
+  } catch (error) {
+    return res.status(500).send({
+      message: `error Message Send ${error}`,
+      sucesss: false,
+      error,
+    });
+  }
+};
+
+export const DeleteNotification = async (req, res) => {
+  const notificationId = req.params.id;
+
+  try {
+    // Find the notification by ID and delete it
+    const deletedNotification = await notificationModel.findByIdAndDelete(
+      notificationId
+    );
+
+    if (!deletedNotification) {
+      return res
+        .status(404)
+        .json({ success: false, message: "Notification not found" });
+    }
+
+    // Return success response
+    res
+      .status(200)
+      .json({ success: true, message: "Notification deleted successfully" });
+  } catch (error) {
+    // Handle errors
+    console.error("Error deleting notification:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to delete notification",
+      error: error.message,
+    });
+  }
+};
+
+export const GetUserNotification = async (req, res) => {
+  try {
+    const { userId } = req.params;
+
+    // Find notifications where the receiver is equal to userId
+    const notifications = await notificationModel
+      .find({ receiver: userId })
+      .lean();
+    const user = await userModel.findByIdAndUpdate(
+      userId,
+      { notifications: 0 }, // Set the notifications count to 0
+      { new: true } // Return the updated user document
+    );
+
+    return res.status(200).send({
+      success: true,
+      message: "Notifications fetched successfully",
+      notifications,
+    });
+  } catch (error) {
+    console.error("Error fetching notifications:", error);
+    return res.status(500).send({
+      success: false,
+      message: `Error fetching notifications: ${error}`,
+      error,
+    });
+  }
+};
+
+const instance = new razorpay({
+  key_id: process.env.LIVEKEY,
+  key_secret: process.env.LIVESECRET,
+});
+// Wallet functionality
+
+export const CheckoutWallet = async (req, res) => {
+  const { amount, userId, note, Local } = req.body;
+  const gstRate = 0.18;
+  const startAmount = amount * gstRate;
+  const finalAmount = amount + startAmount;
+
+  const options = {
+    amount: Number(finalAmount * 100),
+    currency: "INR",
+  };
+  const order = await instance.orders.create(options);
+
+  // Calculate the auto-increment ID
+  const lastLead = await paymentModel.findOne().sort({ _id: -1 }).limit(1);
+  let paymentId;
+
+  if (lastLead) {
+    if (lastLead.paymentId === undefined) {
+      paymentId = 1;
+    } else {
+      // Convert lastOrder.orderId to a number before adding 1
+      const lastOrderId = parseInt(lastLead.paymentId);
+      paymentId = lastOrderId + 1;
+    }
+  } else {
+    paymentId = 1;
+  }
+
+  const payment = await new paymentModel({
+    totalAmount: finalAmount,
+    userId: userId,
+    razorpay_order_id: order.id,
+    note: note,
+    Local: Local,
+    paymentId,
+  });
+  await payment.save();
+
+  console.log(order, payment);
+  res.status(200).json({
+    success: true,
+    order,
+  });
+};
+
+export const CheckoutWallet_phonepay = async (req, res) => {
+  const PHONEPE_CALLBACK_URL = `${process.env.BACKWEB}paymentverification-wallet-phonepay`;
+  const PHONE_PE_HOST_URL = process.env.PHONE_PE_HOST_URL ;
+  const SALT_KEY  = process.env.PHONEPE_SALT_KEY ;
+  const SALT_INDEX  = process.env.PHONEPE_SALT_INDEX ;
+  const PHONEPE_MERCHANT_ID  = process.env.PHONEPE_MERCHANT_ID ;
+
+  try {
+    const { amount, userId, note, Local } = req.body;
+
+    const gstRate = 0.18;
+    const startAmount = amount * gstRate;
+    const finalAmount = amount + startAmount;
+
+    // Generate Transaction ID
+    
+    //  const transactionId = uniqid();
+     const transactionId = `order_${uniqid()}`;
+
+    const normalPayLoad = {
+      merchantId: PHONEPE_MERCHANT_ID,
+      merchantTransactionId: transactionId,
+      merchantUserId:userId,
+      amount: finalAmount * 100,  // Convert amount to paise
+      redirectUrl: `${PHONEPE_CALLBACK_URL}/${transactionId}`,
+      redirectMode: "REDIRECT",
+      callbackUrl: PHONEPE_CALLBACK_URL,
+      mobileNumber: "9999999999",
+      paymentInstrument: {
+        type: "PAY_PAGE",
+      },
+    };
+
+  
+     // Make a base64-encoded payload
+ let bufferObj = Buffer.from(JSON.stringify(normalPayLoad), "utf8");
+ let base64EncodedPayload = bufferObj.toString("base64");
+
+ // X-VERIFY => SHA256(base64EncodedPayload + "/pg/v1/pay" + SALT_KEY) + ### + SALT_INDEX
+ let string = base64EncodedPayload + "/pg/v1/pay" + SALT_KEY;
+ let sha256_val = sha256(string);
+ let xVerifyChecksum = sha256_val + "###" + SALT_INDEX;
+
+  // Calculate the auto-increment ID
+  const lastLead = await paymentModel.findOne().sort({ _id: -1 }).limit(1);
+  let paymentId;
+
+  if (lastLead) {
+    if (lastLead.paymentId === undefined) {
+      paymentId = 1;
+    } else {
+      // Convert lastOrder.orderId to a number before adding 1
+      const lastOrderId = parseInt(lastLead.paymentId);
+      paymentId = lastOrderId + 1;
+    }
+  } else {
+    paymentId = 1;
+  }
+
+
+    // Store the payment details in DB
+    const payment = await new paymentModel({
+      paymentId:paymentId,
+      totalAmount: finalAmount,
+      userId: userId,
+       note: note,
+      Local: Local,
+      paymentStatus: "PENDING",
+      payment: 0,
+      razorpay_order_id: transactionId
+    });
+
+   await payment.save();
+ 
+    const response = await axios.post(
+      `${PHONE_PE_HOST_URL}/pg/v1/pay`,
+      { request: base64EncodedPayload },
+      {
+        headers: {
+          "Content-Type": "application/json",
+          "X-VERIFY": xVerifyChecksum,
+          accept: "application/json",
+        },
+      }
+    );
+
+    // Get the payment URL from the response
+    const paymentUrl = response.data.data.instrumentResponse.redirectInfo.url;
+ 
+
+    res.status(200).json({ success: true, paymentUrl });
+
+
+  } catch (error) {
+    console.error("PhonePe Payment Error:", error);
+    res.status(500).json({ success: false, message: `Payment initiation failed ${error}` });
+  }
+};
+
+
+export const paymentverificationPhonepay_old = async (req, res) => {
+  try {
+    const { transactionId } = req.query;
+
+    const url = `${process.env.PHONEPE_BASE_URL}/pg/v1/status/${process.env.PHONEPE_MERCHANT_ID}/${transactionId}`;
+    const checksum = crypto
+      .createHmac("sha256", process.env.PHONEPE_SALT_KEY)
+      .update(`/pg/v1/status/${process.env.PHONEPE_MERCHANT_ID}/${transactionId}`)
+      .digest("hex");
+
+    const response = await axios.get(url, {
+      headers: { "X-VERIFY": `${checksum}###1` },
+    });
+
+    if (response.data.success && response.data.code === "PAYMENT_SUCCESS") {
+      const payment = await paymentModel.findOneAndUpdate(
+        { transactionId },
+        {
+          paymentStatus: "SUCCESS",
+          paymentId: response.data.data.transactionId,
+        },
+        { new: true }
+      );
+
+      // Add the wallet balance
+      const gstRate = 0.18;
+      const baseAmount = payment.totalAmount / (1 + gstRate);
+      const finalAmount = baseAmount.toFixed(2);
+
+      await AddWalletPayment(payment.userId, 0, payment.note, finalAmount);
+
+      res.redirect(`${process.env.LIVEWEB}/paymentsuccess?reference=${transactionId}`);
+    } else {
+      await paymentModel.findOneAndUpdate(
+        { transactionId },
+        { paymentStatus: "FAILED" },
+        { new: true }
+      );
+
+      res.status(400).json({ success: false, message: "Payment failed" });
+    }
+  } catch (error) {
+    console.error("PhonePe Verification Error:", error);
+    res.status(500).json({ success: false, message: "Payment verification failed" });
+  }
+};
+
+export const paymentverificationPhonepay = async (req, res) => {
+  try {
+    const { merchantTransactionId } = req.params;
+    const todaydate = new Date(); // Get current date for LastRecharge field
+
+    const PHONE_PE_HOST_URL = process.env.PHONE_PE_HOST_URL;
+    const MERCHANT_ID = process.env.PHONEPE_MERCHANT_ID;
+    const SALT_KEY = process.env.PHONEPE_SALT_KEY;
+    const SALT_INDEX = process.env.PHONEPE_SALT_INDEX;
+
+    if (merchantTransactionId) {
+      let statusUrl =
+        `${PHONE_PE_HOST_URL}/pg/v1/status/${MERCHANT_ID}/` + merchantTransactionId;
+
+      let string =
+        `/pg/v1/status/${MERCHANT_ID}/` + merchantTransactionId + SALT_KEY;
+      let sha256_val = sha256(string).toString(); // Ensure you convert it to a string
+      let xVerifyChecksum = sha256_val + "###" + SALT_INDEX;
+
+      axios
+        .get(statusUrl, {
+          headers: {
+            "Content-Type": "application/json",
+            "X-VERIFY": xVerifyChecksum,
+            "X-MERCHANT-ID": merchantTransactionId,
+            accept: "application/json",
+          },
+        })
+        .then(async function (response) {
+          console.log('response->', response.data);
+          if (response.data && response.data.code === "PAYMENT_SUCCESS") {
+            // Update the payment status in the database
+            const payment = await paymentModel.findOneAndUpdate(
+              { razorpay_order_id: merchantTransactionId },
+              { payment: 1 },
+              { new: true }
+            ).lean(); // Use .lean() to get a plain JavaScript object
+            
+            if (payment) {
+              // Update the user's last recharge date if payment is successful
+              await userModel.findOneAndUpdate(
+                { _id: payment.userId }, // Use payment.userId if it's part of the payment data
+                { LastRecharge: todaydate },
+                { new: true }
+              );
+
+              // Redirect to success page
+              res.redirect(`${process.env.LIVEWEB}PaymentSuccess?reference=${merchantTransactionId}`);
+            } else {
+              // Payment not found, handle error case
+              res.redirect(`${process.env.LIVEWEB}all-payment`);
+            }
+          } else {
+            // Update the payment status in the database for failure or pending
+            await paymentModel.findOneAndUpdate(
+              { razorpay_order_id: merchantTransactionId },
+              { payment: 2 },
+              { new: true }
+            ).lean(); // Use .lean() to get a plain JavaScript object
+
+            // Redirect to failure page
+            res.redirect(`${process.env.LIVEWEB}all-payment`);
+          }
+        })
+        .catch(function (error) {
+          console.log('error->', error);
+          res.redirect(`${process.env.LIVEWEB}all-payment`);
+        });
+    } else {
+      res.redirect(`${process.env.LIVEWEB}all-payment`);
+    }
+  } catch (error) {
+    console.error("PhonePe Verification Error:", error);
+    res.redirect(`${process.env.LIVEWEB}all-payment`);
+  }
+};
+
+
+export const paymentverification = async (req, res) => {
+  const { razorpay_order_id, razorpay_payment_id, razorpay_signature } =
+    req.body;
+  const body = razorpay_order_id + "|" + razorpay_payment_id;
+  const expectedsgnature = crypto
+    .createHmac("sha256", process.env.LIVESECRET)
+    .update(body.toString())
+    .digest("hex");
+  const isauth = expectedsgnature === razorpay_signature;
+  if (isauth) {
+    // await Payment.create({
+    //   razorpay_order_id,
+    //   razorpay_payment_id,
+    //   razorpay_signature,
+    // });
+
+    const payment = await paymentModel.findOneAndUpdate(
+      { razorpay_order_id: razorpay_order_id },
+      {
+        razorpay_payment_id,
+        razorpay_signature,
+        payment: 1,
+      },
+      { new: true } // This option returns the updated document
+    );
+    console.log(
+      "razorpay_order_id, razorpay_payment_id, razorpay_signature",
+      razorpay_order_id,
+      razorpay_payment_id,
+      razorpay_signature
+    );
+
+    console.log("razorpay_signature", payment, req.body);
+
+    const gstRate = 0.18; // 18% GST
+
+    // Calculate the base amount before GST
+    const baseAmount = payment.totalAmount / (1 + gstRate);
+
+    const finalAmount = baseAmount.toFixed(2);
+
+    await AddWalletPayment(payment.userId, 0, payment.note, finalAmount);
+
+    res.redirect(
+      `${process.env.LIVEWEB}paymentsuccess?reference=${razorpay_payment_id}`
+    );
+  } else {
+    await Payment.findOneAndUpdate(
+      { razorpay_order_id },
+      {
+        payment: 2,
+      },
+      { new: true } // This option returns the updated document
+    );
+
+    res.status(400).json({ success: false });
+  }
+};
+
+export const WalletKey = async (req, res) => {
+  return res
+    .status(200)
+    .json({ key: encrypt(process.env.LIVEKEY, process.env.APIKEY) });
+};
+
+export const AddWallet = async (req, res) => {
+  try {
+    const { userId, type, note, wallet } = req.body;
+
+    // for create trasaction id
+
+    const lastTrans = await transactionModel
+      .findOne()
+      .sort({ _id: -1 })
+      .limit(1);
+    let lastTransId;
+
+    if (lastTrans) {
+      // Convert lastOrder.orderId to a number before adding 1
+      const lastOrderId = parseInt(lastTrans.t_no || 0);
+      lastTransId = lastOrderId + 1;
+    } else {
+      lastTransId = 1;
+    }
+
+    // Calculate the auto-increment ID
+    const t_id = "tt00" + lastTransId;
+
+    // Create a new transaction
+    const transaction = new transactionModel({
+      userId,
+      type,
+      note,
+      amount: wallet,
+      t_id,
+      t_no: lastTransId,
+    });
+
+    await transaction.save();
+
+    // Update user's wallet amount
+    const user = await userModel.findById(userId);
+
+    if (!user) {
+      return res.status(404).send({
+        success: false,
+        message: "User not found",
+      });
+    }
+
+    user.wallet += wallet;
+
+    await user.save();
+
+    return res.status(200).send({
+      success: true,
+      message: "Wallet updated successfully",
+    });
+  } catch (error) {
+    return res.status(500).send({
+      message: `Error adding to wallet: ${error}`,
+      success: false,
+      error,
+    });
+  }
+};
+
+export const AddWalletPayment = async (userId, type, note, wallet) => {
+  try {
+    // for create trasaction id
+
+    const lastTrans = await transactionModel
+      .findOne()
+      .sort({ _id: -1 })
+      .limit(1);
+    let lastTransId;
+
+    if (lastTrans) {
+      // Convert lastOrder.orderId to a number before adding 1
+      const lastOrderId = parseInt(lastTrans.t_no || 0);
+      lastTransId = lastOrderId + 1;
+    } else {
+      lastTransId = 1;
+    }
+
+    // Calculate the auto-increment ID
+    const t_id = "tt00" + lastTransId;
+
+    // Create a new transaction
+    const transaction = new transactionModel({
+      userId,
+      type,
+      note,
+      amount: wallet,
+      t_id,
+      t_no: lastTransId,
+    });
+
+    await transaction.save();
+
+    // Update user's wallet amount
+    const user = await userModel.findById(userId);
+
+    if (!user) {
+      console.log("User not found");
+      return { success: false, message: "User not found" };
+    }
+    // Convert both user.wallet and wallet to numbers and add them
+    const currentWallet = Number(user.wallet); // Ensure user.wallet is a number
+    const amountToAdd = Number(wallet); // Ensure wallet is a number
+
+    // Add the amount to the current wallet balance
+    user.wallet = currentWallet + amountToAdd;
+
+    await user.save();
+    console.log("Wallet updated successfully");
+    return { success: true, message: "Wallet updated successfully" };
+  } catch (error) {
+    console.log(`Error adding to wallet: ${error}`);
+
+    return {
+      success: false,
+      message: `Error adding to wallet: ${error}`,
+      error,
+    };
+  }
+};
+
+export const AllTransaction = async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const transactions = await transactionModel.find({ userId: userId }).lean();
+
+    return res.status(200).send({
+      success: true,
+      message: "Transaction fetched successfully",
+      transactions,
+    });
+  } catch (error) {
+    return res.status(500).send({
+      message: `Error transaction fetched: ${error}`,
+      success: false,
+      error,
+    });
+  }
+};
+
+export const AllPayment = async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const transactions = await paymentModel.find({ userId: userId }).lean();
+
+    return res.status(200).send({
+      success: true,
+      message: "payments fetched successfully",
+      transactions,
+    });
+  } catch (error) {
+    return res.status(500).send({
+      message: `Error payments fetched: ${error}`,
+      success: false,
+      error,
+    });
+  }
+};
+
+// Message functionality
+
+export const AddMessage = async (req, res) => {
+  try {
+    const { text, userId, senderId } = req.body;
+
+    console.log(text, userId, senderId);
+    // Create a new Message document
+    const message = new messageModel({
+      text,
+      receiver: userId,
+      sender: senderId,
+    });
+
+    // Save the message to the database
+    await message.save();
+
+    return res.status(200).send({
+      success: true,
+      message: "Message Send successfully",
+    });
+  } catch (error) {
+    return res.status(500).send({
+      message: `error Message Send ${error}`,
+      sucesss: false,
+      error,
+    });
+  }
+};
+
+export const AddMessageOrder = async (req, res) => {
+  try {
+    const { text, userId, senderId, orderId } = req.body;
+
+    console.log(text, userId, senderId, orderId);
+    // Create a new Message document
+    const message = new messageModel({
+      text,
+      receiver: userId,
+      sender: senderId,
+      orderId: orderId,
+    });
+
+    // Save the message to the database
+    await message.save();
+
+    return res.status(200).send({
+      success: true,
+      message: "Message Send successfully",
+    });
+  } catch (error) {
+    return res.status(500).send({
+      message: `error Message Send ${error}`,
+      sucesss: false,
+      error,
+    });
+  }
+};
+
+export const GetUserMessage = async (req, res) => {
+  try {
+    const userId = req.params.userId;
+    const senderId = req.params.senderId;
+
+    // Find messages where the sender is equal to userId and the receiver is equal to senderId
+    const messages = await messageModel
+      .find({
+        $or: [
+          { sender: senderId, receiver: userId },
+          { sender: userId, receiver: senderId },
+        ],
+      })
+      .lean();
+
+    return res.status(200).send({
+      success: true,
+      message: "Messages fetched successfully",
+      messages,
+    });
+  } catch (error) {
+    console.error("Error fetching messages:", error);
+    return res.status(500).send({
+      success: false,
+      message: `Error fetching messages: ${error}`,
+      error: error, // Sending error details in the response
+    });
+  }
+};
+
+export const GetUserMessageOrder = async (req, res) => {
+  try {
+    const userId = req.params.userId;
+    const senderId = req.params.senderId;
+    const orderId = req.params.orderId;
+
+    console;
+    // Find messages where the sender is equal to userId and the receiver is equal to senderId
+    const messages = await messageModel
+      .find({
+        $or: [
+          { sender: senderId, receiver: userId, orderId: orderId },
+          { sender: userId, receiver: senderId, orderId: orderId },
+        ],
+      })
+      .lean();
+
+    return res.status(200).send({
+      success: true,
+      message: "Messages fetched successfully",
+      messages,
+    });
+  } catch (error) {
+    console.error("Error fetching messages:", error);
+    return res.status(500).send({
+      success: false,
+      message: `Error fetching messages: ${error}`,
+      error: error, // Sending error details in the response
+    });
+  }
+};
 
 // export const SignupUser = async (req, res) => {
 //   try {
@@ -208,8 +2177,6 @@ export const SignupUser = async (req, res) => {
       expiresIn: "1h",
     });
     user.token = token; // Update the user's token field with the generated token
-    user.type = 2; // Update the user's token field with the generated token
-
     await user.save();
 
     // Generate JWT token
@@ -226,6 +2193,49 @@ export const SignupUser = async (req, res) => {
       success: false,
       message: "Error on signup",
       error: error.message,
+    });
+  }
+};
+
+function cleanDataString(dataString) {
+  // Remove backslashes and other unwanted characters
+  return dataString.replace(/\\/g, "").replace(/\u000F/g, "");
+}
+
+function constructObjectFromDataString(dataString) {
+  const pairs = dataString.split('","').map((pair) => pair.split('":"'));
+  const dataObject = {};
+  for (const [key, value] of pairs) {
+    dataObject[key] = value;
+  }
+  return dataObject;
+}
+
+export const findDistanceApi = async (req, res) => {
+  console.log(req.body);
+
+  try {
+    const { pickup, dropoff } = req.body;
+    const key = "AIzaSyDYsdaR0zrPsBDeuyCKFH_4PuCUyWcQ2mE"; // Replace with your actual API key
+
+    const response = await axios.get(
+      `https://maps.googleapis.com/maps/api/distancematrix/json?destinations=${dropoff}&origins=${pickup}&units=metric&key=${key}`
+    );
+
+    // Extracting distance from response
+    const distance = response.data.rows[0].elements[0].distance.text;
+
+    res.status(200).json({
+      success: true,
+      message: "Distance fetched successfully",
+      data: response.data,
+    });
+  } catch (error) {
+    console.error("Error fetching distance:", error);
+    res.status(500).json({
+      success: false,
+      message: "Error occurred while processing the request",
+      error: error.message, // Sending the error message back to the client
     });
   }
 };
@@ -249,7 +2259,7 @@ export const postman = async (req, res) => {
 
     const finalstatus = encResponse.replace(/\s/g, "").toString();
     console.log("`" + finalstatus + "`");
-    const newStatus = await decrypt(finalstatus, workingKey);
+    const newStatus = await decryptURL(finalstatus, workingKey);
 
     // Clean the string from unwanted characters
     const cleanedData = cleanDataString(newStatus);
@@ -268,10 +2278,7 @@ export const postman = async (req, res) => {
       paymentStatus = 1;
       OrderStatus = "1";
     }
-    if (
-      newData.order_status === "Aborted" ||
-      newData.order_status === undefined
-    ) {
+    if (newData.order_status === "Aborted") {
       paymentStatus = 0;
       OrderStatus = "0";
     }
@@ -308,20 +2315,6 @@ export const postman = async (req, res) => {
     });
   }
 };
-
-function cleanDataString(dataString) {
-  // Remove backslashes and other unwanted characters
-  return dataString.replace(/\\/g, "").replace(/\u000F/g, "");
-}
-
-function constructObjectFromDataString(dataString) {
-  const pairs = dataString.split('","').map((pair) => pair.split('":"'));
-  const dataObject = {};
-  for (const [key, value] of pairs) {
-    dataObject[key] = value;
-  }
-  return dataObject;
-}
 
 export const Userlogin = async (req, res) => {
   try {
@@ -368,82 +2361,6 @@ export const Userlogin = async (req, res) => {
     });
   }
 };
-
-
-export const SignupUserType = async (req, res) => {
-  try {
-    const {
-      type,
-      username,
-      phone,
-      email,
-      state,
-      statename,
-      country,
-      password,
-      pincode,
-      Gender,
-      DOB,
-      address,
-      city,
-    } = req.body;
-
-
-    // const {
-    //   profile,
-
-    //   AadhaarFront,
-    //   AadhaarBack,
-    // } = req.files;
-
-    const hashedPassword = await bcrypt.hash(password, 10);
-
-    // Calculate the auto-increment ID
-    const lastUser = await userModel.findOne().sort({ _id: -1 }).limit(1);
-    let userId;
-
-    if (lastUser) {
-      // Convert lastOrder.orderId to a number before adding 1
-      const lastUserId = parseInt(lastUser.userId || 1);
-      userId = lastUserId + 1;
-    } else {
-      userId = 1;
-    }
-
-    const newUser = new userModel({
-      type,
-      username,
-      phone,
-      email,
-      password: hashedPassword,
-      pincode,
-      gender: Gender,
-      DOB,
-      address,
-      state,
-      statename,
-      country,
-      city,
-
-      userId,
-    });
-
-    await newUser.save();
-    res.status(201).json({
-      success: true,
-      message: "User signed up successfully",
-    });
-  } catch (error) {
-    console.log(error);
-    return res.status(500).send({
-      message: `Error occurred during user signup ${error}`,
-      success: false,
-      error,
-    });
-  }
-};
-
-
 
 export const updateUserController = async (req, res) => {
   try {
@@ -630,7 +2547,7 @@ export const userBlogsController = async (req, res) => {
 export const userTokenController = async (req, res) => {
   try {
     const { id } = req.params;
-    const user = await userModel.findOne({ token: id });
+    const user = await userModel.findById(id);
 
     if (!user) {
       return res.status(200).send({
@@ -727,7 +2644,7 @@ export const UsergetAllCategories = async (req, res) => {
   try {
     const categories = await categoryModel.find(
       { status: "true" },
-      "_id title slug"
+      "_id title"
     );
 
     if (!categories) {
@@ -753,10 +2670,7 @@ export const UsergetAllCategories = async (req, res) => {
 
 export const UsergetAllProducts = async (req, res) => {
   try {
-    const products = await productModel.find(
-      { status: "true" },
-      "_id title slug"
-    );
+    const products = await productModel.find({ status: "true" }, "_id title");
 
     if (!products) {
       return res.status(200).send({
@@ -783,7 +2697,7 @@ export const UsergetAllHomeProducts = async (req, res) => {
   try {
     const products = await productModel.find(
       {},
-      "_id title pImage regularPrice salePrice stock slug variant_products variations"
+      "_id title pImage regularPrice salePrice stock"
     );
 
     if (!products) {
@@ -860,6 +2774,7 @@ export const getProductIdUser = async (req, res) => {
 export const getHomeData = async (req, res) => {
   try {
     const homeData = await homeModel.findOne();
+    const homeScreen = await screenModel.find();
 
     if (!homeData) {
       return res.status(200).send({
@@ -871,7 +2786,11 @@ export const getHomeData = async (req, res) => {
     return res.status(200).json({
       message: "Found home settings!",
       success: true,
-      homeData,
+      homeData: {
+        ...homeData.toObject(), // Convert Mongoose object to plain JavaScript object
+        homeScreen, // Adding all homeScreen data to homeData
+      },
+      
     });
   } catch (error) {
     return res.status(400).json({
@@ -957,7 +2876,7 @@ export const createOrderController = async (req, res) => {
   }
 };
 
-export const updateUserAndCreateOrderController = async (req, res) => {
+export const updateUserAndCreateOrderController_old_old = async (req, res) => {
   let session;
   let transactionInProgress = false;
 
@@ -979,7 +2898,6 @@ export const updateUserAndCreateOrderController = async (req, res) => {
     status,
     totalAmount,
     userId,
-    verified,
   } = req.body;
 
   try {
@@ -990,7 +2908,7 @@ export const updateUserAndCreateOrderController = async (req, res) => {
     // Update user
     const user = await userModel.findByIdAndUpdate(
       id,
-      { username, email, pincode, address, state, verified },
+      { username, email, pincode, address, state },
       { new: true }
     );
 
@@ -1023,6 +2941,7 @@ export const updateUserAndCreateOrderController = async (req, res) => {
       order_id = 1;
     }
 
+    console.log("order_id", order_id);
     // Create new order
     const newOrder = new orderModel({
       details,
@@ -1057,14 +2976,9 @@ export const updateUserAndCreateOrderController = async (req, res) => {
     await session.commitTransaction();
     transactionInProgress = false;
 
+    // // Send order confirmation email
+    // await sendOrderConfirmationEmail(email, username, userId, newOrder);
     if (mode === "COD") {
-      // Send order confirmation email
-      await sendOrderConfirmationEmail(email, username, userId, newOrder);
-      const norder_id = newOrder.orderId;
-
-      // block
-      //  await sendOrderOTP(phone, norder_id);
-
       return res.status(201).json({
         success: true,
         message: "Order created successfully",
@@ -1115,6 +3029,414 @@ export const updateUserAndCreateOrderController = async (req, res) => {
   }
 };
 
+export const UpdateUserCancelOrder = async (req, res) => {
+  try {
+    const { cancel, id } = req.body;
+
+    // Check if user was found and updated
+    if (!id) {
+      return res.status(400).json({
+        success: false,
+        message: "Ride not found",
+      });
+    }
+
+    const updateFields = {
+      status: "0",
+      reason: cancel,
+    };
+    // Find and update the user based on the phone number
+    await orderModel.findByIdAndUpdate(
+      id,
+      updateFields,
+      { new: true } // To return the updated document
+    );
+
+    // Success response
+    res.status(200).json({
+      success: true,
+      message: "Ride updated successfully",
+    });
+  } catch (error) {
+    console.error("Error occurred during Ride update:", error);
+    return res.status(500).json({
+      success: false,
+      message: `Error occurred during Ride update: ${error.message}`,
+      error: error,
+    });
+  }
+};
+
+export const UpdateUserReviewOrder = async (req, res) => {
+  try {
+    const { userId, id, comment, rating, reviewDriverId } = req.body;
+
+    if (!userId || !id || !comment || !rating || !reviewDriverId) {
+      return res.status(400).json({
+        success: false,
+        message: "Missing required fields: userId, id, comment, rating",
+      });
+    }
+
+    // Check if the order exists
+    const existingOrder = await orderModel.findById(id);
+    if (!existingOrder) {
+      return res.status(404).json({
+        success: false,
+        message: "Order not found",
+      });
+    }
+
+    const newReview = new ratingModel({
+      userId,
+      orderId: id,
+      rating,
+      comment,
+    });
+
+    await newReview.save();
+
+    const updateFields = {
+      ratingId: newReview._id,
+    };
+
+    // Find and update the user based on the phone number
+    await orderModel.findByIdAndUpdate(
+      id,
+      updateFields,
+      { new: true } // To return the updated document
+    );
+
+    // Find and update the user based on the phone number
+    const userddModel = await userModel.findByIdAndUpdate(
+      reviewDriverId,
+      { $addToSet: { ratingId: newReview._id } }, // Add to ratingId array if not already present
+      { new: true }
+    );
+
+    console.log(userId, userddModel);
+    // Success response
+    res.status(200).json({
+      success: true,
+      message: "Review added successfully",
+      userId: userId,
+    });
+  } catch (error) {
+    console.error("Error occurred during Ride update:", error);
+    return res.status(500).json({
+      success: false,
+      message: `Error occurred during Ride update: ${error.message}`,
+      error: error,
+    });
+  }
+};
+
+export const EmailVerify = async (req, res) => {
+  const { email } = req.body;
+
+  // Generate a random OTP
+  const OTP = Math.floor(1000 + Math.random() * 9000); // Generate a 4-digit numeric OTP
+
+  // Configure nodemailer transporter
+  const transporter = nodemailer.createTransport({
+    // SMTP configuration
+    host: process.env.MAIL_HOST, // Update with your SMTP host
+    port: process.env.MAIL_PORT, // Update with your SMTP port
+    secure: process.env.MAIL_ENCRYPTION, // Set to true if using SSL/TLS
+    auth: {
+      user: process.env.MAIL_USERNAME, // Update with your email address
+      pass: process.env.MAIL_PASSWORD, // Update with your email password
+    },
+  });
+
+  // Email message
+  const mailOptions = {
+    from: process.env.MAIL_FROM_ADDRESS, // Update with your email address
+    to: email, // Update with your email address
+    subject: "OTP Verification cayroshop.com",
+    text: `OTP: ${OTP}`,
+  };
+
+  // Send email
+  transporter.sendMail(mailOptions, (error, info) => {
+    if (error) {
+      console.error(error);
+      res.status(500).send("Failed to send email");
+    } else {
+      console.log("Email sent: " + info.response);
+      // If email sending is successful, return a success response
+      res.status(201).json({
+        success: true,
+        message: "Email sent successfully",
+        OTP: OTP, // Include OTP in the response if needed
+      });
+    }
+  });
+};
+
+export const updateUserAndCreateOrderController = async (req, res) => {
+  let session;
+  let transactionInProgress = false;
+
+  const { id } = req.params;
+  const {
+    username,
+    email,
+    state,
+    pickupTime,
+    pickupDate,
+    bookingTyp,
+    rideTyp,
+    PickupLocation,
+    DestinationLocation,
+    BookingDistance,
+    totalAmount,
+    userId,
+    mode,
+    CarType,
+    details,
+    DriveHR,
+    FinalDriveKM,
+  } = req.body;
+
+  try {
+    session = await mongoose.startSession();
+    session.startTransaction();
+    transactionInProgress = true;
+
+    // Update user
+    const user = await userModel.findByIdAndUpdate(
+      id,
+      { username, email, state },
+      { new: true }
+    );
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found",
+      });
+    }
+
+    // Create order for the updated user
+    if (
+      !pickupTime ||
+      !bookingTyp ||
+      !rideTyp ||
+      !PickupLocation ||
+      !DestinationLocation ||
+      !totalAmount ||
+      !userId ||
+      !CarType
+    ) {
+      console.log("userId", userId);
+      return res.status(400).json({
+        success: false,
+        message: "Please provide all fields for the Booking",
+        body: req.body,
+      });
+    }
+
+    // Calculate the auto-increment ID
+    const lastOrder = await orderModel.findOne().sort({ _id: -1 }).limit(1);
+    let orderId;
+
+    if (lastOrder) {
+      // Convert lastOrder.orderId to a number before adding 1
+      const lastOrderId = parseInt(lastOrder.orderId);
+      orderId = lastOrderId + 1;
+    } else {
+      orderId = 1;
+    }
+    console.log("order_id", orderId, lastOrder);
+    // Create new order
+    const newOrder = new orderModel({
+      payment: 0,
+      pickupTime,
+      pickupDate,
+      bookingTyp,
+      rideTyp,
+      PickupLocation,
+      DestinationLocation,
+      BookingDistance,
+      totalAmount,
+      userId,
+      mode,
+      CarType,
+      details,
+      orderId,
+      DriveHR,
+      FinalDriveKM,
+    });
+
+    await newOrder.save({ session });
+
+    // Update user's orders
+    user.orders.push(newOrder);
+
+    // Save updated user data
+    await user.save({ session });
+
+    // Commit transaction
+    await session.commitTransaction();
+    transactionInProgress = false;
+
+    // Sending the response after order creation
+    res.status(200).json({
+      success: true,
+      message: "Order created successfully",
+      order: newOrder,
+      user: user, // Include updated user data in the response
+    });
+
+    console.log("username", username, email);
+  } catch (error) {
+    if (transactionInProgress) {
+      try {
+        await session.abortTransaction();
+      } catch (abortError) {
+        console.error("Error aborting transaction:", abortError);
+      }
+    }
+    console.error("Error:", error);
+    return res.status(400).json({
+      success: false,
+      message: "Error while creating order",
+      error: error.message,
+    });
+  } finally {
+    if (session) {
+      session.endSession();
+    }
+  }
+};
+
+export const updateUserAndCreateValetController = async (req, res) => {
+  let session;
+  let transactionInProgress = false;
+
+  const {
+    username,
+    email,
+    state,
+    ValetTime,
+    ValetDate,
+    ValetLocation,
+    ValetAddress,
+    mode,
+    details,
+    totalAmount,
+    userId,
+    ValetCount,
+  } = req.body;
+
+  try {
+    session = await mongoose.startSession();
+    session.startTransaction();
+    transactionInProgress = true;
+
+    // Update user
+    const user = await userModel.findByIdAndUpdate(
+      userId,
+      { username, email, state },
+      { new: true }
+    );
+
+    if (!user) {
+      return res.status(400).json({
+        success: false,
+        message: "User not found",
+      });
+    }
+
+    // Create order for the updated user
+    if (
+      !ValetTime ||
+      !ValetDate ||
+      !ValetLocation ||
+      !ValetAddress ||
+      !mode ||
+      isNaN(totalAmount) ||
+      !userId ||
+      isNaN(ValetCount)
+    ) {
+      console.log("userId", userId);
+      return res.status(400).json({
+        success: false,
+        message: "Please provide all fields for the Booking",
+        body: req.body,
+      });
+    }
+
+    // Calculate the auto-increment ID
+    const lastOrder = await valetModel.findOne().sort({ _id: -1 }).limit(1);
+    let Valet_Id;
+    console.log("lastOrder", lastOrder);
+    if (lastOrder) {
+      // Convert lastOrder.orderId to a number before adding 1
+      const lastOrderId = parseInt(lastOrder.Valet_Id);
+      Valet_Id = lastOrderId + 1;
+    } else {
+      Valet_Id = 1;
+    }
+    console.log("order_id", Valet_Id, lastOrder);
+    // Create new order
+    const newOrder = new valetModel({
+      payment: 0,
+      ValetTime,
+      ValetDate,
+      ValetLocation,
+      ValetAddress,
+      mode,
+      details,
+      totalAmount,
+      userId,
+      Valet_Id,
+      ValetCount,
+    });
+
+    await newOrder.save({ session });
+
+    // Update user's orders
+    user.valets.push(newOrder);
+
+    // Save updated user data
+    await user.save({ session });
+
+    // Commit transaction
+    await session.commitTransaction();
+    transactionInProgress = false;
+
+    // Sending the response after order creation
+    res.status(200).json({
+      success: true,
+      message: "valet order created successfully",
+      order: newOrder,
+      user: user, // Include updated user data in the response
+    });
+
+    console.log("username", username, email);
+  } catch (error) {
+    if (transactionInProgress) {
+      try {
+        await session.abortTransaction();
+      } catch (abortError) {
+        console.error("Error aborting transaction:", abortError);
+      }
+    }
+    console.error("Error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Error while creating valet order",
+      error: error.message,
+    });
+  } finally {
+    if (session) {
+      session.endSession();
+    }
+  }
+};
+
 export const PaymentRequest = async (req, res) => {
   try {
     const tid = Math.floor(Math.random() * 1000000); // Generating random transaction ID
@@ -1141,9 +3463,8 @@ export const PaymentRequest = async (req, res) => {
 };
 
 export const PaymentResponse = async (req, res) => {
-  console.log("req.body.encResp", req.body.encResp);
   const decryptdata = decrypt(req.body.encResp, process.env.WORKING_KEY);
-  console.log("decryptdata", decryptdata);
+  console.log(decryptdata);
 
   // Split the decrypted data into key-value pairs
   const keyValuePairs = decryptdata.split("&");
@@ -1158,49 +3479,27 @@ export const PaymentResponse = async (req, res) => {
   // Extract order_id and order_status
   const orderId = data["order_id"];
   const orderStatus = data["order_status"];
-  const orderAmt = Math.floor(data["amount"]);
 
   console.log("Order ID:", orderId);
   console.log("Order Status:", orderStatus);
 
-  const order = await orderModel.findOne({ orderId }).populate("userId");
-
-  const ordertotal = order.totalAmount;
-
-  console.log("fetch data", data);
-  console.log("fetch amt", orderAmt);
-  console.log("order amt", ordertotal);
+  const order = await orderModel.findOne({ orderId });
 
   if (!order) {
     console.log("order not found");
-  } else {
-    const user = order.userId[0]; // Assuming there's only one user associated with the order
-
-    // Accessing user ID, username, and email
-    const userId = user._id; // User ID
-    const username = user.username;
-    const email = user.email;
-    const phone = user.phone;
-
-    if (orderStatus === "Success" && orderAmt === ordertotal) {
-      // Update payment details
-      order.payment = 1;
-      order.status = "1";
-      // // Send order confirmation email
-      await sendOrderConfirmationEmail(email, username, userId, order);
-
-      // block
-      console.log(otp);
-      //   await sendOrderOTP(phone, order._id);
-    } else {
-      // Update payment details
-      order.payment = 0;
-      order.status = "0";
-    }
-
-    // Save the order details
-    await order.save();
   }
+
+  if (orderStatus === "Success") {
+    // Update payment details
+    // Update payment details
+    order.payment = 1;
+  } else {
+    // Update payment details
+    order.payment = 0;
+  }
+
+  // Save the order details
+  await order.save();
 
   if (orderStatus === "Success") {
     // Redirect after saving data
@@ -1283,7 +3582,7 @@ async function sendOrderConfirmationEmail(email, username, userId, newOrder) {
     <thead>
       <tr> 
       <th style="text-align:left;"> 
-      <img width="200" src="https://backend-9mwl.onrender.com/uploads/new/image-1712823999415.png" />
+      <img width="200" src="https://backend-9mwl.onrender.com/uploads/image-1712229850358.PNG" />
  </th>
         <th style="text-align:right;font-weight:400;"> ${new Date(
         newOrder.createdAt
@@ -1446,8 +3745,7 @@ async function sendOrderConfirmationEmail(email, username, userId, newOrder) {
         
           <strong style="display:block;margin:0 0 10px 0;">Regards</strong> 
           
-          <address><strong class="mb-2"> CAYRO ENTERPRISES </strong><br>
-          <b title="Phone" class="mb-2">Web:</b>www.cayroshop.com <br></address>
+          <address><strong class="mb-2"> CAYRO ENTERPRISES </strong><br><b title="Phone" class="mb-2">GST:</b>  06AAPFC7640H1Z9<br><b title="Phone" class="mb-2">Address:</b> Unit no. DCG-0104, DLF Corporate Greens, Sector 74A, Gurugram, Haryana - 122001<br><b title="Phone" class="mb-2">Email:</b> info@cayroshop.com <br><b title="Phone" class="mb-2">Web:</b>www.cayroshop.com <br></address>
          
         </td>
       </tr>
@@ -1468,197 +3766,8 @@ async function sendOrderConfirmationEmail(email, username, userId, newOrder) {
   }
 }
 
-export const EmailVerify = async (req, res) => {
-  const { email } = req.body;
-
-  // Generate a random OTP
-  const OTP = Math.floor(1000 + Math.random() * 9000); // Generate a 4-digit numeric OTP
-
-  // Configure nodemailer transporter
-  const transporter = nodemailer.createTransport({
-    // SMTP configuration
-    host: process.env.MAIL_HOST, // Update with your SMTP host
-    port: process.env.MAIL_PORT, // Update with your SMTP port
-    secure: process.env.MAIL_ENCRYPTION, // Set to true if using SSL/TLS
-    auth: {
-      user: process.env.MAIL_USERNAME, // Update with your email address
-      pass: process.env.MAIL_PASSWORD, // Update with your email password
-    },
-  });
-
-  // Email message
-  const mailOptions = {
-    from: process.env.MAIL_FROM_ADDRESS, // Update with your email address
-    to: email, // Update with your email address
-    subject: "OTP Verification cayroshop.com",
-    text: `OTP: ${OTP}`,
-  };
-
-  // Send email
-  transporter.sendMail(mailOptions, (error, info) => {
-    if (error) {
-      console.error(error);
-      res.status(500).send("Failed to send email");
-    } else {
-      console.log("Email sent: " + info.response);
-      // If email sending is successful, return a success response
-      res.status(201).json({
-        success: true,
-        message: "Email sent successfully",
-        OTP: OTP, // Include OTP in the response if needed
-      });
-    }
-  });
-};
-
-export const HomeSendEnquire_old = async (req, res) => {
-  const { fullname, email, phone, service, QTY, userId,
-    userEmail, } = req.body;
-
-  try {
-    // Save data to the database
-    const newEnquire = new enquireModel({
-      fullname,
-      email,
-      phone,
-      service,
-      QTY,
-      userId,
-      userEmail,
-    });
-
-    await newEnquire.save();
-
-    // Configure nodemailer transporter
-    const transporter = nodemailer.createTransport({
-      // SMTP configuration
-      host: process.env.MAIL_HOST, // Update with your SMTP host
-      port: process.env.MAIL_PORT, // Update with your SMTP port
-      secure: process.env.MAIL_ENCRYPTION, // Set to true if using SSL/TLS
-      auth: {
-        user: process.env.MAIL_USERNAME, // Update with your email address
-        pass: process.env.MAIL_PASSWORD, // Update with your email password
-      },
-    });
-
-    const recipients = userEmail
-      ? `${userEmail}, ${process.env.MAIL_TO_ADDRESS}`
-      : process.env.MAIL_TO_ADDRESS;
-
-    // Email message
-    const mailOptions = {
-      from: process.env.MAIL_FROM_ADDRESS, // Update with your email address
-      to: recipients, // Update with your email address
-      subject: "New Enquire Form Submission",
-      text: `Name: ${fullname}\nEmail: ${email}\nPhone: ${phone}\nService: ${service}\nQTY:${QTY}`,
-    };
-
-    // Send email
-    transporter.sendMail(mailOptions, (error, info) => {
-      if (error) {
-        console.error(error);
-        res.status(500).send("Failed to send email");
-      } else {
-        console.log("Email sent: " + info.response);
-        res.status(200).send("Email sent successfully");
-      }
-    });
-  } catch (error) {
-    console.error("Error in send data:", error);
-    return res.status(500).json({
-      success: false,
-      message: "Internal Server Error",
-    });
-  }
-};
-
-
-
-export const HomeSendEnquire = async (req, res) => {
-  const {
-    fullname,
-    email,
-    phone,
-    service,
-    QTY,
-    userId,
-    userEmail,
-    type,
-    Requirement,
-    name,
-    organizationName,
-    designation,
-    interested,
-  } = req.body;
-  console.log(userId, userEmail);
-
-  try {
-    // Save data to the database
-    const newEnquire = new enquireModel({
-      fullname,
-      email,
-      phone,
-      service,
-      QTY,
-      Requirement,
-      userId,
-      userEmail,
-      type,
-      name,
-      organizationName,
-      designation,
-      interested,
-    });
-
-    await newEnquire.save();
-
-    // Configure nodemailer transporter
-    const transporter = nodemailer.createTransport({
-      // SMTP configuration
-      host: process.env.MAIL_HOST, // Update with your SMTP host
-      port: process.env.MAIL_PORT, // Update with your SMTP port
-      secure: process.env.MAIL_ENCRYPTION, // Set to true if using SSL/TLS
-      auth: {
-        user: process.env.MAIL_USERNAME, // Update with your email address
-        pass: process.env.MAIL_PASSWORD, // Update with your email password
-      },
-    });
-
-    // Conditional recipient list
-    const recipients = userEmail
-      ? `${userEmail}, ${process.env.MAIL_TO_ADDRESS}`
-      : process.env.MAIL_TO_ADDRESS;
-
-    // Email message
-    const mailOptions = {
-      from: process.env.MAIL_FROM_ADDRESS, // Update with your email address
-      to: recipients, // Update with your email address
-      subject: "New Enquire Form Submission",
-      text: `Name: ${fullname}\nEmail: ${email}\nPhone: ${phone}\nService: ${service}\nQTY:${QTY}`,
-    };
-
-    // Send email
-    transporter.sendMail(mailOptions, (error, info) => {
-      if (error) {
-        console.error(error);
-        res.status(500).send("Failed to send email");
-      } else {
-        console.log("Email sent: " + info.response);
-        res.status(200).send("Email sent successfully");
-      }
-    });
-  } catch (error) {
-    console.error("Error in send data:", error);
-    return res.status(500).json({
-      success: false,
-      message: "Internal Server Error",
-    });
-  }
-};
-
-
 export const contactSendEnquire = async (req, res) => {
-  const { name, email, phone, message } = req.body;
+  const { name, email, message } = req.body;
 
   // Configure nodemailer transporter
   const transporter = nodemailer.createTransport({
@@ -1677,7 +3786,7 @@ export const contactSendEnquire = async (req, res) => {
     from: process.env.MAIL_FROM_ADDRESS, // Update with your email address
     to: process.env.MAIL_TO_ADDRESS, // Update with your email address
     subject: "New Contact Us Form Submission",
-    text: `Name: ${name}\nEmail: ${email}\nPhone: ${phone}\nMessage: ${message}`,
+    text: `Name: ${name}\nEmail: ${email}\nMessage: ${message}`,
   };
 
   // Send email
@@ -1853,7 +3962,7 @@ export const GetAllCategoriesByParentIdController_old = async (req, res) => {
     const categories = await getAllCategoriesByParentId(parentId);
     const MainCat = await categoryModel
       .findById(parentId)
-      .select("title description")
+      .select("title")
       .lean();
 
     const filters = { Category: parentId }; // Initialize filters with parent category filter
@@ -1926,7 +4035,6 @@ export const GetAllCategoriesByParentIdController_old = async (req, res) => {
   }
 };
 
-
 export const GetAllCategoriesByParentIdController = async (req, res) => {
   try {
     const { parentId } = req.params;
@@ -1944,7 +4052,7 @@ export const GetAllCategoriesByParentIdController = async (req, res) => {
     const categories = await getAllCategoriesByParentId(parentId);
     const MainCat = await categoryModel
       .findById(parentId)
-      .select("title metaTitle metaDescription metaKeywords image description")
+      .select("title metaTitle metaDescription metaKeywords")
       .lean();
 
     const filters = { Category: parentId }; // Initialize filters with parent category filter
@@ -2013,99 +4121,6 @@ export const GetAllCategoriesByParentIdController = async (req, res) => {
   }
 };
 
-
-
-export const GetAllCategoriesBySlugController = async (req, res) => {
-  try {
-    const { parentSlug } = req.params;
-    const { filter, price, page = 1, perPage = 2 } = req.query;
-
-    // Check if parentSlug is undefined or null
-    if (!parentSlug) {
-      return res.status(400).json({
-        success: false,
-        message: "Please provide a valid parent ID.",
-      });
-    }
-
-    // Fetch the main category with status check
-    const MainCat = await categoryModel
-      .findOne({ slug: parentSlug, status: "true" })
-      .select(
-        "title metaTitle metaDescription metaKeywords image description specifications slide_head slide_para filter"
-      )
-      .lean();
-
-    // Check if the MainCat exists
-    if (!MainCat) {
-      return res.status(404).json({
-        success: false,
-        message: "Category not found or inactive.",
-      });
-    }
-
-    const parentId = MainCat._id;
-    const categories = await getAllCategoriesByParentId(parentId);
-
-    const filters = { Category: parentId, status: "true" }; // Add status filter for products
-
-    if (filter) {
-      const filterParams = JSON.parse(filter);
-      Object.keys(filterParams).forEach((param) => {
-        const paramValues = filterParams[param].split(",");
-        const variationsKey = `variations.${param}.${param}`;
-        filters[variationsKey] = { $in: paramValues };
-      });
-    }
-
-    // Check if price parameter is provided
-    if (price && price.trim() !== "") {
-      const priceRanges = price.split(",");
-      const priceFilters = priceRanges.map((range) => {
-        const [minPrice, maxPrice] = range.split("-");
-        return {
-          salePrice: { $gte: parseInt(minPrice), $lte: parseInt(maxPrice) },
-          status: "true", // Ensure products are active
-        };
-      });
-
-      filters.$or = priceFilters;
-    }
-
-    const skip = (page - 1) * perPage;
-
-    // Fetch products based on filters with pagination
-    const products = await productModel
-      .find(filters)
-      .select("_id title regularPrice salePrice pImage variations slug")
-      .skip(skip)
-      .limit(perPage)
-      .lean();
-
-    const Procat = { Category: parentId, status: "true" }; // Add status filter for products
-    const productsFilter = await productModel
-      .find(Procat)
-      .select("_id regularPrice salePrice variations slug")
-      .lean();
-
-    const proLength = products.length;
-    return res.status(200).json({
-      success: true,
-      categories,
-      MainCat,
-      products,
-      proLength,
-      productsFilter,
-    });
-  } catch (error) {
-    console.error("Error in GetAllCategoriesBySlugController:", error);
-    return res.status(500).json({
-      success: false,
-      message: "Internal Server Error",
-    });
-  }
-};
-
 export const getAllCategoriesByParentId = async (parentId) => {
   try {
     const categories = await categoryModel.find({ parent: parentId }).lean();
@@ -2117,14 +4132,13 @@ export const getAllCategoriesByParentId = async (parentId) => {
     const result = [];
 
     for (const category of categories) {
-      const { _id, title, image, slug /* other fields */ } = category;
+      const { _id, title, image /* other fields */ } = category;
 
       const categoryData = {
         _id,
         title,
         image,
         subcategories: await getAllCategoriesByParentId(_id), // Recursive call
-        slug,
       };
 
       result.push(categoryData);
@@ -2138,15 +4152,25 @@ export const getAllCategoriesByParentId = async (parentId) => {
 };
 
 export const userOrdersController = async (req, res) => {
+  const userId = req.params.id;
+
   try {
-    const userOrder = await userModel.findById(req.params.id).populate({
+    const userOrder = await userModel.findById(userId).populate({
       path: "orders",
-      select: "_id createdAt totalAmount status mode orderId", // Select only _id and title fields
+      select:
+        "_id createdAt totalAmount status mode orderId PickupLocation DestinationLocation CarType details pickupTime pickupDate rideTyp bookingTyp startStatusOTP endStatusOTP ratingId", // Include the driverId field
       options: {
-        sort: { createdAt: -1 }, // Sort by createdAt field in descending order
+        sort: { createdAt: -1 },
+      },
+      populate: {
+        path: "driverId",
+        select: "_id username email phone ratingId", // Include fields from the driver
+        // populate: {
+        //   path: 'ratingId',
+        //   select: 'rating comment' // Include fields from the rating
+        // }
       },
     });
-
     if (!userOrder) {
       return res.status(200).send({
         message: "Order Not Found By user",
@@ -2176,10 +4200,13 @@ export const userOrdersViewController = async (req, res) => {
     const userOrder = await userModel.findById(userId).populate({
       path: "orders",
       match: { _id: orderId }, // Match the order ID
+      populate: {
+        path: "driverId", // Populate the driverId
+        select: "_id username email phone", // Select the fields you want to include from the driver
+      },
     });
-
     // If user or order not found, return appropriate response
-    if (!userOrder || !userOrder.orders.length) {
+    if (!userOrder || !userOrder.orders) {
       return res.status(404).json({
         message: "Order Not Found By user or Order ID",
         success: false,
@@ -2190,7 +4217,7 @@ export const userOrdersViewController = async (req, res) => {
     return res.status(200).json({
       message: "Single Order Found By user ID and Order ID",
       success: true,
-      userOrder: userOrder.orders[0], // Assuming there's only one order per user
+      userOrder: userOrder.orders, // Assuming there's only one order per user
     });
   } catch (error) {
     // If any error occurs during the process, log it and return error response
@@ -2198,6 +4225,73 @@ export const userOrdersViewController = async (req, res) => {
     return res.status(400).json({
       success: false,
       message: "Error while getting order",
+      error,
+    });
+  }
+};
+
+export const DriverOrdersViewController = async (req, res) => {
+  try {
+    const { userId, orderId } = req.params;
+
+    // Find the user by ID and populate their orders
+    const userOrder = await userModel.findById(userId).populate({
+      path: "orders",
+      match: { _id: orderId }, // Match the order ID
+    });
+
+    // If user or order not found, return appropriate response
+    if (!userOrder || !userOrder.orders) {
+      return res.status(404).json({
+        message: "Order Not Found By user or Order ID",
+        success: false,
+      });
+    }
+
+    // If user order found, return success response with the single order
+    return res.status(200).json({
+      message: "Single Order Found By user ID and Order ID",
+      success: true,
+      userOrder: userOrder.orders, // Assuming there's only one order per user
+    });
+  } catch (error) {
+    // If any error occurs during the process, log it and return error response
+    console.log(error);
+    return res.status(400).json({
+      success: false,
+      message: "Error while getting order",
+      error,
+    });
+  }
+};
+
+export const GetUsernameById = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // Find the user by ID and populate their orders
+    const user = await userModel.findById(id);
+
+    // If user or order not found, return appropriate response
+    if (!user) {
+      return res.status(404).json({
+        message: "User Not Found By ID",
+        success: false,
+      });
+    }
+
+    // If user order found, return success response with the single order
+    return res.status(200).json({
+      message: "User Found By ID",
+      success: true,
+      user,
+    });
+  } catch (error) {
+    // If any error occurs during the process, log it and return error response
+    console.log(error);
+    return res.status(400).json({
+      success: false,
+      message: "Error while getting user",
       error,
     });
   }
@@ -2409,32 +4503,6 @@ export const AddWishListByUser = async (req, res) => {
     });
   }
 };
-
-
-export const getProductIdUserBySlug = async (req, res) => {
-  try {
-    const { slug } = req.params;
-    const Product = await productModel.findOne({ slug: slug });
-    if (!Product) {
-      return res.status(200).send({
-        message: "product Not Found By Id",
-        success: false,
-      });
-    }
-    return res.status(200).json({
-      message: "fetch Single product!",
-      success: true,
-      Product,
-    });
-  } catch (error) {
-    return res.status(400).json({
-      message: `Error while get product: ${error}`,
-      success: false,
-      error,
-    });
-  }
-};
-
 
 export const ViewWishListByUser = async (req, res) => {
   try {
@@ -2656,7 +4724,7 @@ export const ViewOrderByUser = async (req, res) => {
 export const ViewAllZones = async (req, res) => {
   try {
     // Query the database for all ratings where status is 1
-    const Zones = await zonesModel.find({ status: "true" });
+    const Zones = await zonesModel.find({ status: 1 });
 
     res.status(200).json({ success: true, Zones });
   } catch (error) {
@@ -2749,12 +4817,12 @@ const sendRegOTP = async (phone, otp) => {
   try {
     // Construct the request URL with query parameters
     const queryParams = querystring.stringify({
-      username: "cayro.trans",
-      password: "CsgUK",
+      username: "user",
+      password: "passs",
       unicode: false,
-      from: "CAYROE",
+      from: "user",
       to: phone,
-      text: `Here is your OTP ${otp} for registering your account on cayroshop.com`,
+      text: `Here is your OTP ${otp} for registering your account on user.com`,
     });
     const url = `https://pgapi.smartping.ai/fe/api/v1/send?${queryParams}`;
 
@@ -2773,7 +4841,7 @@ const sendRegOTP = async (phone, otp) => {
         throw new Error("Failed to send OTP");
       });
 
-    console.log("OTP request sent successfully");
+    console.log("OTP request sent successfully", otp);
   } catch (error) {
     // Handle errors
     console.error("Error sending OTP:", error);
@@ -2785,12 +4853,12 @@ const sendLogOTP = async (phone, otp) => {
   try {
     // Construct the request URL with query parameters
     const queryParams = querystring.stringify({
-      username: "cayro.trans",
-      password: "CsgUK",
+      username: "user",
+      password: "passs",
       unicode: false,
-      from: "CAYROE",
+      from: "user",
       to: phone,
-      text: `Here is OTP ${otp} for mobile no verification in website cayroshop.com`,
+      text: `Here is OTP ${otp} for mobile no verification in website user.com`,
     });
     const url = `https://pgapi.smartping.ai/fe/api/v1/send?${queryParams}`;
 
@@ -2809,8 +4877,7 @@ const sendLogOTP = async (phone, otp) => {
         console.error("Error sending OTP:", error);
         throw new Error("Failed to send OTP");
       });
-
-    console.log("OTP request sent successfully");
+    console.log("OTP request sent successfully", otp);
   } catch (error) {
     // Handle errors
     console.error("Error sending OTP:", error);
@@ -2822,12 +4889,12 @@ const sendOrderOTP = async (phone, order_id) => {
   try {
     // Construct the request URL with query parameters
     const queryParams = querystring.stringify({
-      username: "cayro.trans",
-      password: "CsgUK",
+      username: "userpass",
+      password: "pass",
       unicode: false,
-      from: "CAYROE",
+      from: "user",
       to: phone,
-      text: `Thank you for your order. Your order id is ${order_id} cayroshop.com`,
+      text: `Thank you for your order. Your order id is ${order_id} user.com`,
     });
     const url = `https://pgapi.smartping.ai/fe/api/v1/send?${queryParams}`;
 
@@ -2847,7 +4914,7 @@ const sendOrderOTP = async (phone, order_id) => {
         throw new Error("Failed to send OTP");
       });
 
-    console.log("OTP request sent successfully");
+    console.log("OTP request sent successfully", otp);
   } catch (error) {
     // Handle errors
     console.error("Error sending OTP:", error);
@@ -2873,21 +4940,161 @@ export const SendOTP = async (req, res) => {
   }
 };
 
+export const sendAisensyOTP = async (req, res) => {
+  try {
+    const { phone } = req.params;
+    const otp = Math.floor(1000 + Math.random() * 9000);
+
+    const data = {
+      apiKey: process.env.AisensyAPIKEY,
+      campaignName: "Signup otp",
+      destination: `91${phone}`,
+      userName: "Travelin Trip Holidays",
+      templateParams: [`${otp}`],
+      source: "new-landing-page form",
+      media: {},
+      buttons: [
+        {
+          type: "button",
+          sub_type: "url",
+          index: 0,
+          parameters: [
+            {
+              type: "text",
+              text: "TESTCODE20",
+            },
+          ],
+        },
+      ],
+      carouselCards: [],
+      location: {},
+      paramsFallbackValue: {
+        FirstName: "user",
+      },
+    };
+    axios
+      .post("https://backend.aisensy.com/campaign/t1/api/v2", data, {
+        headers: {
+          "Content-Type": "application/json",
+        },
+      })
+      .then((response) => {
+        console.log("Response:", response.data);
+      })
+      .catch((error) => {
+        console.error("Error:", error);
+      });
+    console.log(`Aisensy otp ${otp} for ${phone}`);
+
+    return res.status(200).json({
+      message: "Send OTP Successfully",
+      success: true,
+      otp: encrypt(otp, process.env.APIKEY),
+    });
+  } catch (error) {
+    console.error("Error On Send OTP:", error);
+    res.status(500).json({
+      success: false,
+      message: "Error On Send OTP:",
+      error: error.message,
+    });
+  }
+};
+
+export const sendAisensyLoginOTP = async (phone, otp) => {
+  const data = {
+    apiKey: process.env.AisensyAPIKEY2,
+    campaignName: "Signup OTP",
+    destination: `91${phone}`,
+    userName: "Travel Leads",
+    templateParams: [`${otp}`],
+    source: "new-landing-page form",
+    media: {},
+    buttons: [
+      {
+        type: "button",
+        sub_type: "url",
+        index: 0,
+        parameters: [
+          {
+            type: "text",
+            text: "TESTCODE20",
+          },
+        ],
+      },
+    ],
+    carouselCards: [],
+    location: {},
+    paramsFallbackValue: {
+      FirstName: "user",
+    },
+  };
+  axios
+    .post("https://backend.aisensy.com/campaign/t1/api/v2", data, {
+      headers: {
+        "Content-Type": "application/json",
+      },
+    })
+    .then((response) => {
+      console.log("Response:", response.data);
+    })
+    .catch((error) => {
+      console.error("Error:", error);
+    });
+  console.log(`Aisensy otp ${otp} for ${phone}`);
+};
+
+export const sendAisensyLoginOTP_old = async (phone, otp) => {
+  const data = {
+    apiKey: process.env.AisensyAPIKEY,
+    campaignName: "Signup otp",
+    destination: `91${phone}`,
+    userName: "Travelin Trip Holidays",
+    templateParams: [`${otp}`],
+    source: "new-landing-page form",
+    media: {},
+    buttons: [
+      {
+        type: "button",
+        sub_type: "url",
+        index: 0,
+        parameters: [
+          {
+            type: "text",
+            text: "TESTCODE20",
+          },
+        ],
+      },
+    ],
+    carouselCards: [],
+    location: {},
+    paramsFallbackValue: {
+      FirstName: "user",
+    },
+  };
+  axios
+    .post("https://backend.aisensy.com/campaign/t1/api/v2", data, {
+      headers: {
+        "Content-Type": "application/json",
+      },
+    })
+    .then((response) => {
+      console.log("Response:", response.data);
+    })
+    .catch((error) => {
+      console.error("Error:", error);
+    });
+  console.log(`Aisensy otp ${otp} for ${phone}`);
+};
+
 export const SignupLoginUser = async (req, res) => {
   try {
-    const { phone, Gtoken } = req.body;
+    const { phone } = req.body;
 
     // Generate OTP
     const otp = Math.floor(1000 + Math.random() * 9000);
     // // Send OTP via Phone
     //  await sendRegOTP(phone, otp);
-
-    if (!Gtoken) {
-      return res.status(400).json({
-        success: false,
-        message: "you can access this page ",
-      });
-    }
 
     // Validation
     if (!phone) {
@@ -2900,33 +5107,32 @@ export const SignupLoginUser = async (req, res) => {
     const existingUser = await userModel.findOne({ phone });
 
     if (existingUser) {
-      if (existingUser.password !== undefined) {
-        if (existingUser.status === "0") {
-          return res.status(400).json({
-            success: false,
-            message: "An error occurred. Please contact support.",
-          });
-        }
+      if (
+        existingUser.password !== undefined &&
+        existingUser.status !== 0 &&
+        existingUser.status !== 2
+      ) {
         return res.status(201).json({
           success: true,
           message: "User found with password",
           password: true,
         });
       } else {
-        // Hash the OTP
-        const ecryptOTP = await bcrypt.hash(String(otp), 10);
-
-        if (existingUser.status === "0") {
+        if (existingUser.status === 0) {
           return res.status(400).json({
             success: false,
-            message: "An error occurred. Please contact support.",
+            message: "Your account status is pending. Please contact support.",
+          });
+        } else if (existingUser.status === 2) {
+          return res.status(400).json({
+            success: false,
+            message: "Your Account has been suspended ",
           });
         }
+        // await sendLogOTP(phone, otp);
+        await sendAisensyLoginOTP(phone, otp);
 
-        // block
         console.log(otp);
-        //  await sendLogOTP(phone, otp);
-
         return res.status(201).json({
           success: true,
           message: "User found",
@@ -2936,24 +5142,20 @@ export const SignupLoginUser = async (req, res) => {
             phone: existingUser.phone,
             email: existingUser.email,
             type: existingUser.type,
+            profile: existingUser.profile,
           },
           token: existingUser.token,
-          otp: ecryptOTP,
-          type: 2,
-
+          otp: otp,
         });
       }
     } else {
-      const ecryptOTP = await bcrypt.hash(String(otp), 10);
-
-      // block
-      console.log(otp);
-      // await sendRegOTP(phone, otp);
+      // await sendLogOTP(phone, otp);
+      await sendAisensyLoginOTP(phone, otp);
       return res.status(200).json({
         success: true,
         message: "New User found",
         newUser: true,
-        otp: ecryptOTP,
+        otp: otp,
       });
     }
   } catch (error) {
@@ -2974,6 +5176,7 @@ export const SignupNewUser = async (req, res) => {
     const otp = Math.floor(1000 + Math.random() * 9000);
     // // Send OTP via Phone
     // await sendOTP(phone, otp);
+    await sendAisensyLoginOTP(phone, otp);
 
     // Validation
     if (!phone) {
@@ -2983,18 +5186,21 @@ export const SignupNewUser = async (req, res) => {
       });
     }
 
+    // Calculate the auto-increment ID
+    const lastUser = await userModel.findOne().sort({ _id: -1 }).limit(1);
+    let userId;
+
+    if (lastUser) {
+      // Convert lastOrder.orderId to a number before adding 1
+      const lastUserId = parseInt(lastUser.userId || 126325);
+      userId = lastUserId + 1;
+    } else {
+      userId = 126325;
+    }
     // Create a new user
-    const user = new userModel({ phone });
-    const token = jwt.sign({ userId: user._id }, secretKey, {
-      expiresIn: "1h",
-    });
-    user.token = token; // Update the user's token field with the generated token
-    user.type = 2; // Update the user's token field with the generated token
+    const user = new userModel({ phone, userId, status: 1 });
 
     await user.save();
-
-    // Hash the OTP
-    const ecryptOTP = await bcrypt.hash(String(otp), 10);
 
     res.status(201).json({
       success: true,
@@ -3005,10 +5211,10 @@ export const SignupNewUser = async (req, res) => {
         phone: user.phone,
         email: user.email,
         type: user.type,
+        profile: user.profile,
+        status: 1,
       },
-      otp: ecryptOTP,
-      token,
-      type: 2,
+      otp: otp,
     });
   } catch (error) {
     console.error("Error on signup:", error);
@@ -3022,19 +5228,14 @@ export const SignupNewUser = async (req, res) => {
 
 export const LoginUserWithOTP = async (req, res) => {
   try {
-    const { phone, Gtoken } = req.body;
-
+    const { phone } = req.body;
+    console.log(phone);
     // Generate OTP
     const otp = Math.floor(1000 + Math.random() * 9000);
     // // Send OTP via Phone
     // await sendLogOTP(phone, otp);
+    // await sendAisensyLoginOTP(phone, otp);
 
-    // if (!Gtoken) {
-    //   return res.status(400).json({
-    //     success: false,
-    //     message: 'you can access this page ',
-    //   });
-    // }
     // Validation
     if (!phone) {
       return res.status(400).json({
@@ -3043,30 +5244,38 @@ export const LoginUserWithOTP = async (req, res) => {
       });
     }
 
-    const existingUser = await userModel.findOne({ phone, status: "1", type: 2 });
+    const existingUser = await userModel.findOne({ phone });
 
     if (existingUser) {
-      // Hash the OTP
-      const ecryptOTP = await bcrypt.hash(String(otp), 10);
+      if (existingUser.status === 1) {
+        // await sendLogOTP(phone, otp);
+        await sendAisensyLoginOTP(phone, otp);
 
-      // block
-      console.log(otp);
-      //   await sendLogOTP(phone, otp);
-
-      return res.status(201).json({
-        success: true,
-        message: "User found",
-        existingUser: {
-          _id: existingUser._id,
-          username: existingUser.username,
-          phone: existingUser.phone,
-          email: existingUser.email,
-          type: existingUser.type,
-        },
-        token: existingUser.token,
-        otp: ecryptOTP,
-        type: 2,
-
+        return res.status(200).json({
+          success: true,
+          message: "User found",
+          existingUser: {
+            _id: existingUser._id,
+            username: existingUser.username,
+            phone: existingUser.phone,
+            email: existingUser.email,
+            type: existingUser.type,
+            profile: existingUser.profile,
+          },
+          token: existingUser.token,
+          otp: otp,
+        });
+      } else {
+        return res.status(400).json({
+          success: false,
+          message: "Waiting For Approval",
+        });
+      }
+    } else {
+      console.log();
+      return res.status(400).json({
+        success: false,
+        message: "User Not found",
       });
     }
   } catch (error) {
@@ -3081,18 +5290,18 @@ export const LoginUserWithOTP = async (req, res) => {
 
 export const LoginUserWithPass = async (req, res) => {
   try {
-    const { phone, Gtoken, password } = req.body;
+    const { phone, password } = req.body;
 
     // Generate OTP
     const otp = Math.floor(1000 + Math.random() * 9000);
 
-    if (!phone || !password || !Gtoken) {
+    if (!phone || !password) {
       return res.status(400).send({
         success: false,
         message: "please fill all fields",
       });
     }
-    const user = await userModel.findOne({ phone, status: "1", type: 2 });
+    const user = await userModel.findOne({ phone });
 
     // password check
 
@@ -3116,11 +5325,10 @@ export const LoginUserWithPass = async (req, res) => {
         phone: user.phone,
         email: user.email,
         type: user.type,
+        profile: user.profile,
       },
       token: user.token,
       checkpass: true,
-      type: 2,
-
     });
   } catch (error) {
     return res.status(500).send({
@@ -3134,9 +5342,8 @@ export const LoginUserWithPass = async (req, res) => {
 export const LoginAndVerifyOTP = async (req, res) => {
   try {
     const { OTP, HASHOTP } = req.body;
-
-    const isMatch = await bcrypt.compare(OTP, HASHOTP);
-
+    console.log(OTP, HASHOTP);
+    const isMatch = OTP === HASHOTP;
     if (isMatch) {
       return res.status(200).json({
         success: true,
@@ -3186,1304 +5393,22 @@ export const updatePromoAdmin = async (req, res) => {
     });
   }
 };
-
-
-
-const cityData = {
-  "Andaman and Nicobar Islands": ["Port Blair"],
-  Haryana: [
-    "Faridabad",
-    "Gurgaon",
-    "Hisar",
-    "Rohtak",
-    "Panipat",
-    "Karnal",
-    "Sonipat",
-    "Yamunanagar",
-    "Panchkula",
-    "Bhiwani",
-    "Bahadurgarh",
-    "Jind",
-    "Sirsa",
-    "Thanesar",
-    "Kaithal",
-    "Palwal",
-    "Rewari",
-    "Hansi",
-    "Narnaul",
-    "Fatehabad",
-    "Gohana",
-    "Tohana",
-    "Narwana",
-    "Mandi Dabwali",
-    "Charkhi Dadri",
-    "Shahbad",
-    "Pehowa",
-    "Samalkha",
-    "Pinjore",
-    "Ladwa",
-    "Sohna",
-    "Safidon",
-    "Taraori",
-    "Mahendragarh",
-    "Ratia",
-    "Rania",
-    "Sarsod",
-  ],
-  "Tamil Nadu": [
-    "Chennai",
-    "Coimbatore",
-    "Madurai",
-    "Tiruchirappalli",
-    "Salem",
-    "Tirunelveli",
-    "Tiruppur",
-    "Ranipet",
-    "Nagercoil",
-    "Thanjavur",
-    "Vellore",
-    "Kancheepuram",
-    "Erode",
-    "Tiruvannamalai",
-    "Pollachi",
-    "Rajapalayam",
-    "Sivakasi",
-    "Pudukkottai",
-    "Neyveli (TS)",
-    "Nagapattinam",
-    "Viluppuram",
-    "Tiruchengode",
-    "Vaniyambadi",
-    "Theni Allinagaram",
-    "Udhagamandalam",
-    "Aruppukkottai",
-    "Paramakudi",
-    "Arakkonam",
-    "Virudhachalam",
-    "Srivilliputhur",
-    "Tindivanam",
-    "Virudhunagar",
-    "Karur",
-    "Valparai",
-    "Sankarankovil",
-    "Tenkasi",
-    "Palani",
-    "Pattukkottai",
-    "Tirupathur",
-    "Ramanathapuram",
-    "Udumalaipettai",
-    "Gobichettipalayam",
-    "Thiruvarur",
-    "Thiruvallur",
-    "Panruti",
-    "Namakkal",
-    "Thirumangalam",
-    "Vikramasingapuram",
-    "Nellikuppam",
-    "Rasipuram",
-    "Tiruttani",
-    "Nandivaram-Guduvancheri",
-    "Periyakulam",
-    "Pernampattu",
-    "Vellakoil",
-    "Sivaganga",
-    "Vadalur",
-    "Rameshwaram",
-    "Tiruvethipuram",
-    "Perambalur",
-    "Usilampatti",
-    "Vedaranyam",
-    "Sathyamangalam",
-    "Puliyankudi",
-    "Nanjikottai",
-    "Thuraiyur",
-    "Sirkali",
-    "Tiruchendur",
-    "Periyasemur",
-    "Sattur",
-    "Vandavasi",
-    "Tharamangalam",
-    "Tirukkoyilur",
-    "Oddanchatram",
-    "Palladam",
-    "Vadakkuvalliyur",
-    "Tirukalukundram",
-    "Uthamapalayam",
-    "Surandai",
-    "Sankari",
-    "Shenkottai",
-    "Vadipatti",
-    "Sholingur",
-    "Tirupathur",
-    "Manachanallur",
-    "Viswanatham",
-    "Polur",
-    "Panagudi",
-    "Uthiramerur",
-    "Thiruthuraipoondi",
-    "Pallapatti",
-    "Ponneri",
-    "Lalgudi",
-    "Natham",
-    "Unnamalaikadai",
-    "P.N.Patti",
-    "Tharangambadi",
-    "Tittakudi",
-    "Pacode",
-    "O' Valley",
-    "Suriyampalayam",
-    "Sholavandan",
-    "Thammampatti",
-    "Namagiripettai",
-    "Peravurani",
-    "Parangipettai",
-    "Pudupattinam",
-    "Pallikonda",
-    "Sivagiri",
-    "Punjaipugalur",
-    "Padmanabhapuram",
-    "Thirupuvanam",
-  ],
-  "Madhya Pradesh": [
-    "Indore",
-    "Bhopal",
-    "Jabalpur",
-    "Gwalior",
-    "Ujjain",
-    "Sagar",
-    "Ratlam",
-    "Satna",
-    "Murwara (Katni)",
-    "Morena",
-    "Singrauli",
-    "Rewa",
-    "Vidisha",
-    "Ganjbasoda",
-    "Shivpuri",
-    "Mandsaur",
-    "Neemuch",
-    "Nagda",
-    "Itarsi",
-    "Sarni",
-    "Sehore",
-    "Mhow Cantonment",
-    "Seoni",
-    "Balaghat",
-    "Ashok Nagar",
-    "Tikamgarh",
-    "Shahdol",
-    "Pithampur",
-    "Alirajpur",
-    "Mandla",
-    "Sheopur",
-    "Shajapur",
-    "Panna",
-    "Raghogarh-Vijaypur",
-    "Sendhwa",
-    "Sidhi",
-    "Pipariya",
-    "Shujalpur",
-    "Sironj",
-    "Pandhurna",
-    "Nowgong",
-    "Mandideep",
-    "Sihora",
-    "Raisen",
-    "Lahar",
-    "Maihar",
-    "Sanawad",
-    "Sabalgarh",
-    "Umaria",
-    "Porsa",
-    "Narsinghgarh",
-    "Malaj Khand",
-    "Sarangpur",
-    "Mundi",
-    "Nepanagar",
-    "Pasan",
-    "Mahidpur",
-    "Seoni-Malwa",
-    "Rehli",
-    "Manawar",
-    "Rahatgarh",
-    "Panagar",
-    "Wara Seoni",
-    "Tarana",
-    "Sausar",
-    "Rajgarh",
-    "Niwari",
-    "Mauganj",
-    "Manasa",
-    "Nainpur",
-    "Prithvipur",
-    "Sohagpur",
-    "Nowrozabad (Khodargama)",
-    "Shamgarh",
-    "Maharajpur",
-    "Multai",
-    "Pali",
-    "Pachore",
-    "Rau",
-    "Mhowgaon",
-    "Vijaypur",
-    "Narsinghgarh",
-  ],
-  Jharkhand: [
-    "Dhanbad",
-    "Ranchi",
-    "Jamshedpur",
-    "Bokaro Steel City",
-    "Deoghar",
-    "Phusro",
-    "Adityapur",
-    "Hazaribag",
-    "Giridih",
-    "Ramgarh",
-    "Jhumri Tilaiya",
-    "Saunda",
-    "Sahibganj",
-    "Medininagar (Daltonganj)",
-    "Chaibasa",
-    "Chatra",
-    "Gumia",
-    "Dumka",
-    "Madhupur",
-    "Chirkunda",
-    "Pakaur",
-    "Simdega",
-    "Musabani",
-    "Mihijam",
-    "Patratu",
-    "Lohardaga",
-    "Tenu dam-cum-Kathhara",
-  ],
-  Mizoram: ["Aizawl", "Lunglei", "Saiha"],
-  Nagaland: [
-    "Dimapur",
-    "Kohima",
-    "Zunheboto",
-    "Tuensang",
-    "Wokha",
-    "Mokokchung",
-  ],
-  "Himachal Pradesh": [
-    "Shimla",
-    "Mandi",
-    "Solan",
-    "Nahan",
-    "Sundarnagar",
-    "Palampur",
-    "Kullu",
-  ],
-  Tripura: [
-    "Agartala",
-    "Udaipur",
-    "Dharmanagar",
-    "Pratapgarh",
-    "Kailasahar",
-    "Belonia",
-    "Khowai",
-  ],
-  "Andhra Pradesh": [
-    "Visakhapatnam",
-    "Vijayawada",
-    "Guntur",
-    "Nellore",
-    "Kurnool",
-    "Rajahmundry",
-    "Kakinada",
-    "Tirupati",
-    "Anantapur",
-    "Kadapa",
-    "Vizianagaram",
-    "Eluru",
-    "Ongole",
-    "Nandyal",
-    "Machilipatnam",
-    "Adoni",
-    "Tenali",
-    "Chittoor",
-    "Hindupur",
-    "Proddatur",
-    "Bhimavaram",
-    "Madanapalle",
-    "Guntakal",
-    "Dharmavaram",
-    "Gudivada",
-    "Srikakulam",
-    "Narasaraopet",
-    "Rajampet",
-    "Tadpatri",
-    "Tadepalligudem",
-    "Chilakaluripet",
-    "Yemmiganur",
-    "Kadiri",
-    "Chirala",
-    "Anakapalle",
-    "Kavali",
-    "Palacole",
-    "Sullurpeta",
-    "Tanuku",
-    "Rayachoti",
-    "Srikalahasti",
-    "Bapatla",
-    "Naidupet",
-    "Nagari",
-    "Gudur",
-    "Vinukonda",
-    "Narasapuram",
-    "Nuzvid",
-    "Markapur",
-    "Ponnur",
-    "Kandukur",
-    "Bobbili",
-    "Rayadurg",
-    "Samalkot",
-    "Jaggaiahpet",
-    "Tuni",
-    "Amalapuram",
-    "Bheemunipatnam",
-    "Venkatagiri",
-    "Sattenapalle",
-    "Pithapuram",
-    "Palasa Kasibugga",
-    "Parvathipuram",
-    "Macherla",
-    "Gooty",
-    "Salur",
-    "Mandapeta",
-    "Jammalamadugu",
-    "Peddapuram",
-    "Punganur",
-    "Nidadavole",
-    "Repalle",
-    "Ramachandrapuram",
-    "Kovvur",
-    "Tiruvuru",
-    "Uravakonda",
-    "Narsipatnam",
-    "Yerraguntla",
-    "Pedana",
-    "Puttur",
-    "Renigunta",
-    "Rajam",
-    "Srisailam Project (Right Flank Colony) Township",
-  ],
-  Punjab: [
-    "Ludhiana",
-    "Patiala",
-    "Amritsar",
-    "Jalandhar",
-    "Bathinda",
-    "Pathankot",
-    "Hoshiarpur",
-    "Batala",
-    "Moga",
-    "Malerkotla",
-    "Khanna",
-    "Mohali",
-    "Barnala",
-    "Firozpur",
-    "Phagwara",
-    "Kapurthala",
-    "Zirakpur",
-    "Kot Kapura",
-    "Faridkot",
-    "Muktsar",
-    "Rajpura",
-    "Sangrur",
-    "Fazilka",
-    "Gurdaspur",
-    "Kharar",
-    "Gobindgarh",
-    "Mansa",
-    "Malout",
-    "Nabha",
-    "Tarn Taran",
-    "Jagraon",
-    "Sunam",
-    "Dhuri",
-    "Firozpur Cantt.",
-    "Sirhind Fatehgarh Sahib",
-    "Rupnagar",
-    "Jalandhar Cantt.",
-    "Samana",
-    "Nawanshahr",
-    "Rampura Phul",
-    "Nangal",
-    "Nakodar",
-    "Zira",
-    "Patti",
-    "Raikot",
-    "Longowal",
-    "Urmar Tanda",
-    "Morinda, India",
-    "Phillaur",
-    "Pattran",
-    "Qadian",
-    "Sujanpur",
-    "Mukerian",
-    "Talwara",
-  ],
-  Chandigarh: ["Chandigarh"],
-  Rajasthan: [
-    "Jaipur",
-    "Jodhpur",
-    "Bikaner",
-    "Udaipur",
-    "Ajmer",
-    "Bhilwara",
-    "Alwar",
-    "Bharatpur",
-    "Pali",
-    "Barmer",
-    "Sikar",
-    "Tonk",
-    "Sadulpur",
-    "Sawai Madhopur",
-    "Nagaur",
-    "Makrana",
-    "Sujangarh",
-    "Sardarshahar",
-    "Ladnu",
-    "Ratangarh",
-    "Nokha",
-    "Nimbahera",
-    "Suratgarh",
-    "Rajsamand",
-    "Lachhmangarh",
-    "Rajgarh (Churu)",
-    "Nasirabad",
-    "Nohar",
-    "Phalodi",
-    "Nathdwara",
-    "Pilani",
-    "Merta City",
-    "Sojat",
-    "Neem-Ka-Thana",
-    "Sirohi",
-    "Pratapgarh",
-    "Rawatbhata",
-    "Sangaria",
-    "Lalsot",
-    "Pilibanga",
-    "Pipar City",
-    "Taranagar",
-    "Vijainagar, Ajmer",
-    "Sumerpur",
-    "Sagwara",
-    "Ramganj Mandi",
-    "Lakheri",
-    "Udaipurwati",
-    "Losal",
-    "Sri Madhopur",
-    "Ramngarh",
-    "Rawatsar",
-    "Rajakhera",
-    "Shahpura",
-    "Shahpura",
-    "Raisinghnagar",
-    "Malpura",
-    "Nadbai",
-    "Sanchore",
-    "Nagar",
-    "Rajgarh (Alwar)",
-    "Sheoganj",
-    "Sadri",
-    "Todaraisingh",
-    "Todabhim",
-    "Reengus",
-    "Rajaldesar",
-    "Sadulshahar",
-    "Sambhar",
-    "Prantij",
-    "Mount Abu",
-    "Mangrol",
-    "Phulera",
-    "Mandawa",
-    "Pindwara",
-    "Mandalgarh",
-    "Takhatgarh",
-  ],
-  Assam: [
-    "Guwahati",
-    "Silchar",
-    "Dibrugarh",
-    "Nagaon",
-    "Tinsukia",
-    "Jorhat",
-    "Bongaigaon City",
-    "Dhubri",
-    "Diphu",
-    "North Lakhimpur",
-    "Tezpur",
-    "Karimganj",
-    "Sibsagar",
-    "Goalpara",
-    "Barpeta",
-    "Lanka",
-    "Lumding",
-    "Mankachar",
-    "Nalbari",
-    "Rangia",
-    "Margherita",
-    "Mangaldoi",
-    "Silapathar",
-    "Mariani",
-    "Marigaon",
-  ],
-  Odisha: [
-    "Bhubaneswar",
-    "Cuttack",
-    "Raurkela",
-    "Brahmapur",
-    "Sambalpur",
-    "Puri",
-    "Baleshwar Town",
-    "Baripada Town",
-    "Bhadrak",
-    "Balangir",
-    "Jharsuguda",
-    "Bargarh",
-    "Paradip",
-    "Bhawanipatna",
-    "Dhenkanal",
-    "Barbil",
-    "Kendujhar",
-    "Sunabeda",
-    "Rayagada",
-    "Jatani",
-    "Byasanagar",
-    "Kendrapara",
-    "Rajagangapur",
-    "Parlakhemundi",
-    "Talcher",
-    "Sundargarh",
-    "Phulabani",
-    "Pattamundai",
-    "Titlagarh",
-    "Nabarangapur",
-    "Soro",
-    "Malkangiri",
-    "Rairangpur",
-    "Tarbha",
-  ],
-  Chhattisgarh: [
-    "Raipur",
-    "Bhilai Nagar",
-    "Korba",
-    "Bilaspur",
-    "Durg",
-    "Rajnandgaon",
-    "Jagdalpur",
-    "Raigarh",
-    "Ambikapur",
-    "Mahasamund",
-    "Dhamtari",
-    "Chirmiri",
-    "Bhatapara",
-    "Dalli-Rajhara",
-    "Naila Janjgir",
-    "Tilda Newra",
-    "Mungeli",
-    "Manendragarh",
-    "Sakti",
-  ],
-  "Jammu and Kashmir": [
-    "Srinagar",
-    "Jammu",
-    "Baramula",
-    "Anantnag",
-    "Sopore",
-    "KathUrban Agglomeration",
-    "Rajauri",
-    "Punch",
-    "Udhampur",
-  ],
-  Karnataka: [
-    "Bengaluru",
-    "Hubli-Dharwad",
-    "Belagavi",
-    "Mangaluru",
-    "Davanagere",
-    "Ballari",
-    "Mysore",
-    "Tumkur",
-    "Shivamogga",
-    "Raayachuru",
-    "Robertson Pet",
-    "Kolar",
-    "Mandya",
-    "Udupi",
-    "Chikkamagaluru",
-    "Karwar",
-    "Ranebennuru",
-    "Ranibennur",
-    "Ramanagaram",
-    "Gokak",
-    "Yadgir",
-    "Rabkavi Banhatti",
-    "Shahabad",
-    "Sirsi",
-    "Sindhnur",
-    "Tiptur",
-    "Arsikere",
-    "Nanjangud",
-    "Sagara",
-    "Sira",
-    "Puttur",
-    "Athni",
-    "Mulbagal",
-    "Surapura",
-    "Siruguppa",
-    "Mudhol",
-    "Sidlaghatta",
-    "Shahpur",
-    "Saundatti-Yellamma",
-    "Wadi",
-    "Manvi",
-    "Nelamangala",
-    "Lakshmeshwar",
-    "Ramdurg",
-    "Nargund",
-    "Tarikere",
-    "Malavalli",
-    "Savanur",
-    "Lingsugur",
-    "Vijayapura",
-    "Sankeshwara",
-    "Madikeri",
-    "Talikota",
-    "Sedam",
-    "Shikaripur",
-    "Mahalingapura",
-    "Mudalagi",
-    "Muddebihal",
-    "Pavagada",
-    "Malur",
-    "Sindhagi",
-    "Sanduru",
-    "Afzalpur",
-    "Maddur",
-    "Madhugiri",
-    "Tekkalakote",
-    "Terdal",
-    "Mudabidri",
-    "Magadi",
-    "Navalgund",
-    "Shiggaon",
-    "Shrirangapattana",
-    "Sindagi",
-    "Sakaleshapura",
-    "Srinivaspur",
-    "Ron",
-    "Mundargi",
-    "Sadalagi",
-    "Piriyapatna",
-    "Adyar",
-  ],
-  Manipur: ["Imphal", "Thoubal", "Lilong", "Mayang Imphal"],
-  Kerala: [
-    "Thiruvananthapuram",
-    "Kochi",
-    "Kozhikode",
-    "Kollam",
-    "Thrissur",
-    "Palakkad",
-    "Alappuzha",
-    "Malappuram",
-    "Ponnani",
-    "Vatakara",
-    "Kanhangad",
-    "Taliparamba",
-    "Koyilandy",
-    "Neyyattinkara",
-    "Kayamkulam",
-    "Nedumangad",
-    "Kannur",
-    "Tirur",
-    "Kottayam",
-    "Kasaragod",
-    "Kunnamkulam",
-    "Ottappalam",
-    "Thiruvalla",
-    "Thodupuzha",
-    "Chalakudy",
-    "Changanassery",
-    "Punalur",
-    "Nilambur",
-    "Cherthala",
-    "Perinthalmanna",
-    "Mattannur",
-    "Shoranur",
-    "Varkala",
-    "Paravoor",
-    "Pathanamthitta",
-    "Peringathur",
-    "Attingal",
-    "Kodungallur",
-    "Pappinisseri",
-    "Chittur-Thathamangalam",
-    "Muvattupuzha",
-    "Adoor",
-    "Mavelikkara",
-    "Mavoor",
-    "Perumbavoor",
-    "Vaikom",
-    "Palai",
-    "Panniyannur",
-    "Guruvayoor",
-    "Puthuppally",
-    "Panamattom",
-  ],
-  Delhi: ["Delhi", "New Delhi"],
-  "Dadra and Nagar Haveli": ["Silvassa"],
-  Puducherry: ["Pondicherry", "Karaikal", "Yanam", "Mahe"],
-  Uttarakhand: [
-    "Dehradun",
-    "Hardwar",
-    "Haldwani-cum-Kathgodam",
-    "Srinagar",
-    "Kashipur",
-    "Roorkee",
-    "Rudrapur",
-    "Rishikesh",
-    "Ramnagar",
-    "Pithoragarh",
-    "Manglaur",
-    "Nainital",
-    "Mussoorie",
-    "Tehri",
-    "Pauri",
-    "Nagla",
-    "Sitarganj",
-    "Bageshwar",
-  ],
-  "Uttar Pradesh": [
-    "Lucknow",
-    "Kanpur",
-    "Firozabad",
-    "Agra",
-    "Meerut",
-    "Varanasi",
-    "Allahabad",
-    "Amroha",
-    "Moradabad",
-    "Aligarh",
-    "Saharanpur",
-    "Noida",
-    "Loni",
-    "Jhansi",
-    "Shahjahanpur",
-    "Rampur",
-    "Modinagar",
-    "Hapur",
-    "Etawah",
-    "Sambhal",
-    "Orai",
-    "Bahraich",
-    "Unnao",
-    "Rae Bareli",
-    "Lakhimpur",
-    "Sitapur",
-    "Lalitpur",
-    "Pilibhit",
-    "Chandausi",
-    "Hardoi ",
-    "Azamgarh",
-    "Khair",
-    "Sultanpur",
-    "Tanda",
-    "Nagina",
-    "Shamli",
-    "Najibabad",
-    "Shikohabad",
-    "Sikandrabad",
-    "Shahabad, Hardoi",
-    "Pilkhuwa",
-    "Renukoot",
-    "Vrindavan",
-    "Ujhani",
-    "Laharpur",
-    "Tilhar",
-    "Sahaswan",
-    "Rath",
-    "Sherkot",
-    "Kalpi",
-    "Tundla",
-    "Sandila",
-    "Nanpara",
-    "Sardhana",
-    "Nehtaur",
-    "Seohara",
-    "Padrauna",
-    "Mathura",
-    "Thakurdwara",
-    "Nawabganj",
-    "Siana",
-    "Noorpur",
-    "Sikandra Rao",
-    "Puranpur",
-    "Rudauli",
-    "Thana Bhawan",
-    "Palia Kalan",
-    "Zaidpur",
-    "Nautanwa",
-    "Zamania",
-    "Shikarpur, Bulandshahr",
-    "Naugawan Sadat",
-    "Fatehpur Sikri",
-    "Shahabad, Rampur",
-    "Robertsganj",
-    "Utraula",
-    "Sadabad",
-    "Rasra",
-    "Lar",
-    "Lal Gopalganj Nindaura",
-    "Sirsaganj",
-    "Pihani",
-    "Shamsabad, Agra",
-    "Rudrapur",
-    "Soron",
-    "SUrban Agglomerationr",
-    "Samdhan",
-    "Sahjanwa",
-    "Rampur Maniharan",
-    "Sumerpur",
-    "Shahganj",
-    "Tulsipur",
-    "Tirwaganj",
-    "PurqUrban Agglomerationzi",
-    "Shamsabad, Farrukhabad",
-    "Warhapur",
-    "Powayan",
-    "Sandi",
-    "Achhnera",
-    "Naraura",
-    "Nakur",
-    "Sahaspur",
-    "Safipur",
-    "Reoti",
-    "Sikanderpur",
-    "Saidpur",
-    "Sirsi",
-    "Purwa",
-    "Parasi",
-    "Lalganj",
-    "Phulpur",
-    "Shishgarh",
-    "Sahawar",
-    "Samthar",
-    "Pukhrayan",
-    "Obra",
-    "Niwai",
-    "Mirzapur",
-  ],
-  Bihar: [
-    "Patna",
-    "Gaya",
-    "Bhagalpur",
-    "Muzaffarpur",
-    "Darbhanga",
-    "Arrah",
-    "Begusarai",
-    "Chhapra",
-    "Katihar",
-    "Munger",
-    "Purnia",
-    "Saharsa",
-    "Sasaram",
-    "Hajipur",
-    "Dehri-on-Sone",
-    "Bettiah",
-    "Motihari",
-    "Bagaha",
-    "Siwan",
-    "Kishanganj",
-    "Jamalpur",
-    "Buxar",
-    "Jehanabad",
-    "Aurangabad",
-    "Lakhisarai",
-    "Nawada",
-    "Jamui",
-    "Sitamarhi",
-    "Araria",
-    "Gopalganj",
-    "Madhubani",
-    "Masaurhi",
-    "Samastipur",
-    "Mokameh",
-    "Supaul",
-    "Dumraon",
-    "Arwal",
-    "Forbesganj",
-    "BhabUrban Agglomeration",
-    "Narkatiaganj",
-    "Naugachhia",
-    "Madhepura",
-    "Sheikhpura",
-    "Sultanganj",
-    "Raxaul Bazar",
-    "Ramnagar",
-    "Mahnar Bazar",
-    "Warisaliganj",
-    "Revelganj",
-    "Rajgir",
-    "Sonepur",
-    "Sherghati",
-    "Sugauli",
-    "Makhdumpur",
-    "Maner",
-    "Rosera",
-    "Nokha",
-    "Piro",
-    "Rafiganj",
-    "Marhaura",
-    "Mirganj",
-    "Lalganj",
-    "Murliganj",
-    "Motipur",
-    "Manihari",
-    "Sheohar",
-    "Maharajganj",
-    "Silao",
-    "Barh",
-    "Asarganj",
-  ],
-  Gujarat: [
-    "Ahmedabad",
-    "Surat",
-    "Vadodara",
-    "Rajkot",
-    "Bhavnagar",
-    "Jamnagar",
-    "Nadiad",
-    "Porbandar",
-    "Anand",
-    "Morvi",
-    "Mahesana",
-    "Bharuch",
-    "Vapi",
-    "Navsari",
-    "Veraval",
-    "Bhuj",
-    "Godhra",
-    "Palanpur",
-    "Valsad",
-    "Patan",
-    "Deesa",
-    "Amreli",
-    "Anjar",
-    "Dhoraji",
-    "Khambhat",
-    "Mahuva",
-    "Keshod",
-    "Wadhwan",
-    "Ankleshwar",
-    "Savarkundla",
-    "Kadi",
-    "Visnagar",
-    "Upleta",
-    "Una",
-    "Sidhpur",
-    "Unjha",
-    "Mangrol",
-    "Viramgam",
-    "Modasa",
-    "Palitana",
-    "Petlad",
-    "Kapadvanj",
-    "Sihor",
-    "Wankaner",
-    "Limbdi",
-    "Mandvi",
-    "Thangadh",
-    "Vyara",
-    "Padra",
-    "Lunawada",
-    "Rajpipla",
-    "Vapi",
-    "Umreth",
-    "Sanand",
-    "Rajula",
-    "Radhanpur",
-    "Mahemdabad",
-    "Ranavav",
-    "Tharad",
-    "Mansa",
-    "Umbergaon",
-    "Talaja",
-    "Vadnagar",
-    "Manavadar",
-    "Salaya",
-    "Vijapur",
-    "Pardi",
-    "Rapar",
-    "Songadh",
-    "Lathi",
-    "Adalaj",
-    "Chhapra",
-    "Gandhinagar",
-  ],
-  Telangana: [
-    "Hyderabad",
-    "Warangal",
-    "Nizamabad",
-    "Karimnagar",
-    "Ramagundam",
-    "Khammam",
-    "Mahbubnagar",
-    "Mancherial",
-    "Adilabad",
-    "Suryapet",
-    "Jagtial",
-    "Miryalaguda",
-    "Nirmal",
-    "Kamareddy",
-    "Kothagudem",
-    "Bodhan",
-    "Palwancha",
-    "Mandamarri",
-    "Koratla",
-    "Sircilla",
-    "Tandur",
-    "Siddipet",
-    "Wanaparthy",
-    "Kagaznagar",
-    "Gadwal",
-    "Sangareddy",
-    "Bellampalle",
-    "Bhongir",
-    "Vikarabad",
-    "Jangaon",
-    "Bhadrachalam",
-    "Bhainsa",
-    "Farooqnagar",
-    "Medak",
-    "Narayanpet",
-    "Sadasivpet",
-    "Yellandu",
-    "Manuguru",
-    "Kyathampalle",
-    "Nagarkurnool",
-  ],
-  Meghalaya: ["Shillong", "Tura", "Nongstoin"],
-  "Himachal Praddesh": ["Manali"],
-  "Arunachal Pradesh": ["Naharlagun", "Pasighat"],
-  Maharashtra: [
-    "Mumbai",
-    "Pune",
-    "Nagpur",
-    "Thane",
-    "Nashik",
-    "Kalyan-Dombivali",
-    "Vasai-Virar",
-    "Solapur",
-    "Mira-Bhayandar",
-    "Bhiwandi",
-    "Amravati",
-    "Nanded-Waghala",
-    "Sangli",
-    "Malegaon",
-    "Akola",
-    "Latur",
-    "Dhule",
-    "Ahmednagar",
-    "Ichalkaranji",
-    "Parbhani",
-    "Panvel",
-    "Yavatmal",
-    "Achalpur",
-    "Osmanabad",
-    "Nandurbar",
-    "Satara",
-    "Wardha",
-    "Udgir",
-    "Aurangabad",
-    "Amalner",
-    "Akot",
-    "Pandharpur",
-    "Shrirampur",
-    "Parli",
-    "Washim",
-    "Ambejogai",
-    "Manmad",
-    "Ratnagiri",
-    "Uran Islampur",
-    "Pusad",
-    "Sangamner",
-    "Shirpur-Warwade",
-    "Malkapur",
-    "Wani",
-    "Lonavla",
-    "Talegaon Dabhade",
-    "Anjangaon",
-    "Umred",
-    "Palghar",
-    "Shegaon",
-    "Ozar",
-    "Phaltan",
-    "Yevla",
-    "Shahade",
-    "Vita",
-    "Umarkhed",
-    "Warora",
-    "Pachora",
-    "Tumsar",
-    "Manjlegaon",
-    "Sillod",
-    "Arvi",
-    "Nandura",
-    "Vaijapur",
-    "Wadgaon Road",
-    "Sailu",
-    "Murtijapur",
-    "Tasgaon",
-    "Mehkar",
-    "Yawal",
-    "Pulgaon",
-    "Nilanga",
-    "Wai",
-    "Umarga",
-    "Paithan",
-    "Rahuri",
-    "Nawapur",
-    "Tuljapur",
-    "Morshi",
-    "Purna",
-    "Satana",
-    "Pathri",
-    "Sinnar",
-    "Uchgaon",
-    "Uran",
-    "Pen",
-    "Karjat",
-    "Manwath",
-    "Partur",
-    "Sangole",
-    "Mangrulpir",
-    "Risod",
-    "Shirur",
-    "Savner",
-    "Sasvad",
-    "Pandharkaoda",
-    "Talode",
-    "Shrigonda",
-    "Shirdi",
-    "Raver",
-    "Mukhed",
-    "Rajura",
-    "Vadgaon Kasba",
-    "Tirora",
-    "Mahad",
-    "Lonar",
-    "Sawantwadi",
-    "Pathardi",
-    "Pauni",
-    "Ramtek",
-    "Mul",
-    "Soyagaon",
-    "Mangalvedhe",
-    "Narkhed",
-    "Shendurjana",
-    "Patur",
-    "Mhaswad",
-    "Loha",
-    "Nandgaon",
-    "Warud",
-  ],
-  Goa: ["Marmagao", "Panaji", "Margao", "Mapusa"],
-  "West Bengal": [
-    "Kolkata",
-    "Siliguri",
-    "Asansol",
-    "Raghunathganj",
-    "Kharagpur",
-    "Naihati",
-    "English Bazar",
-    "Baharampur",
-    "Hugli-Chinsurah",
-    "Raiganj",
-    "Jalpaiguri",
-    "Santipur",
-    "Balurghat",
-    "Medinipur",
-    "Habra",
-    "Ranaghat",
-    "Bankura",
-    "Nabadwip",
-    "Darjiling",
-    "Purulia",
-    "Arambagh",
-    "Tamluk",
-    "AlipurdUrban Agglomerationr",
-    "Suri",
-    "Jhargram",
-    "Gangarampur",
-    "Rampurhat",
-    "Kalimpong",
-    "Sainthia",
-    "Taki",
-    "Murshidabad",
-    "Memari",
-    "Paschim Punropara",
-    "Tarakeswar",
-    "Sonamukhi",
-    "PandUrban Agglomeration",
-    "Mainaguri",
-    "Malda",
-    "Panchla",
-    "Raghunathpur",
-    "Mathabhanga",
-    "Monoharpur",
-    "Srirampore",
-    "Adra",
-  ],
-};
-
-export const uploadDataZone = async (req, res) => {
-  try {
-    for (const [zoneName, cities] of Object.entries(cityData)) {
-      // Create a new document for each zone
-      const newZone = new zonesModel({
-        name: zoneName,
-        cities: cities, // Cities is directly assigned as an array
-        status: "true", // Status can be set to any value you want
-      });
-
-      // Save the document to MongoDB
-      await newZone.save();
-    }
-
-    console.log("Data uploaded successfully!");
-  } catch (error) {
-    console.error("Error uploading data:", error);
-  }
-};
-
-// Controller to delete all entries in zonesModel
-export const deleteAllZones = async (req, res) => {
-  try {
-    // Delete all documents from the collection
-    await zonesModel.deleteMany({});
-
-    console.log("All entries in the zonesModel collection have been deleted.");
-    res.status(200).send({ message: "All entries deleted successfully!" });
-  } catch (error) {
-    console.error("Error deleting all entries:", error);
-    res.status(500).send({ error: "Failed to delete all entries." });
-  }
-};
-
-
 export const AuthUserByID = async (req, res) => {
   try {
     const { id } = req.body;
-
+    console.log(req.body.id);
     const existingUser = await userModel.findById(id);
 
     if (existingUser) {
+      if (existingUser.status === 2) {
+        return res.status(200).send({
+          success: false,
+          message: "Account Suspended",
+        });
+      }
+      // Increment the login count
+      existingUser.loginCount = (existingUser.loginCount || 0) + 1; // Initialize if undefined
+      await existingUser.save(); // Save the updated user document
 
       return res.status(200).json({
         success: true,
@@ -4493,23 +5418,29 @@ export const AuthUserByID = async (req, res) => {
           username: existingUser.username,
           phone: existingUser.phone,
           email: existingUser.email,
-          type: existingUser.type,
-          state: existingUser.state,
-          statename: existingUser.statename,
-          city: existingUser.city,
           address: existingUser.address,
-          verified: existingUser.verified,
           pincode: existingUser.pincode,
-          DOB: existingUser.DOB,
-          about: existingUser.about,
-          department: existingUser.department,
-          Doc1: existingUser.Doc1,
-          Doc2: existingUser.Doc2,
-          Doc3: existingUser.Doc3,
+          state: existingUser.state,
+          messages: existingUser.messages,
+          notifications: existingUser.notifications,
+          wallet: existingUser.wallet,
           profile: existingUser.profile,
+          status: existingUser?.status,
+          verified: existingUser?.verified,
+          c_name: existingUser?.c_name,
+          gstin: existingUser?.gstin,
+          city: existingUser?.city,
+          DL: existingUser?.DL,
+          PoliceVerification: existingUser?.PoliceVerification,
+          AadhaarBack: existingUser?.AadhaarBack,
+          AadhaarFront: existingUser?.AadhaarFront,
+          Local: existingUser?.Local,
+          password: existingUser?.password ? true : false,
+          statename: existingUser?.statename,
         },
       });
 
+      // return res.status(401).send({
     } else {
       return res.status(401).send({
         success: false,
@@ -4524,109 +5455,297 @@ export const AuthUserByID = async (req, res) => {
     });
   }
 };
-
-export const updateProfileUser = async (req, res) => {
+export const AuthUserByPhone = async (req, res) => {
   try {
-    const { id } = req.params;
-    const { username, phone, state, email, pincode, address, password } =
-      req.body;
+    const { phone } = req.params;
+    const existingUser = await userModel.findOne({ phone });
 
-    if (!password) {
-      if (!username || !email || !pincode || !address || !state) {
-        return res.status(400).json({
-          success: false,
-          message: "Please fill all fields",
-        });
-      }
-
-      let updateFields = {
-        username,
-        email,
-        pincode,
-        address,
-        state,
-      };
-
-      await userModel.findByIdAndUpdate(id, updateFields, {
-        new: true,
-      });
-
+    if (existingUser) {
       return res.status(200).json({
-        message: "Profile Updated!",
         success: true,
+        message: "User Found",
+        existingUser: {
+          _id: existingUser._id,
+          username: existingUser.username,
+          carName: existingUser.username,
+          carNumber: existingUser.carNumber,
+          carImage: existingUser.carImage,
+        },
       });
+
+      // return res.status(401).send({
     } else {
-      const hashedPassword = await bcrypt.hash(password, 10);
-
-      let updateFields = {
-        password: hashedPassword,
-      };
-
-      const user = await userModel.findByIdAndUpdate(id, updateFields, {
-        new: true,
-      });
-
-      return res.status(200).json({
-        message: "Password Updated!",
-        success: true,
+      return res.status(401).send({
+        success: false,
+        message: "user Not found",
       });
     }
   } catch (error) {
-    return res.status(400).json({
-      message: `Error while updating Promo code: ${error}`,
-      success: false,
+    return res.status(500).send({
+      message: `error on phone ${error}`,
+      sucesss: false,
       error,
     });
   }
 };
 
-export const updateDetailsUser = async (req, res) => {
+export const updateProfileUser = async (req, res) => {
   try {
     const { id } = req.params;
-    const {
-      username,
-      address,
-      email,
-      pincode,
-      password,
-      gender,
-      state,
-      statename,
-      city,
-      confirm_password,
-      about,
-    } = req.body;
+    const { username, email, password, passwordType } = req.body;
+    console.log(username, email, password, passwordType);
+    const profile = req.files ? req.files.profile : undefined;
 
+    if (!username || !email) {
+      return res.status(400).json({
+        success: false,
+        message: "Please fill all fields",
+      });
+    }
+
+    // Prepare update fields
     let updateFields = {
       username,
-      address,
-      gender,
-      state,
-      statename,
-      city,
-      about,
       email,
-      pincode,
     };
 
-    if (password.length > 0 && confirm_password.length > 0) {
+    if (profile && profile[0]) {
+      updateFields.profile = profile[0].path; // Assumes profile[0] is the uploaded file
+    }
+
+    // Update password if provided
+    if (password && passwordType === "false") {
       const hashedPassword = await bcrypt.hash(password, 10);
       updateFields.password = hashedPassword;
     }
 
-    const user = await userModel.findByIdAndUpdate(id, updateFields, {
+    // Perform database update
+    const updatedUser = await userModel.findByIdAndUpdate(id, updateFields, {
       new: true,
     });
 
+    if (!updatedUser) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found",
+      });
+    }
+
+    // Return success message based on the operation performed
+    const successMessage = password ? "Profile updated!" : "Profile updated!";
     return res.status(200).json({
-      message: "user Updated!",
       success: true,
+      message: successMessage,
+      updatedUser,
     });
   } catch (error) {
+    console.error("Error while updating profile:", error);
     return res.status(400).json({
-      message: `Error while updating Promo code: ${error}`,
       success: false,
-      error,
+      message: `Error while updating profile: ${error.message}`,
+      error: error.message,
+    });
+  }
+};
+
+export const updateCompanyUser = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const {
+      c_name,
+      address,
+      city,
+      state,
+      pincode,
+      gstin,
+      password,
+      passwordType,
+      statename,
+    } = req.body;
+
+    console.log(statename, address, city, state, pincode, gstin);
+    console.log(req.body);
+    let statetax = 0;
+    const mystate = await zonesModel.findById(state);
+    if (mystate && mystate.primary === 1) {
+      statetax = 1;
+    }
+    if (!c_name || !address || !city || !state || !pincode) {
+      return res.status(400).json({
+        success: false,
+        message: "Please fill all fields",
+      });
+    }
+
+    let updateFields = {};
+ 
+      // Prepare update fields
+      updateFields = {
+        c_name,
+        address,
+        city,
+        state,
+        pincode,
+        gstin,
+        Local: statetax,
+        statename,
+      };
+     
+
+    // Perform database update
+    const updatedUser = await userModel.findByIdAndUpdate(id, updateFields, {
+      new: true,
+    });
+
+    if (!updatedUser) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found",
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      updatedUser,
+    });
+  } catch (error) {
+    console.error("Error while updating profile:", error);
+    return res.status(400).json({
+      success: false,
+      message: `Error while updating profile: ${error.message}`,
+      error: error.message,
+    });
+  }
+};
+
+export const updatePasswordUser = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { password } = req.body;
+
+    if (!password) {
+      return res.status(400).json({
+        success: false,
+        message: "Please fill all fields",
+      });
+    }
+    const hashedPassword = await bcrypt.hash(password, 10);
+    // Prepare update fields
+    let updateFields = {
+      password: hashedPassword,
+    };
+
+    // Perform database update
+    const updatedUser = await userModel.findByIdAndUpdate(id, updateFields, {
+      new: true,
+    });
+
+    if (!updatedUser) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found",
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      updatedUser,
+      message: "Password Updated Sucessfully",
+    });
+  } catch (error) {
+    console.error("Error while updating profile:", error);
+    return res.status(400).json({
+      success: false,
+      message: `Error while updating profile: ${error.message}`,
+      error: error.message,
+    });
+  }
+};
+
+// signup user
+
+export const UpdateKycImage = upload.fields([
+  { name: "DLfile", maxCount: 1 },
+  { name: "AadhaarFront", maxCount: 1 },
+  { name: "AadhaarBack", maxCount: 1 },
+  { name: "PoliceVerification", maxCount: 1 },
+]);
+
+export const updateKycUser = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { valid } = req.body;
+
+
+    const files = req.files || {};
+    console.log(" req.files", req.files);
+    // Extract files safely
+    const DLfile = files.DLfile ? files.DLfile[0] : undefined;
+    const PoliceVerification = files.PoliceVerification
+      ? files.PoliceVerification[0]
+      : undefined;
+    const AadhaarBack = files.AadhaarBack ? files.AadhaarBack[0] : undefined;
+    const AadhaarFront = files.AadhaarFront ? files.AadhaarFront[0] : undefined;
+
+    // Validate that all required files are present
+    if (valid && (!DLfile || !PoliceVerification || !AadhaarBack || !AadhaarFront)) {
+      return res.status(400).json({
+        success: false,
+        message:
+          "All required files (DLfile, PoliceVerification, AadhaarBack, AadhaarFront) must be provided.",
+      });
+    }
+
+    // Prepare update fields
+    let updateFields = {};
+
+    // Ensure that file paths are set correctly
+    if (DLfile) {
+      updateFields.DL = DLfile.path
+        .replace(/\\/g, "/")
+        .replace(/^public\//, ""); // Normalize path
+    }
+    if (PoliceVerification) {
+      updateFields.PoliceVerification = PoliceVerification.path
+        .replace(/\\/g, "/")
+        .replace(/^public\//, ""); // Normalize path
+    }
+    if (AadhaarBack) {
+      updateFields.AadhaarBack = AadhaarBack.path
+        .replace(/\\/g, "/")
+        .replace(/^public\//, ""); // Normalize path
+    }
+    if (AadhaarFront) {
+      updateFields.AadhaarFront = AadhaarFront.path
+        .replace(/\\/g, "/")
+        .replace(/^public\//, ""); // Normalize path
+    }
+
+    updateFields.verified = 2;
+
+    console.log("updateFields", updateFields); // This should now display the correct updateFields object
+
+    const updatedUser = await userModel.findByIdAndUpdate(id, updateFields, {
+      new: true,
+    });
+
+    if (!updatedUser) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found",
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      updatedUser,
+    });
+  } catch (error) {
+    console.error("Error while updating profile:", error);
+    return res.status(400).json({
+      success: false,
+      message: `Error while updating profile: ${error.message}`,
+      error: error.message,
     });
   }
 };
@@ -4747,197 +5866,1959 @@ export const cancelOrderUser = async (req, res) => {
   }
 };
 
-
-
-export const getAllPlanCategoryController = async (req, res) => {
+export const AllValetByUser = async (req, res) => {
   try {
-    const plan = await planCategoryModel.find({});
-    if (!plan) {
+    const id = req.params.id;
+
+    const valetList = await valetModel
+      .find({ userId: id })
+      .populate("driverId")
+      .populate("VendorId")
+      .lean();
+
+    console.log("Found valetList:", valetList);
+
+    if (!valetList || valetList.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: "No valet found for the specified User",
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: "Valet accepted by the User retrieved successfully",
+      Valet: valetList,
+    });
+  } catch (error) {
+    console.error("Error retrieving valet accepted by User:", error);
+    return res.status(500).json({
+      success: false,
+      message: "An error occurred while retrieving valet accepted by User",
+      error: error.message,
+    });
+  }
+};
+
+export const AllValetServiceByUser = async (req, res) => {
+  try {
+    const id = req.params.id;
+
+    const valetList = await valetRideModel
+      .find({ userId: id })
+      .populate("driverId")
+      .populate("VendorId")
+      .populate("userId")
+      .populate("Valet_Model")
+      .lean();
+
+    console.log("Found valetList:", valetList);
+
+    if (!valetList || valetList.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: "No valet found for the specified User",
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: "Valet accepted by the User retrieved successfully",
+      Valet: valetList,
+    });
+  } catch (error) {
+    console.error("Error retrieving valet accepted by User:", error);
+    return res.status(500).json({
+      success: false,
+      message: "An error occurred while retrieving valet accepted by User",
+      error: error.message,
+    });
+  }
+};
+
+// for driver
+
+export const getAllBookRide = async (req, res) => {
+  try {
+    const cancelId = req.params.id;
+
+    const Bookings = await orderModel
+      .find({
+        $or: [{ driverId: { $exists: false } }, { driverId: { $eq: null } }],
+        CancelId: { $ne: cancelId }, // Exclude bookings where CancelId matches
+      })
+      .populate("userId")
+      .lean();
+
+    if (!Bookings || Bookings.length === 0) {
       return res.status(200).send({
-        message: "NO plan Find",
+        message: "No Bookings Found",
+        success: false,
+      });
+    }
+
+    return res.status(200).send({
+      message: "All Bookings List ",
+      BookingCount: Bookings.length,
+      success: true,
+      Bookings,
+    });
+  } catch (error) {
+    return res.status(500).send({
+      message: `Error while getting Bookings: ${error}`,
+      success: false,
+      error,
+    });
+  }
+};
+
+export const RejectOrderDriver = async (req, res) => {
+  try {
+    const { orderId, driverId } = req.body; // Changed to camelCase orderId
+
+    // Validation
+    if (!orderId || !driverId) {
+      return res.status(400).json({
+        success: false,
+        message: "Please provide both orderId & driverId",
+      });
+    }
+
+    // Check if the order exists
+    const order = await orderModel.findById(orderId);
+
+    if (!order) {
+      return res.status(404).json({
+        success: false,
+        message: "Order not found",
+      });
+    }
+
+    // Check if the order already has a driver assigned
+    if (order.CancelId.length !== 0) {
+      return res.status(400).json({
+        success: false,
+        message: "This booking has already been Cancel by another driver",
+      });
+    }
+
+    // Update the order with the provided driverId
+    order.CancelId = driverId;
+    await order.save();
+
+    return res.status(200).json({
+      success: true,
+      message: "Booking cancel by the driver successfully",
+      order,
+    });
+  } catch (error) {
+    return res.status(400).json({
+      message: `Error while cancel booking: ${error}`,
+      success: false,
+      error,
+    });
+  }
+};
+
+export const AllBookingsByDriver = async (req, res) => {
+  try {
+    const driverId = req.params.id; // Assuming the driverId is passed as a parameter in the request
+
+    // Find bookings accepted by the specified driver and populate user data
+    const bookings = await orderModel
+      .find({ driverId: driverId })
+      .populate("userId")
+      .lean();
+
+    return res.status(200).json({
+      success: true,
+      message: "Bookings accepted by the driver retrieved successfully",
+      bookings: bookings,
+    });
+  } catch (error) {
+    console.error("Error retrieving bookings accepted by driver:", error);
+    return res.status(500).json({
+      success: false,
+      message: "An error occurred while retrieving bookings accepted by driver",
+      error: error.message,
+    });
+  }
+};
+
+// Accept Booking By driver
+export const AcceptOrderDriver = async (req, res) => {
+  try {
+    const { orderId, driverId } = req.body; // Changed to camelCase orderId
+
+    // Validation
+    if (!orderId || !driverId) {
+      return res.status(400).json({
+        success: false,
+        message: "Please provide both orderId & driverId",
+      });
+    }
+
+    // Check if the order exists
+    const order = await orderModel.findById(orderId);
+
+    if (!order) {
+      return res.status(404).json({
+        success: false,
+        message: "Order not found",
+      });
+    }
+
+    // Check if the order already has a driver assigned
+    if (order.driverId) {
+      return res.status(400).json({
+        success: false,
+        message: "This booking has already been accepted by another driver",
+      });
+    }
+
+    // Check if the driver has already started another order
+    const activeOrders = await orderModel.find({
+      driverId: driverId,
+      startStatusOTP: 1,
+      endStatusOTP: 0,
+    });
+
+    if (activeOrders.length > 0) {
+      return res.status(400).json({
+        success: false,
+        message: "The driver has already started another Ride",
+      });
+    }
+
+    const user = await userModel.findById(driverId);
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "Driver not found",
+      });
+    }
+
+    // Calculate the commission and the amount to deduct from the user's wallet
+    const orderAmount = order.totalAmount;
+    const commissionRate = user.LocalCommission / 100;
+    const commissionAmount = orderAmount * commissionRate;
+
+    console.log("amountToDeduct", commissionAmount);
+
+    if (user.wallet >= commissionAmount) {
+      //  Update the order with the provided driverId
+      order.driverId = driverId;
+      await order.save();
+
+      return res.status(200).json({
+        success: true,
+        message: "Booking accepted by the driver successfully",
+        order,
+      });
+    } else {
+      return res.status(400).json({
+        success: false,
+        message: "You do not have enough funds to accept this ride",
+      });
+    }
+  } catch (error) {
+    return res.status(400).json({
+      message: `Error while accepting booking: ${error}`,
+      success: false,
+      error,
+    });
+  }
+};
+
+// Start ride
+export const StartOrderRide = async (req, res) => {
+  try {
+    const orderId = req.params.id;
+    console.log(orderId);
+    // Validation
+    if (!orderId) {
+      return res.status(400).json({
+        success: false,
+        message: "Please Provide orderId ",
+      });
+    }
+
+    // Check if the order exists
+    const order = await orderModel.findById(orderId);
+    // Generate 4-digit random OTP
+    const generateOTP = () => Math.floor(1000 + Math.random() * 9000);
+
+    // Create two different OTPs
+    const startOTP = generateOTP();
+    //  const endOTP = generateOTP();
+    order.startOTP = startOTP;
+    //  order.endOTP = endOTP;
+
+    if (!order) {
+      return res.status(404).json({
+        success: false,
+        message: "Order not found",
+      });
+    }
+
+    await order.save();
+
+    return res.status(200).json({
+      success: true,
+      message: "Start Ride OTP Genrated successfully",
+      order,
+    });
+  } catch (error) {
+    return res.status(400).json({
+      message: `Error While Start Ride OTP Genrated ${error}`,
+      success: false,
+      error,
+    });
+  }
+};
+
+export const EndOrderRide = async (req, res) => {
+  try {
+    const orderId = req.params.id;
+    //console.log(orderId);
+    // Validation
+    if (!orderId) {
+      return res.status(400).json({
+        success: false,
+        message: "Please Provide orderId ",
+      });
+    }
+
+    // Check if the order exists
+    const order = await orderModel.findById(orderId);
+    // Generate 4-digit random OTP
+    const generateOTP = () => Math.floor(1000 + Math.random() * 9000);
+
+    // Create two different OTPs
+
+    const endOTP = generateOTP();
+    order.endOTP = endOTP;
+
+    if (!order) {
+      return res.status(404).json({
+        success: false,
+        message: "Order not found",
+      });
+    }
+
+    await order.save();
+
+    return res.status(200).json({
+      success: true,
+      message: "Start Ride OTP Genrated successfully",
+      order,
+    });
+  } catch (error) {
+    return res.status(400).json({
+      message: `Error While Start Ride OTP Genrated ${error}`,
+      success: false,
+      error,
+    });
+  }
+};
+
+export const StartOrderVerifyRide = async (req, res) => {
+  try {
+    const orderId = req.params.id;
+
+    // Validation
+    if (!orderId) {
+      return res.status(400).json({
+        success: false,
+        message: "Please Provide orderId ",
+      });
+    }
+
+    // Check if the order exists
+    const order = await orderModel.findById(orderId);
+
+    order.startStatusOTP = 1;
+    order.otpStartDate = new Date(); // Update otpStartDate to the current date and time
+    //  order.endOTP = endOTP;
+
+    if (!order) {
+      return res.status(404).json({
+        success: false,
+        message: "Order not found",
+      });
+    }
+
+    await order.save();
+
+    return res.status(200).json({
+      success: true,
+      message: "Start Ride OTP Verified successfully",
+      order,
+    });
+  } catch (error) {
+    return res.status(400).json({
+      message: `Error While Start Ride OTP Verified ${error}`,
+      success: false,
+      error,
+    });
+  }
+};
+
+const calculateTimeDuration = (start, end) => {
+  const startTime = new Date(start);
+  const endTime = new Date(end);
+
+  const difference = endTime - startTime;
+  const hours = Math.floor(difference / 1000 / 60 / 60);
+  const minutes = Math.floor((difference / 1000 / 60) % 60);
+
+  return { hours, minutes };
+};
+
+const calculateDaysDuration = (start, end) => {
+  const startTime = new Date(start);
+  const endTime = new Date(end);
+
+  // Calculate the total difference in milliseconds
+  const difference = endTime - startTime;
+
+  // Calculate the number of days
+  const days = Math.floor(difference / 1000 / 60 / 60 / 24);
+
+  // Calculate the number of night changes
+  let nightChanges = 0;
+  let currentTime = new Date(startTime);
+
+  // Iterate from start to end, checking each night period
+  while (currentTime < endTime) {
+    // Define the night period for the current date
+    const currentNightStart = new Date(currentTime);
+    currentNightStart.setHours(23, 0, 0, 0); // 11 PM of the current day
+    const currentNightEnd = new Date(currentTime);
+    currentNightEnd.setDate(currentNightEnd.getDate() + 1);
+    currentNightEnd.setHours(5, 0, 0, 0); // 5 AM of the next day
+
+    // Check if the interval overlaps with the night period
+    if (
+      (startTime < currentNightEnd && endTime > currentNightStart) ||
+      (startTime < currentNightEnd && endTime > currentNightStart)
+    ) {
+      nightChanges++;
+    }
+
+    // Move to the next day
+    currentTime.setDate(currentTime.getDate() + 1);
+  }
+
+  return { days, nightChanges };
+};
+
+export const EndOrderVerifyRide = async (req, res) => {
+  const { FinalDriveKM } = req.body; // Changed to camelCase orderId
+
+  try {
+    const orderId = req.params.id;
+
+    // Validation
+    if (!orderId) {
+      return res.status(400).json({
+        success: false,
+        message: "Please Provide orderId ",
+      });
+    }
+
+    // Check if the order exists
+    const order = await orderModel.findById(orderId);
+
+    if (!order) {
+      return res.status(404).json({
+        success: false,
+        message: "Order not found",
+      });
+    }
+
+    const caldata = await homeModel.findOne();
+
+    // Check if caldata exists
+    if (!caldata) {
+      return res.status(404).json({
+        success: false,
+        message: "calulation data not found.",
+      });
+    }
+
+    order.endStatusOTP = 1;
+    const EndDate = new Date(); // Update otpEndDate to the current date and time
+    order.otpEndDate = EndDate;
+    let TotalCost = 0;
+
+    const Totaltime = calculateDaysDuration(order.otpStartDate, EndDate);
+    let { days, nightChanges } = Totaltime;
+
+    if (order.bookingTyp === "Outstation") {
+      if (order.rideTyp === "One Way") {
+        console.log(`FinalDriveKM: ${FinalDriveKM}`);
+
+        TotalCost = Number(FinalDriveKM) * caldata.OutstationOneWayChargesKm;
+        console.log(`TotalCost One Way: ${TotalCost} ${FinalDriveKM}`);
+      } else {
+        if (days === 0) {
+          days = 1;
+        }
+
+        TotalCost =
+          days * caldata.outstationChargesRoundTripDay +
+          nightChanges * caldata.OutstationNightCharges;
+
+        console.log(`nightChanges: ${nightChanges} `);
+
+        console.log(`days: ${days} `);
+        console.log(`TotalCost: ${TotalCost} `);
+      }
+    } else {
+      const Totaltime = calculateTimeDuration(order.otpStartDate, EndDate);
+      const { hours, minutes } = Totaltime;
+
+      // Calculate total cost based on time duration
+      if (hours <= 4) {
+        TotalCost = caldata.localCharges13;
+        if (hours === 4) {
+          if (minutes > 0) {
+            TotalCost += minutes * caldata.localBeyond3hrsMinute;
+          }
+        }
+      } else {
+        TotalCost =
+          (hours - 4) * 60 * caldata.localBeyond3hrsMinute +
+          caldata.localCharges13;
+        if (minutes > 0) {
+          TotalCost += minutes * caldata.localBeyond3hrsMinute;
+        }
+      }
+      TotalCost = TotalCost + nightChanges * caldata.localNightChargesHour;
+    }
+
+    const roundedTotalCost = Math.round(TotalCost);
+
+    if (TotalCost === undefined && TotalCost === 0) {
+      return res.status(404).json({
+        success: false,
+        message: "Total Cost Undefined",
+      });
+    }
+
+    order.totalAmount = roundedTotalCost;
+
+    // Find the user by driverId
+    const user = await userModel.findById(order.driverId);
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "Driver not found",
+      });
+    }
+
+    // Calculate the commission and the amount to deduct from the user's wallet
+    const orderAmount = roundedTotalCost;
+    const commissionRate = user.LocalCommission / 100;
+    const commissionAmount = Math.round(orderAmount * commissionRate);
+
+    console.log("amountToDeduct", commissionAmount);
+
+    if (user.wallet >= commissionAmount) {
+      user.wallet -= commissionAmount; // Deduct the amount from the user's wallet
+      await user.save();
+
+      // for create trasaction id
+
+      const lastTrans = await transactionModel
+        .findOne()
+        .sort({ _id: -1 })
+        .limit(1);
+      let lastTransId;
+
+      if (lastTrans) {
+        // Convert lastOrder.orderId to a number before adding 1
+        const lastOrderId = parseInt(lastTrans.t_no || 0);
+        lastTransId = lastOrderId + 1;
+      } else {
+        lastTransId = 1;
+      }
+
+      // Calculate the auto-increment ID
+      const t_id = "tt00" + lastTransId;
+
+      const transaction = new transactionModel({
+        userId: order.driverId,
+        type: 1,
+        note:
+          "Commission deducted and ride completed Booking ID #" + order.orderId,
+        amount: -commissionAmount,
+        t_id,
+        t_no: lastTransId,
+      });
+
+      await transaction.save();
+    } else {
+      return res.status(400).json({
+        success: false,
+        message: "You do not have enough funds to end this ride",
+      });
+    }
+
+    console.log("order", order.driverId, user);
+
+    await order.save();
+
+    return res.status(200).json({
+      success: true,
+      message: "End Ride OTP Verified successfully",
+      order,
+    });
+  } catch (error) {
+    return res.status(400).json({
+      message: `Error While Start Ride OTP Verified ${error}`,
+      success: false,
+      error,
+    });
+  }
+};
+
+export const AllValetByDriver = async (req, res) => {
+  try {
+    const id = req.params.id;
+    const type = req.params.type;
+
+    const valetList = await valetModel
+      .find({ driverId: id, type })
+      .populate("userId")
+      .populate("VendorId")
+      .lean();
+
+    console.log("Found valetList:", valetList);
+
+    if (!valetList || valetList.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: "No valet found for the specified driver",
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: "Valet accepted by the driver retrieved successfully",
+      Valet: valetList,
+    });
+  } catch (error) {
+    console.error("Error retrieving valet accepted by driver:", error);
+    return res.status(500).json({
+      success: false,
+      message: "An error occurred while retrieving valet accepted by driver",
+      error: error.message,
+    });
+  }
+};
+
+export const AddDriverValetRide = async (req, res) => {
+  try {
+    const {
+      PickupStartLocation,
+      PickupEndLocation,
+      DropStartLocation,
+      DropEndLocation,
+      userId,
+      VendorId,
+      driverId,
+      Valet_Model,
+    } = req.body;
+
+    const valetRide = new valetRideModel({
+      PickupStartLocation,
+      PickupEndLocation,
+      DropStartLocation,
+      DropEndLocation,
+      userId,
+      VendorId,
+      driverId,
+      Valet_Model,
+    });
+
+    await valetRide.save();
+    res.status(201).json({
+      success: true,
+      message: "Valet Ride Created successfully",
+    });
+  } catch (error) {
+    console.log(error);
+    return res.status(500).send({
+      message: `Error occurred during Valet Ride Creating: ${error}`,
+      success: false,
+      error,
+    });
+  }
+};
+
+export const driverValeRideViewController = async (req, res) => {
+  try {
+    const { valetId } = req.params;
+
+    // Assuming you want to find a valet record based on userId and valetId
+    const valet = await valetRideModel
+      .findOne({ _id: valetId })
+      .populate(
+        "userId",
+        "_id username email phone carNumber carName carImage "
+      ) // Populate userId with specified fields
+      .populate("VendorId", "_id username email phone") // Populate VendorId with specified fields
+      .populate("Valet_Model", "_id"); // Populate VendorId with specified fields
+
+    if (!valet) {
+      return res.status(404).json({
+        success: false,
+        message: "Valet Ride not found",
+      });
+    }
+
+    return res.status(200).json({
+      message: "Single Valet Ride Found By driver ID and valet ID",
+      success: true,
+      valet: valet,
+    });
+  } catch (error) {
+    console.log(error);
+    return res.status(500).json({
+      success: false,
+      message: "Error while getting Valet ride",
+      error: error.message,
+    });
+  }
+};
+
+// for Vendor
+// for Vendor
+// for Vendor
+// for Vendor
+
+export const getAllBookValet = async (req, res) => {
+  try {
+    const cancelId = req.params.id;
+
+    const Valet = await valetModel
+      .find({
+        $or: [
+          { VendorId: { $exists: false } }, // Matches documents where VendorId does not exist
+          { VendorId: null }, // Matches documents where VendorId is null
+          { VendorId: [] }, // Matches documents where VendorId is an empty string
+        ],
+        CancelId: { $ne: cancelId }, // Exclude bookings where CancelId matches
+      })
+      .populate("userId")
+      .lean();
+    console.log("Valet", Valet);
+
+    if (!Valet || Valet.length === 0) {
+      return res.status(200).send({
+        message: "No Valet Found",
+        success: false,
+      });
+    }
+
+    return res.status(200).send({
+      message: "All Valet List ",
+      BookingCount: Valet.length,
+      success: true,
+      Valet,
+    });
+  } catch (error) {
+    return res.status(500).send({
+      message: `Error while getting Valet: ${error}`,
+      success: false,
+      error,
+    });
+  }
+};
+
+// Accept Valet By Vendor
+export const AcceptValetVendor = async (req, res) => {
+  try {
+    const { valetId, vendorId } = req.body; // Changed to camelCase orderId
+
+    // Validation
+    if (!valetId || !vendorId) {
+      return res.status(400).json({
+        success: false,
+        message: "Please provide both valet & vendor",
+      });
+    }
+
+    // Check if the order exists
+    const valet = await valetModel.findById(valetId);
+
+    if (!valet) {
+      return res.status(404).json({
+        success: false,
+        message: "Valet not found",
+      });
+    }
+
+    // Check if the order already has a driver assigned
+    if (valet.VendorId && valet.VendorId.length !== 0) {
+      return res.status(400).json({
+        success: false,
+        message: "This valet has already been accepted by another vendor",
+      });
+    }
+
+    const user = await userModel.findById(vendorId);
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "Vendor not found",
+      });
+    }
+
+    // Calculate the commission and the amount to deduct from the user's wallet
+    const orderAmount = valet.totalAmount;
+    const commissionRate = user.LocalCommission / 100;
+    const commissionAmount = orderAmount * commissionRate;
+
+    console.log("amountToDeduct", commissionAmount);
+
+    if (user.wallet >= commissionAmount) {
+      //  Update the order with the provided driverId
+      valet.VendorId = vendorId;
+      await valet.save();
+
+      return res.status(200).json({
+        success: true,
+        message: "Booking accepted by the driver successfully",
+        valet,
+      });
+    } else {
+      return res.status(400).json({
+        success: false,
+        message: "You do not have enough funds to accept this valet",
+      });
+    }
+  } catch (error) {
+    return res.status(400).json({
+      message: `Error while accepting booking: ${error}`,
+      success: false,
+      error,
+    });
+  }
+};
+
+export const AllValetByVendor = async (req, res) => {
+  try {
+    const id = req.params.id;
+    const type = req.params.type;
+    console.log("Searching for valet with VendorId:", id);
+
+    const valetList = await valetModel
+      .find({ VendorId: id, type })
+      .populate("userId")
+      .lean();
+
+    console.log("Found valetList:", valetList);
+
+    if (!valetList || valetList.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: "No valet found for the specified vendor",
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: "Valet accepted by the vendor retrieved successfully",
+      Valet: valetList,
+    });
+  } catch (error) {
+    console.error("Error retrieving valet accepted by vendor:", error);
+    return res.status(500).json({
+      success: false,
+      message: "An error occurred while retrieving valet accepted by vendor",
+      error: error.message,
+    });
+  }
+};
+
+export const userValetViewController_old = async (req, res) => {
+  try {
+    const { userId, valetId } = req.params;
+
+    // Find the user by ID and populate their orders
+    const userOrder = await userModel.findById(userId).populate({
+      path: "valets",
+      match: { _id: valetId }, // Match the order ID
+      populate: [
+        {
+          path: "VendorId", // Populate the VendorId
+          select: "_id username email phone", // Select the fields you want to include from the VendorId
+        },
+        {
+          path: "Valetride_Model", // Populate the Valetride_Model array
+          select:
+            "_id driverId PickupStartLocation PickupEndLocation DropStartLocation DropEndLocation",
+        },
+      ],
+    });
+
+    // If user or order not found, return appropriate response
+    if (!userOrder || !userOrder.orders) {
+      return res.status(404).json({
+        message: "Valet Not Found By user or Order ID",
+        success: false,
+      });
+    }
+    console.log(userOrder);
+    const valet = await valetModel.findById(valetId);
+    console.log("ValetId", valetId);
+    // If user order found, return success response with the single order
+    return res.status(200).json({
+      message: "Single Valet Found By user ID and Order ID",
+      success: true,
+      userOrder: userOrder, // Assuming there's only one order per user
+      drivers: valet,
+    });
+  } catch (error) {
+    // If any error occurs during the process, log it and return error response
+    console.log(error);
+    return res.status(400).json({
+      success: false,
+      message: "Error while getting Valet",
+      error,
+    });
+  }
+};
+
+export const userValetViewController = async (req, res) => {
+  try {
+    const { valetId } = req.params;
+
+    // Assuming you want to find a valet record based on userId and valetId
+    const valet = await valetModel
+      .findOne({ _id: valetId })
+      .populate("userId", "_id username email phone") // Populate userId with specified fields
+      .populate("VendorId", "_id username email phone"); // Populate VendorId with specified fields
+
+    if (!valet) {
+      return res.status(404).json({
+        success: false,
+        message: "Valet not found",
+      });
+    }
+
+    return res.status(200).json({
+      message: "Single Valet Found By user ID and Order ID",
+      success: true,
+      valet: valet,
+    });
+  } catch (error) {
+    console.log(error);
+    return res.status(500).json({
+      success: false,
+      message: "Error while getting Valet",
+      error: error.message,
+    });
+  }
+};
+
+export const UserAllValtRides = async (req, res) => {
+  const { valetId } = req.params;
+
+  try {
+    const Rides = await valetRideModel.find({ Valet_Model: valetId });
+
+    if (!Rides) {
+      return res.status(200).send({
+        message: "NO Rides Found",
         success: false,
       });
     }
     return res.status(200).send({
-      message: "All plan List ",
-      planCount: plan.length,
+      message: "All Rides List ",
+      proCount: Rides.length,
       success: true,
-      plan,
+      Rides,
     });
   } catch (error) {
     return res.status(500).send({
-      message: `error while getting plan ${error}`,
+      message: `error while All Rides ${error}`,
       success: false,
       error,
     });
   }
 };
 
-
-
-// all plan & buy plan
-
-export const getAllPlanUser = async (req, res) => {
-  const { id } = req.params;
-
+export const driverValetViewController = async (req, res) => {
   try {
+    const { driverId, valetId } = req.params;
 
-    const lastBuy = await buyPlanModel.findOne({ userId: id }).sort({ _id: -1 }).limit(1).populate('planId');
-    const User = await userModel.findById(id);
-    let Local;
-    if (!User.state) {
-      return res.status(200).send({ // Send 500 Internal Server Error response
-        message: `Error`,
+    // Assuming you want to find a valet record based on userId and valetId
+    const valet = await valetModel
+      .findOne({ driverId, _id: valetId })
+      .populate("userId", "_id username email phone") // Populate userId with specified fields
+      .populate("VendorId", "_id username email phone"); // Populate VendorId with specified fields
+
+    if (!valet) {
+      return res.status(404).json({
         success: false,
-        state: false,
-        plan: []
+        message: "Valet not found",
       });
-    } else {
-      const State = await zonesModel.findById(User.state);
-      if (State.primary === 'true') {
-        Local = 1;
+    }
+
+    return res.status(200).json({
+      message: "Single Valet Found By user ID and Order ID",
+      success: true,
+      valet: valet,
+    });
+  } catch (error) {
+    console.log(error);
+    return res.status(500).json({
+      success: false,
+      message: "Error while getting Valet",
+      error: error.message,
+    });
+  }
+};
+
+export const AddDriverVendor = async (req, res) => {
+  try {
+    const {
+      type,
+      username,
+      phone,
+      email,
+      password,
+      pincode,
+      Gender,
+      DOB,
+      address,
+      parentId,
+    } = req.body;
+
+    const {
+      profile,
+      DLfile,
+      AadhaarFront,
+      AadhaarBack,
+      PoliceVerification,
+      PassPort,
+      Electricity,
+      WaterBill,
+    } = req.files;
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    console.log("Request Body:", req.body);
+    console.log("Uploaded Files:", req.files);
+
+    console.log("Uploaded profile:", profile[0].path);
+    const newUser = new userModel({
+      type,
+      username,
+      phone,
+      email,
+      password: hashedPassword,
+      pincode,
+      Gender,
+      DOB,
+      address,
+      parentId,
+      profile: profile ? profile[0].path : "",
+      DL: DLfile ? DLfile[0].path : "",
+      AadhaarFront: AadhaarFront ? AadhaarFront[0].path : "",
+      AadhaarBack: AadhaarBack ? AadhaarBack[0].path : "",
+      PoliceVerification: PoliceVerification ? PoliceVerification[0].path : "",
+      PassPort: PassPort ? PassPort[0].path : "",
+      Electricity: Electricity ? Electricity[0].path : "",
+      WaterBill: WaterBill ? WaterBill[0].path : "",
+    });
+
+    await newUser.save();
+    res.status(201).json({
+      success: true,
+      message: "User signed up successfully",
+    });
+  } catch (error) {
+    console.log(error);
+    return res.status(500).send({
+      message: `Error occurred during user signup ${error}`,
+      success: false,
+      error,
+    });
+  }
+};
+
+export const AllDriversByVendor = async (req, res) => {
+  try {
+    const id = req.params.id; // Assuming the driverId is passed as a parameter in the request
+
+    // Find bookings accepted by the specified driver and populate user data
+    const DriverList = await userModel.find({ parentId: id }).lean();
+
+    return res.status(200).json({
+      success: true,
+      message: "All drivers by vendor",
+      Driver: DriverList,
+    });
+  } catch (error) {
+    console.error("Error getting All drivers by vendor:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Error getting All drivers by vendor",
+      error: error.message,
+    });
+  }
+};
+
+export const AssignedDriverValet = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { driverIds } = req.body;
+
+    console.log(driverIds);
+    // Check if driverIds is an array of valid ObjectId (24 hex characters)
+    if (
+      !Array.isArray(driverIds) ||
+      !driverIds.every((id) => /^[0-9a-fA-F]{24}$/.test(id))
+    ) {
+      return res.status(400).json({
+        message: "Invalid driverIds array",
+        success: false,
+      });
+    }
+
+    const order = await valetModel.findById(id);
+
+    if (!order) {
+      return res.status(404).json({
+        message: "Order not found",
+        success: false,
+      });
+    }
+
+    for (const driverId of driverIds) {
+      const driverIndex = order.driverId.findIndex(
+        (driver) => driver.toString() === driverId
+      );
+
+      if (driverIndex !== -1) {
+        // Remove the driverId if it's already assigned
+        order.driverId.splice(driverIndex, 1);
+
+        const text = `Valet Id #${order.Valet_Id} Removed By Vendor`;
+        const notification = new notificationModel({
+          text,
+          receiver: driverId,
+        });
+
+        await notification.save();
+
+        console.log("Driver removed success!", driverId);
       } else {
-        Local = 0;
+        const text = `Valet Id #${order.Valet_Id} Assigned By Vendor`;
+        const notification = new notificationModel({
+          text,
+          receiver: driverId,
+        });
+
+        await notification.save();
+
+        const user = await userModel.findById(driverId);
+        if (user) {
+          user.notifications += 1;
+          await user.save();
+        }
+
+        order.driverId.push(driverId);
+
+        console.log(`Driver assigned: ${driverId}`);
       }
     }
 
+    await order.save();
 
-    const plan = await planModel
-      .find({}).populate('Category').lean(); // Convert documents to plain JavaScript objects
-
-    if (!plan || plan.length === 0) { // Check if no users found
-      return res.status(404).send({ // Send 404 Not Found response
-        message: "No Plan",
-        success: false,
-      });
-    }
-
-
-    const planDetails = lastBuy?.planId;
-    const planValidityInDays = planDetails?.validity; // Number of days the plan is valid for
-    const purchaseDate = lastBuy?.createdAt; // Date when the plan was purchased
-
-    // Calculate validTill date by adding validity days to the purchase date
-    const validTill = new Date(purchaseDate);
-    validTill.setDate(validTill.getDate() + planValidityInDays);
-
-    // Calculate days left
-    const currentDate = new Date();
-    const daysLeft = Math.floor((validTill - currentDate) / (1000 * 60 * 60 * 24)); // Difference in days
-
-
-
-    return res.status(200).send({ // Send successful response
-      message: "All Plan ",
+    return res.status(200).json({
+      message: "Drivers updated successfully!",
       success: true,
-      plan, // Return users array
-      lastBuy: { ...lastBuy?.toObject(), daysLeft }, // Spread lastBuy object and add daysLeft  
-      Local
     });
   } catch (error) {
-    return res.status(500).send({ // Send 500 Internal Server Error response
-      message: `Error while plan: ${error.message}`,
+    console.error(`Error while updating Order: ${error}`);
+    return res.status(500).json({
+      message: `Error while updating Order: ${error}`,
       success: false,
       error,
     });
   }
 };
 
-
-export const BuyPlanUser = async (req, res) => {
-
+export const UnAssignedDriverValet = async (req, res) => {
   try {
-    const { totalAmount, planId, userId, Local } = req.body;
+    const { id } = req.params;
+    const { driverId } = req.body;
 
-    if (!userId) {
-      return res.status(500).send({ // Send successful response
-        message: req.body,
+    // Check if driverId is a valid ObjectId (24 hex characters)
+    if (!/^[0-9a-fA-F]{24}$/.test(driverId)) {
+      return res.status(400).json({
+        message: "Invalid driverId",
         success: false,
       });
     }
 
-    const lastLead = await buyPlanModel.findOne().sort({ _id: -1 }).limit(1);
-    let paymentId;
+    const order = await valetModel.findById(id);
+
+    if (!order) {
+      return res.status(404).json({
+        message: "Order not found",
+        success: false,
+      });
+    }
+
+    const driverIndex = order.driverId.findIndex(
+      (driver) => driver.toString() === driverId
+    );
+
+    if (driverIndex !== -1) {
+      // Remove the driverId if it's already assigned
+      order.driverId.splice(driverIndex, 1);
+
+      const text = `Valet Id #${order.Valet_Id} Removed By Vendor`;
+      const notification = new notificationModel({
+        text,
+        receiver: driverId,
+      });
+
+      await notification.save();
+
+      await order.save();
+
+      console.log("Driver remove success!", driverId);
+
+      return res.status(200).json({
+        message: "Driver removed successfully!",
+        success: false,
+      });
+    } else {
+      const text = `Valet Id #${order.Valet_Id} Assigned By Vendor`;
+      const notification = new notificationModel({
+        text,
+        receiver: driverId,
+      });
+
+      await notification.save();
+
+      const user = await userModel.findById(driverId);
+      if (user) {
+        user.notifications += 1;
+        await user.save();
+      }
+
+      order.driverId.push(driverId);
+
+      await order.save();
+
+      console.log(`Driver assigned: ${driverId}`);
+
+      return res.status(200).json({
+        message: "Driver assigned successfully!",
+        success: true,
+      });
+    }
+  } catch (error) {
+    console.error(`Error while updating Order: ${error}`);
+    return res.status(500).json({
+      message: `Error while updating Order: ${error}`,
+      success: false,
+      error,
+    });
+  }
+};
+
+export const StartValetRide = async (req, res) => {
+  try {
+    const orderId = req.params.id;
+    console.log(orderId);
+    // Validation
+    if (!orderId) {
+      return res.status(400).json({
+        success: false,
+        message: "Please Provide valetId ",
+      });
+    }
+
+    // Check if the order exists
+    const order = await valetModel.findById(orderId);
+    // Generate 4-digit random OTP
+    const generateOTP = () => Math.floor(1000 + Math.random() * 9000);
+
+    // Create two different OTPs
+    const startOTP = generateOTP();
+    //  const endOTP = generateOTP();
+    order.startOTP = startOTP;
+    //  order.endOTP = endOTP;
+
+    if (!order) {
+      return res.status(404).json({
+        success: false,
+        message: "Valet not found",
+      });
+    }
+
+    await order.save();
+
+    return res.status(200).json({
+      success: true,
+      message: "Start Ride OTP Genrated successfully",
+      order,
+    });
+  } catch (error) {
+    return res.status(400).json({
+      message: `Error While Start Valet OTP Genrated ${error}`,
+      success: false,
+      error,
+    });
+  }
+};
+
+export const EndValetRide = async (req, res) => {
+  try {
+    const orderId = req.params.id;
+    //console.log(orderId);
+    // Validation
+    if (!orderId) {
+      return res.status(400).json({
+        success: false,
+        message: "Please Provide valetId ",
+      });
+    }
+
+    // Check if the order exists
+    const order = await valetModel.findById(orderId);
+    // Generate 4-digit random OTP
+    const generateOTP = () => Math.floor(1000 + Math.random() * 9000);
+
+    // Create two different OTPs
+
+    const endOTP = generateOTP();
+    order.endOTP = endOTP;
+
+    if (!order) {
+      return res.status(404).json({
+        success: false,
+        message: "Valet not found",
+      });
+    }
+
+    await order.save();
+
+    return res.status(200).json({
+      success: true,
+      message: "Start Valet OTP Genrated successfully",
+      order,
+    });
+  } catch (error) {
+    return res.status(400).json({
+      message: `Error While Start Valet OTP Genrated ${error}`,
+      success: false,
+      error,
+    });
+  }
+};
+
+export const StartValetVerifyRide = async (req, res) => {
+  try {
+    const orderId = req.params.id;
+
+    // Validation
+    if (!orderId) {
+      return res.status(400).json({
+        success: false,
+        message: "Please Provide ValtId ",
+      });
+    }
+
+    // Check if the order exists
+    const order = await valetModel.findById(orderId);
+
+    order.startStatusOTP = 1;
+    order.otpStartDate = new Date(); // Update otpStartDate to the current date and time
+    //  order.endOTP = endOTP;
+
+    if (!order) {
+      return res.status(404).json({
+        success: false,
+        message: "Valet not found",
+      });
+    }
+
+    await order.save();
+
+    return res.status(200).json({
+      success: true,
+      message: "Start Valet OTP Verified successfully",
+      order,
+    });
+  } catch (error) {
+    return res.status(400).json({
+      message: `Error While Start Valet OTP Verified ${error}`,
+      success: false,
+      error,
+    });
+  }
+};
+
+export const valetUpdateDailyCost = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const { dailyCost } = req.body;
+
+    let updateFields = {
+      dailyCost,
+    };
+
+    const valet = await valetModel.findByIdAndUpdate(id, updateFields, {
+      new: true,
+    });
+
+    return res.status(200).json({
+      message: "Valet Updated!",
+      success: true,
+      valet,
+    });
+  } catch (error) {
+    return res.status(400).json({
+      message: `Error while updating Valet: ${error}`,
+      success: false,
+      error,
+    });
+  }
+};
+
+export const EndValetVerifyRide = async (req, res) => {
+  try {
+    const orderId = req.params.id;
+
+    // Validation
+    if (!orderId) {
+      return res.status(400).json({
+        success: false,
+        message: "Please Provide orderId ",
+      });
+    }
+
+    // Check if the order exists
+    const order = await valetModel.findById(orderId);
+
+    if (!order) {
+      return res.status(400).json({
+        success: false,
+        message: "Order not found",
+      });
+    }
+
+    order.endStatusOTP = 1;
+    const EndDate = new Date(); // Update otpEndDate to the current date and time
+    order.otpEndDate = EndDate;
+    const orderAmount = order.totalAmount;
+
+    console.log(order.VendorId);
+    // Find the user by driverId
+    const vendorIds = order.VendorId; // Assuming VendorId is an array of ObjectIds
+    const user = await userModel.findOne({ _id: order.VendorId });
+
+    if (!user) {
+      return res.status(400).json({
+        success: false,
+        message: "Driver not found",
+      });
+    }
+
+    const commissionRate = user.LocalCommission / 100;
+    const commissionAmount = Math.round(orderAmount * commissionRate);
+
+    console.log("amountToDeduct", user.LocalCommission);
+
+    if (user.wallet >= commissionAmount) {
+      user.wallet -= commissionAmount; // Deduct the amount from the user's wallet
+      await user.save();
+
+      // for create trasaction id
+      const lastTrans = await transactionModel
+        .findOne()
+        .sort({ _id: -1 })
+        .limit(1);
+      let lastTransId;
+
+      if (lastTrans) {
+        // Convert lastOrder.orderId to a number before adding 1
+        const lastOrderId = parseInt(lastTrans.t_no || 0);
+        lastTransId = lastOrderId + 1;
+      } else {
+        lastTransId = 1;
+      }
+
+      // Calculate the auto-increment ID
+      const t_id = "tt00" + lastTransId;
+
+      const transaction = new transactionModel({
+        userId: order.VendorId,
+        type: 1,
+        note:
+          "Commission deducted and Valet completed Booking ID #" +
+          order.orderId,
+        amount: -commissionAmount,
+        t_id,
+        t_no: lastTransId,
+      });
+
+      await transaction.save();
+    } else {
+      return res.status(400).json({
+        success: false,
+        message: "You do not have enough funds to end this Valet",
+      });
+    }
+
+    // console.log("order", order.driverId, user);
+
+    await order.save();
+
+    return res.status(200).json({
+      success: true,
+      message: "End Valet OTP Verified successfully",
+      order,
+    });
+  } catch (error) {
+    return res.status(400).json({
+      message: `Error While Start Ride OTP Verified ${error}`,
+      success: false,
+      error,
+    });
+  }
+};
+
+export const UpdateUserValetRide = async (req, res) => {
+  try {
+    const {
+      PickupStartLocation,
+      PickupEndLocation,
+      DropStartLocation,
+      DropEndLocation,
+      driverId,
+    } = req.body;
+
+    const id = req.params.id;
+
+    if (!id) {
+      return res.status(400).json({
+        success: false,
+        message: "Valet id is required",
+      });
+    }
+
+    const updateFields = {};
+
+    // Ensure that each location object is properly structured with `location`, `longitude`, and `latitude`
+    if (PickupStartLocation) {
+      if (
+        PickupStartLocation.location &&
+        PickupStartLocation.longitude &&
+        PickupStartLocation.latitude
+      ) {
+        updateFields.PickupStartLocation = {
+          location: PickupStartLocation.location,
+          longitude: PickupStartLocation.longitude,
+          latitude: PickupStartLocation.latitude,
+        };
+      } else {
+        return res.status(400).json({
+          success: false,
+          message:
+            "PickupStartLocation must include location, longitude, and latitude",
+        });
+      }
+    }
+
+    if (PickupEndLocation) {
+      if (
+        PickupEndLocation.location &&
+        PickupEndLocation.longitude &&
+        PickupEndLocation.latitude
+      ) {
+        updateFields.PickupEndLocation = {
+          location: PickupEndLocation.location,
+          longitude: PickupEndLocation.longitude,
+          latitude: PickupEndLocation.latitude,
+        };
+      } else {
+        return res.status(400).json({
+          success: false,
+          message:
+            "PickupEndLocation must include location, longitude, and latitude",
+        });
+      }
+    }
+
+    if (DropStartLocation) {
+      if (
+        DropStartLocation.location &&
+        DropStartLocation.longitude &&
+        DropStartLocation.latitude
+      ) {
+        updateFields.DropStartLocation = {
+          location: DropStartLocation.location,
+          longitude: DropStartLocation.longitude,
+          latitude: DropStartLocation.latitude,
+        };
+      } else {
+        return res.status(400).json({
+          success: false,
+          message:
+            "DropStartLocation must include location, longitude, and latitude",
+        });
+      }
+    }
+
+    if (DropEndLocation) {
+      if (
+        DropEndLocation.location &&
+        DropEndLocation.longitude &&
+        DropEndLocation.latitude
+      ) {
+        updateFields.DropEndLocation = {
+          location: DropEndLocation.location,
+          longitude: DropEndLocation.longitude,
+          latitude: DropEndLocation.latitude,
+        };
+      } else {
+        return res.status(400).json({
+          success: false,
+          message:
+            "DropEndLocation must include location, longitude, and latitude",
+        });
+      }
+    }
+
+    if (driverId) {
+      updateFields.driverId = driverId;
+    }
+
+    const updatedValet = await valetRideModel.findByIdAndUpdate(
+      id,
+      { $set: updateFields },
+      { new: true }
+    );
+
+    if (!updatedValet) {
+      return res.status(404).json({
+        success: false,
+        message: "Valet not found",
+      });
+    }
+
+    // Success response
+    res.status(200).json({
+      success: true,
+      message: "Valet updated successfully",
+      data: updatedValet,
+    });
+  } catch (error) {
+    console.error("Error occurred during Valet update:", error);
+    return res.status(500).json({
+      success: false,
+      message: `Error occurred during Valet update: ${error.message}`,
+      error: error,
+    });
+  }
+};
+
+export const editValetRidePayment = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { payment } = req.body;
+
+    const updateFields = {
+      payment,
+    };
+
+    await valetRideModel.findByIdAndUpdate(id, updateFields, {
+      new: true,
+    });
+
+    return res.status(200).json({
+      message: "Valet Ride Status Updated!",
+      success: true,
+    });
+  } catch (error) {
+    return res.status(400).json({
+      message: `Error while updating Valet Ride: ${error}`,
+      success: false,
+      error,
+    });
+  }
+};
+
+///////  for whatsapp api
+
+export const SignupUserValetTypeViaAPI = async (
+  phone,
+  VendorId,
+  driverId,
+  Valet_Model,
+  phoneId
+) => {
+  try {
+    const newUser = new userModel({
+      phone,
+      verified: 1,
+    });
+
+    await newUser.save();
+
+    const valetRide = new valetRideModel({
+      userId: newUser._id,
+      VendorId,
+      driverId,
+      Valet_Model,
+    });
+
+    await valetRide.save();
+
+    await sendMessage(
+      phoneId,
+      "Thankyou your account created successfully for valet booking service, Now Driver Will Update Further Details "
+    );
+  } catch (error) {
+    console.log(error);
+    await sendMessage(
+      phoneId,
+      "Hey, user something is missing please try again later "
+    );
+  }
+};
+
+// for Leads
+
+export const AddUserLeadController = async (req, res) => {
+  try {
+    const {
+      PickupLocation,
+      DropLocation,
+      startDate,
+      endDate,
+      count,
+      name,
+      email,
+      phone,
+      CPC,
+      type,
+      typeRange,
+      traveller,
+      source,
+      PickupTime,
+      ridetype,
+    } = req.body;
+
+    // Validation
+    if (
+      !PickupLocation ||
+      !DropLocation ||
+      !startDate ||
+      !endDate ||
+      !count ||
+      !name ||
+      !email ||
+      !phone ||
+      !CPC ||
+      !traveller
+    ) {
+      console.log(req.body);
+      return res.status(400).send({
+        success: false,
+        message: "Please Provide All Fields",
+      });
+    }
+
+    // Calculate the auto-increment ID
+    const lastLead = await LeadModel.findOne().sort({ _id: -1 }).limit(1);
+    let LeadId;
 
     if (lastLead) {
-      if (lastLead.paymentId === undefined) {
-        paymentId = 1;
-      } else {
-        // Convert lastOrder.orderId to a number before adding 1
-        const lastOrderId = parseInt(lastLead.paymentId);
-        paymentId = lastOrderId + 1;
-      }
+      // Convert lastOrder.orderId to a number before adding 1
+      const lastOrderId = parseInt(lastLead.LeadId);
+      LeadId = lastOrderId + 1;
     } else {
-      paymentId = 1;
+      LeadId = 1;
     }
 
-
-    // Create a new buy plan record
-    const newBuyPlan = new buyPlanModel({
-      userId,
-      planId,
-      totalAmount,
-      paymentId,
-      note: 'payment succesfully added',
-      payment: 1,  // Assuming payment is the same as totalAmount initially, but could be adjusted as needed
-      Local,  // You can modify this based on your actual requirements
+    // Create a new category with the specified parent
+    const newLead = new LeadModel({
+      PickupLocation,
+      DropLocation,
+      startDate,
+      endDate,
+      count,
+      LeadId,
+      name,
+      email,
+      phone,
+      CPC,
+      type,
+      typeRange,
+      traveller,
+      source,
+      PickupTime,
+      ridetype,
     });
-    await newBuyPlan.save();
+    await newLead.save();
 
-    if (!newBuyPlan || newBuyPlan.length === 0) { // Check if no users found
-      return res.status(404).send({ // Send 404 Not Found response
-        message: "No Plan",
-        success: false,
-      });
-    }
-
-    return res.status(200).send({ // Send successful response
-      message: "All Plan ",
+    return res.status(200).send({
       success: true,
-      newBuyPlan, // Return users array
+      message: "Leads Creating Successfully!",
     });
   } catch (error) {
-    return res.status(500).send({ // Send 500 Internal Server Error response
-      message: `Error while plan: ${error.message}`,
+    console.error("Error while creating Leads:", error);
+    return res.status(400).send({
       success: false,
+      message: "Error while creating Leads",
       error,
     });
   }
 };
 
+// for Employee
 
-export const getAllVendor = async (req, res) => {
+export const AddEmployeeLeadController = async (req, res) => {
+  try {
+    const {
+      PickupLocation,
+      DropLocation,
+      startDate,
+      endDate,
+      count,
+      name,
+      email,
+      phone,
+      CPC,
+      type,
+      typeRange,
+      traveller,
+      EmployeeId,
+      source,
+    } = req.body;
+
+    // Validation
+    if (
+      !PickupLocation ||
+      !DropLocation ||
+      !startDate ||
+      !endDate ||
+      !count ||
+      !name ||
+      !email ||
+      !phone ||
+      !CPC ||
+      !type ||
+      !traveller
+    ) {
+      return res.status(400).send({
+        success: false,
+        message: "Please Provide All Fields",
+      });
+    }
+
+    // Calculate the auto-increment ID
+    const lastLead = await LeadModel.findOne().sort({ _id: -1 }).limit(1);
+    let LeadId;
+
+    if (lastLead) {
+      // Convert lastOrder.orderId to a number before adding 1
+      const lastOrderId = parseInt(lastLead.LeadId);
+      LeadId = lastOrderId + 1;
+    } else {
+      LeadId = 1;
+    }
+
+    // Create a new category with the specified parent
+    const newLead = new LeadModel({
+      PickupLocation,
+      DropLocation,
+      startDate,
+      endDate,
+      count,
+      LeadId,
+      name,
+      email,
+      phone,
+      CPC,
+      type,
+      typeRange,
+      traveller,
+      EmployeeId,
+      source,
+    });
+
+    await newLead.save();
+
+    return res.status(200).send({
+      success: true,
+      message: "Leads Creating Successfully!",
+    });
+  } catch (error) {
+    console.error("Error while creating Leads:", error);
+    return res.status(400).send({
+      success: false,
+      message: "Error while creating Leads",
+      error,
+    });
+  }
+};
+
+export const getAllLeadsEmployee = async (req, res) => {
   try {
     const page = parseInt(req.query.page) || 1; // Current page, default is 1
     const limit = parseInt(req.query.limit) || 10; // Number of documents per page, default is 10
-    const state = req.query.state || ""; // Get search term from the query parameters
-    const city = req.query.city || ""; // Get search term from the query parameters
-    const department = req.query.department || ""; // Get search term from the query parameters
+    const searchTerm = req.query.search || ""; // Get search term from the query parameters
 
     // Get startDate and endDate from query parameters
     const startDate = req.query.startDate
       ? new Date(req.query.startDate)
       : null;
     const endDate = req.query.endDate ? new Date(req.query.endDate) : null;
+    const status = req.query.status || ""; // Get search term from the query parameters
+    const EmployeeId = req.query.EmployeeId || ""; // Get search term from the query parameters
 
-    // console.log(startDate, endDate)
     const skip = (page - 1) * limit;
 
     const query = {};
+    if (searchTerm) {
+      const regex = new RegExp(searchTerm, "i"); // Case-insensitive regex pattern for the search term
 
+      // Add regex pattern to search both username and email fields for the full name
+      query.$or = [{ name: regex }, { email: regex }];
 
-    if (state.length > 0) {
-      query.state = { $in: state }; // Use $in operator to match any of the values in the array
-    }
-    if (city.length > 0) {
-      query.city = { $in: city }; // Use $in operator to match any of the values in the array
-    }
-    if (department.length > 0) {
-      query.department = { $in: department }; // Use $in operator to match any of the values in the array
+      if (!isNaN(Number(searchTerm))) {
+        query.$or.push({ phone: Number(searchTerm) });
+      }
+      if (!isNaN(Number(searchTerm))) {
+        query.$or.push({ LeadId: Number(searchTerm) });
+      }
     }
 
-    query.type = { $in: 1 }; // Use $in operator to match any of the values in the array
-    // query.verified = { $in: 1 };  
+    if (status.length > 0) {
+      query.status = { $in: status }; // Use $in operator to match any of the values in the array
+    }
+
+    if (EmployeeId.length > 0) {
+      query.EmployeeId = { $in: EmployeeId }; // Use $in operator to match any of the values in the array
+    }
 
     // Add date range filtering to the query
     if (startDate && endDate) {
@@ -4948,351 +7829,52 @@ export const getAllVendor = async (req, res) => {
       query.createdAt = { $lte: endDate };
     }
 
-    const totalUser = await userModel.countDocuments(query); // Count total documents matching the query
+    const totalData = await LeadModel.countDocuments(query); // Count total documents matching the query
 
-    const users = await userModel
-      .find(query)
+    const leads = await LeadModel.find(query)
       .sort({ _id: -1 }) // Sort by _id in descending order
       .skip(skip)
       .limit(limit)
       .lean(); // Convert documents to plain JavaScript objects
 
-    if (!users || users.length === 0) {
+    if (!leads || leads.length === 0) {
       // Check if no users found
-      return res.status(401).send({
+      return res.status(400).send({
         // Send 404 Not Found response
-        message: "No users found",
+        message: "No leads found",
         success: false,
       });
     }
 
     return res.status(200).send({
       // Send successful response
-      message: "All user list",
-      userCount: users.length,
+      message: "All leads list",
+      Count: leads.length,
       currentPage: page,
-      totalPages: Math.ceil(totalUser / limit),
+      totalPages: Math.ceil(totalData / limit),
       success: true,
-      users: users, // Return users array
+      leads: encrypt(leads, process.env.APIKEY), // Return users array
     });
   } catch (error) {
     return res.status(500).send({
       // Send 500 Internal Server Error response
-      message: `Error while getting users: ${error.message}`,
+      message: `Error while getting zones: ${error.message}`,
       success: false,
       error,
     });
   }
 };
-
-
-
-export const getAllDepartment = async (req, res) => {
-  try {
-    const Department = await departmentsModel.find({}).lean();
-    if (!Department) {
-      return res.status(200).send({
-        message: "NO Department Find",
-        success: false,
-      });
-    }
-    return res.status(200).send({
-      message: "All Department List ",
-      success: true,
-      Department,
-    });
-  } catch (error) {
-    return res.status(500).send({
-      message: `error while getting Department ${error}`,
-      success: false,
-      error,
-    });
-  }
-};
-
-
-export const ViewAllZonesDepartment = async (req, res) => {
-  try {
-    // Query the database for all ratings where status is 1
-    const Zones = await zonesModel.find({ status: "true" });
-    const Department = await departmentsModel.find({}).lean();
-
-    res.status(200).json({ success: true, Zones, Department });
-  } catch (error) {
-    console.error("Error fetching ratings:", error);
-    res.status(500).json({ success: false, message: "Internal Server Error" });
-  }
-};
-
-
-
-export const getVendorById = async (req, res) => {
-  try {
-    const { slug } = req.params;
-    const Mpage = await userModel.findOne({ _id: slug, type: 1 });
-    if (!Mpage) {
-      return res.status(200).send({
-        message: "user not found",
-        success: false,
-      });
-    }
-    return res.status(200).json({
-      message: "fetch user Page!",
-      success: true,
-      Mpage,
-    });
-  } catch (error) {
-    return res.status(400).json({
-      message: `Error while get Page: ${error}`,
-      success: false,
-      error,
-    });
-  }
-};
-
-export const getAllPdlanUser = async (req, res) => {
-  const { id } = req.params;
-
-  try {
-
-    const lastBuy = await buyPlanModel.findOne({ userId: id }).sort({ _id: -1 }).limit(1).populate('planId');
-
-    const plan = await planModel
-      .find({}).lean(); // Convert documents to plain JavaScript objects
-
-    if (!plan || plan.length === 0) { // Check if no users found
-      return res.status(404).send({ // Send 404 Not Found response
-        message: "No Plan",
-        success: false,
-      });
-    }
-
-
-    const planDetails = lastBuy?.planId;
-    const planValidityInDays = planDetails?.validity; // Number of days the plan is valid for
-    const purchaseDate = lastBuy?.createdAt; // Date when the plan was purchased
-
-    // Calculate validTill date by adding validity days to the purchase date
-    const validTill = new Date(purchaseDate);
-    validTill.setDate(validTill.getDate() + planValidityInDays);
-
-    // Calculate days left
-    const currentDate = new Date();
-    const daysLeft = Math.floor((validTill - currentDate) / (1000 * 60 * 60 * 24)); // Difference in days
-
-
-
-    return res.status(200).send({ // Send successful response
-      message: "All Plan ",
-      success: true,
-      plan, // Return users array
-      lastBuy: { ...lastBuy?.toObject(), daysLeft }, // Spread lastBuy object and add daysLeft      
-    });
-  } catch (error) {
-    return res.status(500).send({ // Send 500 Internal Server Error response
-      message: `Error while plan: ${error.message}`,
-      success: false,
-      error,
-    });
-  }
-};
-
-
-
-export const HomeSendvendorEnquire = async (req, res) => {
-
-
-  const { fullname, email, phone, service, QTY, userId, senderId,
-    userEmail, requirement } = req.body;
-
-  if (!senderId || !userId) {
-    return res.status(500).json({
-      success: false,
-      message: "user Not found",
-    });
-  }
-  const lastBuy = await buyPlanModel.findOne({ userId: senderId }).sort({ _id: -1 }).limit(1).populate('planId');
-
-  try {
-
-    if (lastBuy) {
-      const planDetails = lastBuy?.planId;
-      const planValidityInDays = planDetails?.validity; // Number of days the plan is valid for
-      const purchaseDate = lastBuy?.createdAt; // Date when the plan was purchased
-
-      // Calculate validTill date by adding validity days to the purchase date
-      const validTill = new Date(purchaseDate);
-      validTill.setDate(validTill.getDate() + planValidityInDays);
-
-      // Calculate days left
-      const currentDate = new Date();
-      const daysLeft = Math.floor((validTill - currentDate) / (1000 * 60 * 60 * 24)); // Difference in days
-      if (daysLeft > 0) {
-
-      } else {
-        return res.status(200).json({
-          success: false,
-          message: "Sorry your plan has expired",
-        });
-      }
-    } else {
-      return res.status(200).json({
-        success: false,
-        message: "Sorry, you don't have any plans.",
-      });
-    }
-
-
-    // Save data to the database
-    const newEnquire = new enquireModel({
-      fullname,
-      email,
-      phone,
-      service,
-      QTY,
-      userId,
-      userEmail,
-      type: 1,
-      senderId,
-      requirement
-    });
-
-    await newEnquire.save();
-
-    // Configure nodemailer transporter
-    const transporter = nodemailer.createTransport({
-      // SMTP configuration
-      host: process.env.MAIL_HOST, // Update with your SMTP host
-      port: process.env.MAIL_PORT, // Update with your SMTP port
-      secure: process.env.MAIL_ENCRYPTION, // Set to true if using SSL/TLS
-      auth: {
-        user: process.env.MAIL_USERNAME, // Update with your email address
-        pass: process.env.MAIL_PASSWORD, // Update with your email password
-      },
-    });
-
-    const recipients = userEmail
-      ? `${userEmail}, ${process.env.MAIL_TO_ADDRESS}`
-      : process.env.MAIL_TO_ADDRESS;
-
-    // Email message
-    const mailOptions = {
-      from: process.env.MAIL_FROM_ADDRESS, // Update with your email address
-      to: recipients, // Update with your email address
-      subject: "New Enquire Form Submission",
-      text: `Name: ${fullname}\nEmail: ${email}\nPhone: ${phone}\nService: ${service}\nQTY:${QTY}`,
-    };
-
-    // Send email
-    transporter.sendMail(mailOptions, (error, info) => {
-      if (error) {
-        console.error(error);
-        res.status(500).send("Failed to send email");
-      } else {
-        console.log("Email sent: " + info.response);
-        return res.status(200).json({
-          success: true,
-          message: "Email sent successfully",
-        });
-      }
-    });
-  } catch (error) {
-    console.error("Error in send data:", error);
-    return res.status(500).json({
-      success: false,
-      message: "Internal Server Error",
-    });
-  }
-};
-
-
-export const ApplyEnquireStatus = async (req, res) => {
-  try {
-    const page = parseInt(req.query.page) || 1; // Current page, default is 1
-    const limit = parseInt(req.query.limit) || 10; // Number of documents per page, default is 10
-    const searchTerm = req.query.search || ""; // Get search term from the query parameters
-    const userId = req.query.userId; // Directly access userId from query parameters
-
-    if (!userId) {
-      return res.status(400).send({
-        message: "userId is required",
-        success: false,
-      });
-    }
-
-    const skip = (page - 1) * limit;
-
-    const query = {
-      senderId: userId, // Filter by senderId matching userId
-    };
-
-    // If there's a search term, you can apply it to a specific field in the enquire model (like 'title' or 'content')
-    if (searchTerm) {
-      query.$text = { $search: searchTerm }; // Assuming your model has text indexes for search
-    }
-
-    const total = await enquireModel.countDocuments(query); // Count only the documents matching the query
-
-    const Enquire = await enquireModel
-      .find(query)
-      .sort({ _id: -1 }) // Sort by _id in descending order
-      .skip(skip)
-      .limit(limit)
-      .populate('userId', 'username email phone address') // Populate userId with username and address only
-      .populate('senderId', 'username email phone address') // Populate senderId with username and address only
-      .lean();
-
-    if (!Enquire || Enquire.length === 0) {
-      return res.status(200).send({
-        message: "No Enquires found for the given user.",
-        success: false,
-      });
-    }
-
-    return res.status(200).send({
-      message: "Enquire list retrieved successfully",
-      EnquireCount: Enquire.length,
-      currentPage: page,
-      totalPages: Math.ceil(total / limit),
-      success: true,
-      Enquire,
-    });
-
-  } catch (error) {
-    return res.status(500).send({
-      message: `Error while getting Enquire data: ${error}`,
-      success: false,
-      error,
-    });
-  }
-};
-
-
-export const AllPayment = async (req, res) => {
-  try {
-    const { userId } = req.params;
-    const transactions = await buyPlanModel.find({ userId: userId }).lean();
-
-    return res.status(200).send({
-      success: true,
-      message: "payments fetched successfully",
-      transactions,
-    });
-  } catch (error) {
-    return res.status(500).send({
-      message: `Error payments fetched: ${error}`,
-      success: false,
-      error,
-    });
-  }
-};
-
 
 const generateUserInvoicePDF = async (invoiceData) => {
   // console.log(invoiceData);
 
-  const browser = await puppeteer.launch();
+  const browser = await puppeteer.launch({
+    headless: true, // Ensure headless mode (no GUI)
+    userDataDir: "/tmp/puppeteer", // Ensure a writable user data directory for cloud environments
+  });
+
   const page = await browser.newPage();
+
   const gstRate = 0.18;
 
   const totalWithGST = invoiceData.totalAmount;
@@ -5316,24 +7898,44 @@ const generateUserInvoicePDF = async (invoiceData) => {
   const htmlContent = `
     <div class="invoice">
       <div class="invoice-header">
-        <div class="invoice-header-left">
-          <img 
-          src="data:image/jpeg;base64,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NHpa9XGmbUUVCaiJ3M5kjD7eC2S/aAr4rbazbqTlZ2Q7lU1hAw7nzxPHiSM9wK3G+6Ud8p567hnDK7Ywdr6/ldP16Gdq9qloiBFNS1FQ7oyAwHx8/mWsXXaZeq9ro6RsdDGelnZP8p9gWs3C2VlqnEFdDyMuM7m+0kDu4JwvKq08m3s+h3MXguBFKcVzfr1/6OyeaWpldNPK+WR3xnvcXE+MrrRFVO4oqC0gsjZLHW3+uFJRszji+Q/FjHWfuWW01oe4357ZpWmlo+B5V44vH6I9vN31LNos1DY6JtJQwhjB8Z35Tz1k9JVynGlPrLojzvFOOV46ddPWf9kdNgsFJp+3Clpm5cTvSyEdlI7rKyqIuqkktI8DZZKyTnN7bOURFJgEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAFwuUQGuX7RNovpMskXuepP++h4E98cx8aj+77Ob5bi51LG2vhH5UR3XeNp9hKmNcLROiE+6OricXysXpGW17MrpPBPTScnUQSQvH5MjS0+Qr4ViKijpquMx1MEczDztewOB8qwlRoTTVScutrIz/wAp7meYHCqSwn6M9DT8UQ/8sH/sRpoepdR30VMlaaSjhYX1JLsNcOgY6ST4+dbpLrmhv9HW2+iqJKGqc0imlkO6JDjoPQT5eK7pdl9ie7LJKqMdQkB9IK+G7LbI1wJmq3DqMgHoC2wrthHlRRyszh2Ta7ZbT6a6e3v7kTyb7pXmRznPLjvF3PnpyuY43yyNjjY573HAa0ZJ7wU0U+z7TVMd73v5R3XJI5w8hOFmaO2UNvbu0dJBTt6o4w30LUsOT7svT+Jaox1VBv8AXp+5EFp0FfroWufSmjhPO+o7E/u8632xbPLTad2WpzXVA/Llb2LT3G/flbaitQx64ehwcvjWXk9HLS9kcAAc3BcoisHHOUXC5QBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREB//Z" 
-          alt="Company Logo" width="250">
-          
-          <p>WZ 10C, A-2 Block, Asalatpur Near Mata Chanan Devi Hospital, Janakpuri, New Delhi, 110058</p>
-          <p>Email: info@travelintrip.com</p>
-          <p>Phone: +91 8100188188</p>
+        <div class="invoice-header-left" style="flex:none;">
+          <img src="data:image/png;base64,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" alt="Company Logo" width="200">
+        
         </div>
         <div class="invoice-header-right">
-          <h2>Invoice</h2>
-          <p   >Invoice Number: #${invoiceData?.paymentId}</p>
-          <p>Date: ${formatDate(invoiceData?.createdAt)}     </p>
-           <p>Full Name: ${invoiceData.userId?.username}</p>
-            <p>Email Id: ${invoiceData.userId?.email}</p>
-            <p>Phone No.: ${invoiceData.userId?.phone}</p>
+          <h2 style="margin-top:0px;">TRAVEL LEADS</h2>
+                   <p> <b>GSTIN: 09CQEPK5634C1ZY</b> </p>
+<p>45, Kisan Agro Mall, Mandi Road, Jhansi, Uttar Pradesh - 284001 </p>
+<p> Contact - +91-8062182339 </p>
+  <p> Email : support@travelleads.in </p>
+         
+                         
+        </div>
+      </div>
 
-          <p style=" color:${(() => {
+<div style="margin-bottom: 15px;margin-top: 15px;border-top-style: solid;border-top-width: 3pt;border-top-color: #4F81BC;"> </div>
+
+          <div class="invoice-header">
+        <div class="invoice-header-left">
+                     <h2 style="margin-top:0px;">BILLED TO</h2>
+
+
+          <p> <b> Company Name: </b> ${invoiceData.userId?.c_name}</p>
+
+           <p> <b> Contact Person: </b> ${invoiceData.userId?.username}</p>
+            <p> <b> Email Id: </b> ${invoiceData.userId?.email}</p>
+            <p> <b>  Phone No.: </b> ${invoiceData.userId?.phone}</p>
+                     <p>
+  ${invoiceData.userId?.gstin && invoiceData.userId?.gstin.length !== 0
+      ? `<b>GST No. :</b> ${invoiceData.userId?.gstin}`
+      : null
+    }
+</p>
+
+ 
+          <p 
+          > <b> Payment Status : </b>
+          <b style=" color:${(() => {
       if (invoiceData.payment === 0) {
         return "orange";
       } else if (invoiceData.payment === 1) {
@@ -5341,8 +7943,7 @@ const generateUserInvoicePDF = async (invoiceData) => {
       } else if (invoiceData.payment === 2) {
         return "red";
       }
-    })()}"
-          > Payment Status : 
+    })()}" >
           ${(() => {
       if (invoiceData.payment === 0) {
         return "Pending";
@@ -5351,64 +7952,153 @@ const generateUserInvoicePDF = async (invoiceData) => {
       } else if (invoiceData.payment === 2) {
         return "failed";
       }
-    })()}
+    })()} </b>
           
          </p> 
+         
+        </div>
+        <div class="invoice-header-right">
+          <h2 style="margin-top:0px;">TAX INVOICE</h2>
+            <p> <b> Invoice No.:</b> #${invoiceData?.paymentId}</p>
+          <p> <b>  Invoice Date:</b> ${formatDate(
+      invoiceData?.createdAt
+    )}     </p>
+
+       <p>   <b>   State Name :</b> ${invoiceData.userId?.statename} </p>
+
+ 
+
                          
         </div>
       </div>
 
+
       <table class="invoice-table">
         <thead>
-          <tr >
-            <th >Item</th>
+          <tr style="text-align: left;"  >
+            <th  style="text-align: left;"  >Name of Product/Service</th>
            
-            <th>Total</th>
+            <th style="text-align: right;"  colspan="2" >Total Amount</th>
           </tr>
         </thead>
         <tbody>
  
-            <tr>
-              <td> ${invoiceData.planId?.name}</td>
+            <tr   >
+              <td style="text-align: left;" > <b> IT Service Fees  </b>
+                <p style="
+    border-top: 1px dashed grey;
+    width: 50%;
+" > </p>
+              Order Id : <b> ${invoiceData.razorpay_order_id} </b>
+           <br>
+           <p>SAC Code: 998314 </p>
+              </td>
              
-              <td> ₹${parseFloat(amountWithoutGST.toFixed(2))}</td>
+              <td style="text-align: right;" colspan="2"  >     
+              <b>  Rs. ${parseFloat(amountWithoutGST.toFixed(2))} </b> </td>
             </tr>
           
-            
-        </tbody>
-      </table>
+              <tr   >
+              <td style="text-align: left;" >  
+       
+          <b>  Sub Total </b>
 
-      <div class="invoice-total">
-        <p>Subtotal: ₹${parseFloat(amountWithoutGST.toFixed(2))}</p>
+
+           
+              </td>
+             
+              <td style="text-align: right;"  colspan="2" > 
+              <b> Rs. ${parseFloat(amountWithoutGST.toFixed(2))} </b> </td>
+            </tr>
+          
+            <tr>
+              
+              <td style="text-align: left;" rowspan="2"  > 
+              <p style="font-size:8pt;">
+              
+              <b> Declaration </b> <br><br>
+              We declare that this invoice shows the actual price of the goods described <br>and that all particulars are true and correct.
+<br><br>
+Thanks You for your payment 
+</p>
+ </td>
+
+                 
+              <td style="text-align: right;"  > 
+              
+                
         ${(() => {
       if (invoiceData.Local === 1) {
-        return `<p>
-                CGST:  ₹${parseFloat(TotalLocal.toFixed(2))}
-              </p><p>
-                SGST:  ₹${parseFloat(TotalLocal.toFixed(2))}
+        return `
+            <p>
+                CGST (9%):  
+              </p> <hr/>
+              <p>
+                SGST (9%):   
               </p>`;
       } else if (invoiceData.Local === 0) {
         return `<p>
-IGST: ₹${(parseFloat(invoiceData?.totalAmount.toFixed(2)) - parseFloat(amountWithoutGST.toFixed(2))).toFixed(2)}
+            IGST (18%):  
           </p>`;
       }
     })()}
-        <p>Total: ₹${invoiceData?.totalAmount.toFixed(2)}</p>
-      </div>
+        
+        </td>
 
-      <div class="invoice-footer">
-        <div class="text-center mt-3">
-          <p>Thank you for your support</p>
-        </div>
-      </div>
+
+                 
+              <td style="text-align: right;"  > 
+              <b>   ${(() => {
+      if (invoiceData.Local === 1) {
+        return `
+             <p> <b> Rs. ${TotalLocal.toFixed(2)}  </b>     <p>
+             <hr/>
+                   <p> <b> Rs. ${TotalLocal.toFixed(2)}   </b>  <p>
+             `;
+      } else if (invoiceData.Local === 0) {
+        return ` 
+            <p> <b> Rs. ${(
+            invoiceData?.totalAmount - amountWithoutGST.toFixed(2)
+          ).toFixed(2)} </b>  <p>
+          `;
+      }
+    })()} </td>
+          
+
+            </tr>
+
+            
+
+
+<tr>
+
+               <td style="text-align: right;"  > 
+              <b> TOTAL </b> </td>
+          
+               <td style="text-align: right;"  > 
+              <b> Rs. ${invoiceData?.totalAmount} </b> </td>
+          
+           
+            </tr>
+
+            
+        </tbody>
+      </table>
+<br>
+     <p style="text-align:center" >This is a Computer Generated Invoice </p>
+ <br>
     </div>
     <style>
       body {
         font-family: Arial, sans-serif;
       }
       h2 {
-        font-weight: 800;
+        font-weight: 700;
       }
+        h1,h2{
+        font-size: 14pt;
+}
+        p,td,th{font-size: 10pt;}
       .invoice {
         width: 95%;
         margin: 10px auto;
@@ -5417,7 +8107,7 @@ IGST: ₹${(parseFloat(invoiceData?.totalAmount.toFixed(2)) - parseFloat(amountW
       .invoice-header {
         display: flex;
         justify-content: space-between;
-        align-items: center;
+        align-items: start;
         margin-bottom: 20px;
       }
       .invoice-header-left {
@@ -5457,6 +8147,287 @@ IGST: ₹${(parseFloat(invoiceData?.totalAmount.toFixed(2)) - parseFloat(amountW
   return pdfBuffer;
 };
 
+export const generateUserInvoicePDFView = async (req, res) => {
+  const lastTransaction = await paymentModel
+    .find({})
+    .sort({ _id: -1 }) // Sort by _id in descending order to get the latest transaction first
+    .limit(1) // Only get the most recent transaction
+    .populate({
+      path: "userId", // The field to populate
+      select: "phone username email c_name gstin statename ", // Only select the phone and username fields from the User model
+    })
+    .lean(); // Convert documents to plain JavaScript objects
+
+  // If lastTransaction is an array, you can access the first element like this
+  const invoiceData = lastTransaction[0];
+  // console.log(invoiceData);
+
+  const gstRate = 0.18;
+  const totalWithGST = invoiceData.totalAmount;
+  const amountWithoutGST = totalWithGST / (1 + gstRate);
+
+  const CSGT = invoiceData.totalAmount - amountWithoutGST.toFixed(2);
+
+  const TotalLocal = CSGT / 2;
+
+  const formatDate = (dateString) => {
+    const options = { year: "numeric", month: "long", day: "numeric" };
+    return new Date(dateString).toLocaleDateString(undefined, options);
+  };
+
+  const formatTime = (dateString) => {
+    const options = { hour: "2-digit", minute: "2-digit" };
+    return new Date(dateString).toLocaleTimeString(undefined, options);
+  };
+
+  // Define the HTML content
+  const htmlContent = `
+    <div class="invoice">
+      <div class="invoice-header">
+        <div class="invoice-header-left" style="flex:none;">
+          <img src="data:image/png;base64,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" alt="Company Logo" width="200">
+        
+        </div>
+        <div class="invoice-header-right">
+          <h2 style="margin-top:0px;">TRAVEL LEADS</h2>
+                   <p> <b>GSTIN: 09CQEPK5634C1ZY</b> </p>
+<p>45, Kisan Agro Mall, Mandi Road, Jhansi, Uttar Pradesh - 284001 </p>
+<p> Contact - +91-8062182339 </p>
+  <p> Email : support@travelleads.in </p>
+         
+                         
+        </div>
+      </div>
+
+<div style="margin-bottom: 15px;margin-top: 15px;border-top-style: solid;border-top-width: 3pt;border-top-color: #4F81BC;"> </div>
+
+          <div class="invoice-header">
+        <div class="invoice-header-left">
+                     <h2 style="margin-top:0px;">BILLED TO</h2>
+
+
+          <p> <b> Company Name: </b> ${invoiceData.userId?.c_name}</p>
+
+           <p> <b> Contact Person: </b> ${invoiceData.userId?.username}</p>
+            <p> <b> Email Id: </b> ${invoiceData.userId?.email}</p>
+            <p> <b>  Phone No.: </b> ${invoiceData.userId?.phone}</p>
+                     <p>
+  ${invoiceData.userId?.gstin && invoiceData.userId?.gstin.length !== 0
+      ? `<b>GST No. :</b> ${invoiceData.userId?.gstin}`
+      : null
+    }
+</p>
+
+ 
+          <p 
+          > <b> Payment Status : </b>
+          <b style=" color:${(() => {
+      if (invoiceData.payment === 0) {
+        return "orange";
+      } else if (invoiceData.payment === 1) {
+        return "green";
+      } else if (invoiceData.payment === 2) {
+        return "red";
+      }
+    })()}" >
+          ${(() => {
+      if (invoiceData.payment === 0) {
+        return "Pending";
+      } else if (invoiceData.payment === 1) {
+        return "Success";
+      } else if (invoiceData.payment === 2) {
+        return "failed";
+      }
+    })()} </b>
+          
+         </p> 
+         
+        </div>
+        <div class="invoice-header-right">
+          <h2 style="margin-top:0px;">TAX INVOICE</h2>
+            <p> <b> Invoice No.:</b> #${invoiceData?.paymentId}</p>
+          <p> <b>  Invoice Date:</b> ${formatDate(
+      invoiceData?.createdAt
+    )}     </p>
+
+       <p>   <b>   State Name :</b> ${invoiceData.userId?.statename} </p>
+
+ 
+
+                         
+        </div>
+      </div>
+
+
+      <table class="invoice-table">
+        <thead>
+          <tr style="text-align: left;"  >
+            <th  style="text-align: left;"  >Name of Product/Service</th>
+           
+            <th style="text-align: right;"  colspan="2" >Total Amount</th>
+          </tr>
+        </thead>
+        <tbody>
+ 
+            <tr   >
+              <td style="text-align: left;" > <b> IT Service Fees  </b>
+                <p style="
+    border-top: 1px dashed grey;
+    width: 50%;
+" > </p>
+              Order Id : <b> ${invoiceData.razorpay_order_id} </b>
+           <br>
+           <p>AC Code: 998314 </p>
+              </td>
+             
+              <td style="text-align: right;" colspan="2"  >     
+              <b>  Rs. ${parseFloat(amountWithoutGST.toFixed(2))} </b> </td>
+            </tr>
+          
+              <tr   >
+              <td style="text-align: left;" >  
+       
+          <b>  Sub Total </b>
+
+
+           
+              </td>
+             
+              <td style="text-align: right;"  colspan="2" > 
+              <b> Rs. ${parseFloat(amountWithoutGST.toFixed(2))} </b> </td>
+            </tr>
+          
+            <tr>
+              
+              <td style="text-align: left;" rowspan="2"  > 
+              <p style="font-size:8pt;">
+              
+              <b> Declaration </b> <br><br>
+              We declare that this invoice shows the actual price of the goods described <br>and that all particulars are true and correct.
+<br><br>
+Thanks You for your payment 
+</p>
+ </td>
+
+                 
+              <td style="text-align: right;"  > 
+              
+                
+        ${(() => {
+      if (invoiceData.Local === 1) {
+        return `
+            <p>
+                CGST (9%):  
+              </p> <hr/>
+              <p>
+                SGST (9%):   
+              </p>`;
+      } else if (invoiceData.Local === 0) {
+        return `<p>
+            IGST (18%):  
+          </p>`;
+      }
+    })()}
+        
+        </td>
+
+
+                 
+              <td style="text-align: right;"  > 
+              <b>   ${(() => {
+      if (invoiceData.Local === 1) {
+        return `
+             <p> <b> Rs. ${TotalLocal}  </b>     <p>
+             <hr/>
+                   <p> <b> Rs. ${TotalLocal}   </b>  <p>
+             `;
+      } else if (invoiceData.Local === 0) {
+        return ` 
+            <p> <b> Rs. ${(
+            invoiceData?.totalAmount - amountWithoutGST.toFixed(2)
+          ).toFixed(2)} </b>  <p>
+          `;
+      }
+    })()} </td>
+          
+
+            </tr>
+
+            
+
+
+<tr>
+
+               <td style="text-align: right;"  > 
+              <b> TOTAL </b> </td>
+          
+               <td style="text-align: right;"  > 
+              <b> Rs. ${invoiceData?.totalAmount} </b> </td>
+          
+           
+            </tr>
+
+            
+        </tbody>
+      </table>
+<br>
+     <p style="text-align:center" >This is a Computer Generated Invoice </p>
+ <br>
+    </div>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+      }
+      h2 {
+        font-weight: 700;
+      }
+        h1,h2{
+        font-size: 14pt;
+}
+        p,td,th{font-size: 10pt;}
+      .invoice {
+        width: 95%;
+        margin: 10px auto;
+        padding: 20px;
+      }
+      .invoice-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: start;
+        margin-bottom: 20px;
+      }
+      .invoice-header-left {
+        flex: 1;
+      }
+      .invoice-header-right {
+        flex: 1;
+        text-align: right;
+      }
+      .invoice-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-bottom: 10%;
+      }
+      .invoice-table th,
+      .invoice-table td {
+        border: 1px solid #000;
+        padding: 10px;
+        text-align: center;
+      }
+      .invoice-table th {
+      
+        color:green;
+    
+      }
+      .invoice-total {
+        float: right;
+      }
+    </style>
+  `;
+
+  res.send(htmlContent);
+};
+
 export const downloadUserInvoice = async (req, res) => {
   try {
     const { invoiceId } = req.body; // Assuming invoiceData is sent in the request body
@@ -5464,10 +8435,9 @@ export const downloadUserInvoice = async (req, res) => {
       return res.status(400).send("Invoice ID is required");
     }
     // Fetch invoice data from the database
-    const invoiceData = await buyPlanModel
+    const invoiceData = await paymentModel
       .findById(invoiceId)
-      .populate("userId")
-      .populate("planId");
+      .populate("userId");
 
     const pdfBuffer = await generateUserInvoicePDF(invoiceData);
 
@@ -5475,567 +8445,62 @@ export const downloadUserInvoice = async (req, res) => {
     res.setHeader("Content-Type", "application/pdf");
     res.send(pdfBuffer);
   } catch (error) {
+    await execPromise("npx puppeteer browsers install chrome");
+
     console.error("Error generating invoice PDF:", error);
     res.status(500).send("Internal Server Error");
   }
 };
 
-
-export const checkUserPlan = async (req, res) => {
-  const { userId } = req.params;
-
+export const downloadAdminInvoice = async (req, res) => {
   try {
-    // Ensure that userId is in correct format (ObjectId)
-    if (!mongoose.Types.ObjectId.isValid(userId)) {
-      return res.status(400).json({
-        success: false,
-        message: "Invalid User ID format",
-      });
+    const { invoiceId } = req.params;
+    if (!invoiceId) {
+      return res.status(400).send("Invoice ID is required");
     }
+    // Fetch invoice data from the database
+    const invoiceData = await paymentModel
+      .findById(invoiceId)
+      .populate("userId");
 
-    // Retrieve the most recent plan purchase for the user
-    const lastBuy = await buyPlanModel
-      .findOne({ userId })
-      .sort({ _id: -1 })
-      .limit(1)
-      .populate('planId');  // Ensure that 'planId' is populated with the plan details
+    const pdfBuffer = await generateUserInvoicePDF(invoiceData);
 
-    if (lastBuy) {
-      const planDetails = lastBuy?.planId;
-      const planValidityInDays = planDetails?.validity; // Ensure validity exists
-      const purchaseDate = new Date(lastBuy?.createdAt); // Convert to Date object
-
-      // Check if planValidityInDays is a valid number
-      if (isNaN(planValidityInDays) || planValidityInDays <= 0) {
-        return res.status(500).json({
-          success: false,
-          message: "Invalid plan validity period",
-        });
-      }
-
-      // Calculate the validTill date
-      const validTill = new Date(purchaseDate);
-      validTill.setDate(validTill.getDate() + planValidityInDays);
-
-      // Calculate the number of days left
-      const currentDate = new Date();
-      const daysLeft = Math.floor((validTill - currentDate) / (1000 * 60 * 60 * 24)); // Difference in days
-
-      if (daysLeft > 0) {
-        return res.status(200).json({
-          success: true,
-          message: `Your plan is active. ${daysLeft} day(s) remaining.`,
-        });
-      } else {
-        return res.status(200).json({
-          success: false,
-          message: "Sorry, your plan has expired.",
-        });
-      }
-    } else {
-      return res.status(200).json({
-        success: false,
-        message: "Sorry, you don't have any plans.",
-      });
-    }
+    res.setHeader("Content-Disposition", "attachment; filename=invoice.pdf");
+    res.setHeader("Content-Type", "application/pdf");
+    res.send(pdfBuffer);
   } catch (error) {
-    console.error(`Error getting plan: ${error.message}`);
-    return res.status(500).json({
-      success: false,
-      message: `Error getting plan: ${error.message}`,
-      error,
-    });
+    await execPromise("npx puppeteer browsers install chrome");
+
+    console.error("Error generating invoice PDF:", error);
+    res.status(500).send("Internal Server Error");
   }
 };
 
-
-
-export const GetPlanUser = async (req, res) => {
-
-
+export const loginwithgoogle = async (req, res) => {
   try {
-    const plan = await planModel.find({}).populate('Category').lean();
+    const { email } = req.query; // Change to req.query to access query parameters
+    if (!email) {
+      return res.status(401).json({
+        success: false,
+        message: "Email is required",
+      });
+    }
+    const existingUser = await userModel.findOne({ email });
+    if (!existingUser) {
+      return res.status(401).json({
+        success: false,
+        message: "User Not Found!, Please Signup With Mobile Number",
+      });
+    }
     return res.status(200).send({
       success: true,
-      message: "All plans",
-      plan,
+      message: "Login successfully",
+      existingUser,
     });
   } catch (error) {
     return res.status(500).send({
-      message: `Error plan fetched: ${error}`,
+      message: `Error on Google login: ${error.message}`,
       success: false,
-      error,
-    });
-  }
-};
-
-export const BuyPlanAddUser_old = async (req, res) => {
-
-  try {
-    const {
-      type,
-      username,
-      phone,
-      email,
-      state,
-      statename,
-      country,
-      password,
-      pincode,
-      Gender,
-      DOB,
-      address,
-      city,
-      planId,
-      totalAmount
-    } = req.body;
-
-
-
-    const hashedPassword = await bcrypt.hash(password, 10);
-
-    // Calculate the auto-increment ID
-    const lastUser = await userModel.findOne().sort({ _id: -1 }).limit(1);
-    let userId;
-
-    if (lastUser) {
-      // Convert lastOrder.orderId to a number before adding 1
-      const lastUserId = parseInt(lastUser.userId || 1);
-      userId = lastUserId + 1;
-    } else {
-      userId = 1;
-    }
-
-    const newUser = new userModel({
-      type: 2,
-      username,
-      phone,
-      email,
-      password: hashedPassword,
-      pincode,
-      gender: Gender,
-      DOB,
-      address,
-      state,
-      statename,
-      country,
-      city,
-      userId
-    });
-
-    await newUser.save();
-
-    let Local;
-    if (!newUser.state) {
-      Local = 0;
-    } else {
-      const State = await zonesModel.findById(newUser.state);
-      if (State && State.primary === 'true') {
-        Local = 1;
-      } else {
-        Local = 0;
-      }
-    }
-
-
-
-    const lastLead = await buyPlanModel.findOne().sort({ _id: -1 }).limit(1);
-    let paymentId;
-
-
-    if (lastLead) {
-      if (lastLead.paymentId === undefined) {
-        paymentId = 1;
-      } else {
-        // Convert lastOrder.orderId to a number before adding 1
-        const lastOrderId = parseInt(lastLead.paymentId);
-        paymentId = lastOrderId + 1;
-      }
-    } else {
-      paymentId = 1;
-    }
-
-    // Create a new buy plan record
-    const newBuyPlan = new buyPlanModel({
-      userId: newUser._id,
-      planId,
-      totalAmount,
-      paymentId,
-      note: 'payment succesfully added',
-      payment: 1,  // Assuming payment is the same as totalAmount initially, but could be adjusted as needed
-      Local,  // You can modify this based on your actual requirements
-    });
-
-
-    await newBuyPlan.save();
-
-    res.status(201).json({
-      success: true,
-      user: newUser,
-      message: "User signed up successfully",
-    });
-  } catch (error) {
-    console.log(error);
-    return res.status(500).send({
-      message: `Error occurred during user signup ${error}`,
-      success: false,
-      error,
-    });
-  }
-
-
-
-}
-
-export const BuyPlanAddUser = async (req, res) => {
-  try {
-    const {
-      type,
-      username,
-      phone,
-      email,
-      state,
-      statename,
-      country,
-      password,
-      pincode,
-      Gender,
-      DOB,
-      address,
-      city,
-      planId,
-      totalAmount,
-    } = req.body;
-
-    if (!password) {
-      return res.status(400).json({ success: false, message: "Password is required" });
-    }
-
-    const hashedPassword = await bcrypt.hash(password, 10);
-
-    // Check if user already exists by email or phone
-    const existingUser = await userModel.findOne({ $or: [{ email }, { phone }] });
-    if (existingUser) {
-      return res.status(400).json({ success: false, message: "User with this email or phone already exists" });
-    }
-
-    // Calculate the auto-increment ID for userId
-    const lastUser = await userModel.findOne().sort({ _id: -1 }).limit(1);
-    let userId = 1;
-    if (lastUser) {
-      userId = parseInt(lastUser.userId || 1) + 1;
-    }
-
-    const newUser = new userModel({
-      type: 2,
-      username,
-      phone,
-      email,
-      password: hashedPassword,
-      pincode,
-      gender: Gender,
-      DOB,
-      address,
-      state,
-      statename,
-      country,
-      city,
-      userId,
-    });
-
-    await newUser.save();
-
-    // Determine 'Local' based on the state
-    let Local = 0;
-    if (newUser.state) {
-      const State = await zonesModel.findById(newUser.state);
-      if (State && State.primary === 'true') {
-        Local = 1;
-      }
-    }
-
-    // Calculate the auto-increment ID for paymentId
-    const lastLead = await buyPlanModel.findOne().sort({ _id: -1 }).limit(1);
-    let paymentId = 1;
-    if (lastLead) {
-      paymentId = parseInt(lastLead.paymentId || 1) + 1;
-    }
-
-    const newBuyPlan = new buyPlanModel({
-      userId: newUser._id,
-      planId,
-      totalAmount,
-      paymentId,
-      note: 'Payment successfully added',
-      payment: 1, // Placeholder for actual payment value
-      Local,
-    });
-
-    await newBuyPlan.save();
-
-    res.status(201).json({
-      success: true,
-      user: newUser,
-      buyPlan: newBuyPlan, // Include the newly created buy plan in the response
-      message: "User signed up successfully and plan added.",
-    });
-  } catch (error) {
-    console.log(error);
-    return res.status(500).send({
-      message: `Error occurred during user signup: ${error.message}`,
-      success: false,
-      error,
-    });
-  }
-};
-
-export const BuyPlanByUser = async (req, res) => {
-  try {
-    const {
-      UserData,
-      planId,
-      totalAmount,
-    } = req.body;
-
-
-    // Determine 'Local' based on the state
-    let Local = 0;
-    if (UserData.state) {
-      const State = await zonesModel.findById(UserData.state);
-      if (State && State.primary === 'true') {
-        Local = 1;
-      }
-    }
-
-    // Calculate the auto-increment ID for paymentId
-    const lastLead = await buyPlanModel.findOne().sort({ _id: -1 }).limit(1);
-    let paymentId = 1;
-    if (lastLead) {
-      paymentId = parseInt(lastLead.paymentId || 1) + 1;
-    }
-
-    const newBuyPlan = new buyPlanModel({
-      userId: UserData._id,
-      planId,
-      totalAmount,
-      paymentId,
-      note: 'Payment successfully added',
-      payment: 1, // Placeholder for actual payment value
-      Local,
-    });
-
-    await newBuyPlan.save();
-
-    res.status(201).json({
-      success: true,
-      buyPlan: newBuyPlan, // Include the newly created buy plan in the response
-      message: "pPan buy sucessfully.",
-    });
-  } catch (error) {
-    console.log(error);
-    return res.status(500).send({
-      message: `Error occurred during user signup: ${error.message}`,
-      success: false,
-      error,
-    });
-  }
-};
-
-
-
-export const userPlanIdController = async (req, res) => {
-  try {
-
-
-    const PlanCat = await buyPlanModel.findById(req.params.id).populate('userId', 'username phone email address').populate('planId')  // Populating user info from the 'userId' field
-    const Plan = await planModel.findById(PlanCat.planId)
-      .populate('Category')  // This can be removed if Category is not directly in buyPlanModel.
-
-    let PlanValidity;
-    if (PlanCat) {
-      const planDetails = PlanCat?.planId;
-      const planValidityInDays = planDetails?.validity; // Number of days the plan is valid for
-      const purchaseDate = PlanCat?.createdAt; // Date when the plan was purchased
-
-      // Calculate validTill date by adding validity days to the purchase date
-      const validTill = new Date(purchaseDate);
-      validTill.setDate(validTill.getDate() + planValidityInDays);
-
-      // Calculate days left
-      const currentDate = new Date();
-      const daysLeft = Math.floor((validTill - currentDate) / (1000 * 60 * 60 * 24)); // Difference in days
-      if (daysLeft > 0) {
-        PlanValidity = daysLeft;
-      } else {
-        PlanValidity = 0;
-      }
-    }
-
-    if (!Plan || !PlanCat) {
-      return res.status(200).send({
-        message: "Plan Not Found By Id",
-        success: false,
-      });
-    }
-
-    return res.status(200).json({
-      message: "Plan Found!",
-      success: true,
-      Plan,
-      PlanCat,
-      PlanValidity
-    });
-
-  } catch (error) {
-    console.log(error);
-    return res.status(500).send({
-      success: false,
-      message: "Erorr WHile Deleteing BLog",
-      error,
-    });
-  }
-};
-
-export const profileVendorImage = upload.fields([
-  { name: "Doc1", maxCount: 1 },
-  { name: "Doc2", maxCount: 1 },
-  { name: "Doc3", maxCount: 1 },
-  { name: "profile", maxCount: 1 },
-]);
-
-export const updateVendorProfileUser = async (req, res) => {
-  try {
-    const { id } = req.params;
-    const {
-      username,
-      address,
-      email,
-      pincode,
-      password,
-      gender,
-      state,
-      statename,
-      city,
-      confirm_password,
-      about,
-      department
-    } = req.body;
-    console.log("Uploaded files:", req.files);
-
-    const Doc1 = req.files ? req.files.Doc1 : undefined;
-    const Doc2 = req.files ? req.files.Doc2 : undefined;
-    const Doc3 = req.files ? req.files.Doc3 : undefined;
-    const profileImg = req.files ? req.files.profile : undefined;
-
-    console.log("req.body", req.body, profileImg);
-
-    let updateFields = {
-      username,
-      address,
-      email,
-      pincode,
-      gender,
-      state,
-      statename,
-      city,
-      about,
-      department,
-    };
-
-    if (password.length > 0 && confirm_password.length > 0) {
-      const hashedPassword = await bcrypt.hash(password, 10);
-      updateFields.password = hashedPassword;
-    }
-    // If the files exist, update the corresponding fields
-    if (Doc1 && Doc1[0]) {
-      updateFields.Doc1 = Doc1[0].path;
-    }
-    if (Doc2 && Doc2[0]) {
-      updateFields.Doc2 = Doc2[0].path;
-    }
-    if (Doc3 && Doc3[0]) {
-      updateFields.Doc3 = Doc3[0].path;
-    }
-    if (profileImg && profileImg[0]) {
-      updateFields.profile = profileImg[0].path;
-    }
-
-    const user = await userModel.findByIdAndUpdate(id, updateFields, {
-      new: true,
-    });
-
-    return res.status(200).json({
-      message: "user Updated!",
-      success: true,
-    });
-  } catch (error) {
-    return res.status(400).json({
-      message: `Error while updating Promo code: ${error}`,
-      success: false,
-      error,
-    });
-  }
-};
-
-
-export const SenderEnquireStatus = async (req, res) => {
-  try {
-    const page = parseInt(req.query.page) || 1; // Current page, default is 1
-    const limit = parseInt(req.query.limit) || 10; // Number of documents per page, default is 10
-    const searchTerm = req.query.search || ""; // Get search term from the query parameters
-    const userId = req.query.userId; // Directly access userId from query parameters
-
-    if (!userId) {
-      return res.status(400).send({
-        message: "userId is required",
-        success: false,
-      });
-    }
-
-    const skip = (page - 1) * limit;
-
-    const query = {
-      userId: userId, // Filter by senderId matching userId
-    };
-
-    if (searchTerm) {
-      query.$or = [
-        { 'phone': { $regex: searchTerm, $options: 'i' } }, // Case-insensitive regex search for phone
-        { 'email': { $regex: searchTerm, $options: 'i' } }, // Case-insensitive regex search for email
-        { 'userId.username': { $regex: searchTerm, $options: 'i' } } // Case-insensitive regex search for username
-      ];
-    }
-    const total = await enquireModel.countDocuments(query); // Count only the documents matching the query
-
-    const Enquire = await enquireModel
-      .find(query)
-      .sort({ _id: -1 }) // Sort by _id in descending order
-      .skip(skip)
-      .limit(limit)
-      .populate('userId', 'username email phone address') // Populate userId with username and address only
-      .lean();
-
-    if (!Enquire || Enquire.length === 0) {
-      return res.status(200).send({
-        message: "No Enquires found for the given user.",
-        success: false,
-      });
-    }
-
-    return res.status(200).send({
-      message: "Enquire list retrieved successfully",
-      EnquireCount: Enquire.length,
-      currentPage: page,
-      totalPages: Math.ceil(total / limit),
-      success: true,
-      Enquire,
-    });
-
-  } catch (error) {
-    return res.status(500).send({
-      message: `Error while getting Enquire data: ${error}`,
-      success: false,
-      error,
     });
   }
 };
