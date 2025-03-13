@@ -361,7 +361,7 @@ router.get("/check-plan-user/:userId", checkUserPlan);
 
 router.get("/all-plan", GetPlanUser);
 
-router.post("/buy-plan-add-user", BuyPlanAddUser);
+router.post("/buy-plan-add-user", profileImageHealth, BuyPlanAddUser);
 
 router.post("/paymentverification-plan", paymentVerification);
 
