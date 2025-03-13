@@ -2880,19 +2880,13 @@ export const SendOTP = async (req, res) => {
 
 export const SignupLoginUser = async (req, res) => {
   try {
-    const { phone, Gtoken } = req.body;
+    const { phone } = req.body;
 
     // Generate OTP
     const otp = Math.floor(1000 + Math.random() * 9000);
     // // Send OTP via Phone
     //  await sendRegOTP(phone, otp);
-
-    if (!Gtoken) {
-      return res.status(400).json({
-        success: false,
-        message: "you can access this page ",
-      });
-    }
+ 
 
     // Validation
     if (!phone) {
@@ -5628,7 +5622,6 @@ export const BuyPlanAddUser_old = async (req, res) => {
 
   try {
     const {
-      type,
       username,
       phone,
       email,
@@ -5721,9 +5714,11 @@ export const BuyPlanAddUser_old = async (req, res) => {
       Local,  // You can modify this based on your actual requirements
     });
 
+  
 
     await newBuyPlan.save();
 
+ 
     res.status(201).json({
       success: true,
       user: newUser,
@@ -5838,6 +5833,34 @@ export const paymentVerification = async (req, res) => {
       const user = await payment.populate('userId'); // Assuming userId is populated
 
       if (user) {
+
+           // Send notification
+           const notificationData = {
+            mobile: `91${user.phone}`,
+            templateid: "947805560855158",
+            overridebot: "yes",
+            template: {
+              components: [
+                {
+                  type: "body",
+                  parameters: [
+                    { type: "text", text: user.username },
+                    { type: "text", text: `https://ynbhealthcare.com/card-view/${payment._id}` }
+                  ]
+                }
+              ]
+            }
+          };
+  
+     await axios.post(process.env.WHATSAPPAPI, notificationData, {
+        headers: {
+          "API-KEY": process.env.WHATSAPPKEY,
+          "Content-Type": "application/json"
+        }
+      });
+
+      
+
         const userEmail = user.email;
 
         // Send payment ID to the user's email using nodemailer
