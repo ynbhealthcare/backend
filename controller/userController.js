@@ -6027,6 +6027,8 @@ export const BuyPlanByUser = async (req, res) => {
 };
 
 export const BuyPlanAddUser = async (req, res) => {
+  console.log(req.body);
+
   try {
     const {
        
@@ -6050,7 +6052,6 @@ export const BuyPlanAddUser = async (req, res) => {
      } = req.body;
 
      const tttt = req.body;
-
     if (!password) {
       return res.status(400).json({ success: false, message: "Password is required" , tttt});
     }
