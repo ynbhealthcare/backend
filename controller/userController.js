@@ -1534,6 +1534,10 @@ export const HomeSendEnquire_old = async (req, res) => {
 
     await newEnquire.save();
 
+
+
+      
+
     // Configure nodemailer transporter
     const transporter = nodemailer.createTransport({
       // SMTP configuration
@@ -1616,6 +1620,36 @@ export const HomeSendEnquire = async (req, res) => {
     });
 
     await newEnquire.save();
+
+        
+       // Create the notification data object with dynamic values
+const notificationData = {
+  mobile: "918100188188",  // Replace with dynamic value if needed
+  templateid: "1193466729031008", // Template ID
+  overridebot: "yes", // Optional: Set to "yes" or "no"
+  template: {
+    components: [
+      {
+        type: "body",
+        parameters: [
+          { type: "text", text: fullname || "NA" },  
+          { type: "text", text: phone || "NA" },  
+          { type: "text", text: email || "NA" }, 
+          { type: "text", text: service || "NA" }, 
+          { type: "text", text: QTY || "NA" }  
+        ]
+      }
+    ]
+  }
+};
+  
+   const WHATSAPP =   await axios.post(process.env.WHATSAPPAPI, notificationData, {
+        headers: {
+          "API-KEY": process.env.WHATSAPPKEY,
+          "Content-Type": "application/json"
+        }
+      });
+      console.log('WHATSAPP',WHATSAPP)
 
     // Configure nodemailer transporter
     const transporter = nodemailer.createTransport({
@@ -2878,6 +2912,93 @@ export const SendOTP = async (req, res) => {
   }
 };
 
+export const SignupLoginUser_old = async (req, res) => {
+  try {
+    const { phone } = req.body;
+
+    // Generate OTP
+    const otp = Math.floor(1000 + Math.random() * 9000);
+    // // Send OTP via Phone
+    //  await sendRegOTP(phone, otp);
+ 
+
+    // Validation
+    if (!phone) {
+      return res.status(400).json({
+        success: false,
+        message: "Please fill all fields",
+      });
+    }
+
+    const existingUser = await userModel.findOne({ phone });
+
+    if (existingUser) {
+      if (existingUser.password !== undefined) {
+        if (existingUser.status === "0") {
+          return res.status(400).json({
+            success: false,
+            message: "An error occurred. Please contact support.",
+          });
+        }
+        return res.status(201).json({
+          success: true,
+          message: "User found with password",
+          password: true,
+        });
+      } else {
+        // Hash the OTP
+        const ecryptOTP = await bcrypt.hash(String(otp), 10);
+
+        if (existingUser.status === "0") {
+          return res.status(400).json({
+            success: false,
+            message: "An error occurred. Please contact support.",
+          });
+        }
+
+        // block
+        console.log(otp);
+         await sendLogOTP(phone, otp);
+
+        return res.status(201).json({
+          success: true,
+          message: "User found",
+          existingUser: {
+            _id: existingUser._id,
+            username: existingUser.username,
+            phone: existingUser.phone,
+            email: existingUser.email,
+            type: existingUser.type,
+          },
+          token: existingUser.token,
+          otp: ecryptOTP,
+          type: 2,
+
+        });
+      }
+    } else {
+      const ecryptOTP = await bcrypt.hash(String(otp), 10);
+
+      // block
+      console.log(otp);
+      await sendLogOTP(phone, otp);
+      return res.status(200).json({
+        success: true,
+        message: "New User found",
+        newUser: true,
+        otp: ecryptOTP,
+      });
+    }
+  } catch (error) {
+    console.error("Error on login:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Error on login",
+      error: error.message,
+    });
+  }
+};
+
 export const SignupLoginUser = async (req, res) => {
   try {
     const { phone } = req.body;
@@ -2936,6 +3057,104 @@ export const SignupLoginUser = async (req, res) => {
             email: existingUser.email,
             type: existingUser.type,
           },
+          token: existingUser.token,
+          otp: ecryptOTP,
+          type: 2,
+
+        });
+      }
+    } else {
+      const ecryptOTP = await bcrypt.hash(String(otp), 10);
+
+      // block
+      console.log(otp);
+      // await sendLogOTP(phone, otp);
+      // return res.status(200).json({
+      //   success: true,
+      //   message: "New User found",
+      //   newUser: true,
+      //   otp: ecryptOTP,
+      // });
+      return res.status(400).json({
+        success: false,
+        message: "User Not Found",
+        
+       });
+
+    }
+  } catch (error) {
+    console.error("Error on login:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Error on login",
+      error: error.message,
+    });
+  }
+};
+
+
+export const SignupLoginNew = async (req, res) => {
+  try {
+    const { phone } = req.body;
+
+    // Generate OTP
+    const otp = Math.floor(1000 + Math.random() * 9000);
+    // // Send OTP via Phone
+    //  await sendRegOTP(phone, otp);
+ 
+
+    // Validation
+    if (!phone) {
+      return res.status(400).json({
+        success: false,
+        message: "Please fill all fields",
+      });
+    }
+
+    const existingUser = await userModel.findOne({ phone });
+
+    if (existingUser) {
+      if (existingUser.password !== undefined) {
+        if (existingUser.status === "0") {
+          return res.status(400).json({
+            success: false,
+            message: "An error occurred. Please contact support.",
+          });
+        }
+        return res.status(201).json({
+          success: true,
+          message: "User found with password",
+          password: true,
+        });
+      } else {
+        // Hash the OTP
+        const ecryptOTP = await bcrypt.hash(String(otp), 10);
+
+        if (existingUser.status === "0") {
+          return res.status(400).json({
+            success: false,
+            message: "An error occurred. Please contact support.",
+          });
+        }
+
+        // block
+        console.log(otp);
+         await sendLogOTP(phone, otp);
+
+        return res.status(201).json({
+          success: true,
+          message: "User found",
+          existingUser: {
+            _id: existingUser._id,
+            username: existingUser.username,
+            phone: existingUser.phone,
+            email: existingUser.email,
+            type: existingUser.type,
+            cHealthStatus: existingUser.cHealthStatus,
+            pHealthHistory: existingUser.pHealthHistory,
+
+          },
+          newUser: false,
           token: existingUser.token,
           otp: ecryptOTP,
           type: 2,
@@ -5150,7 +5369,7 @@ export const HomeSendvendorEnquire = async (req, res) => {
 
 
   const { fullname, email, phone, service, QTY, userId, senderId,
-    userEmail, requirement } = req.body;
+    userEmail, requirement,userPhone } = req.body;
 
   if (!senderId || !userId) {
     return res.status(500).json({
@@ -5158,7 +5377,7 @@ export const HomeSendvendorEnquire = async (req, res) => {
       message: "user Not found",
     });
   }
-  const lastBuy = await buyPlanModel.findOne({ userId: senderId }).sort({ _id: -1 }).limit(1).populate('planId');
+  const lastBuy = await buyPlanModel.findOne({ userId: senderId }).sort({ _id: -1 }).limit(1).populate('planId').populate('userId');
 
   try {
 
@@ -5206,6 +5425,34 @@ export const HomeSendvendorEnquire = async (req, res) => {
 
     await newEnquire.save();
 
+           // Create the notification data object with dynamic values
+const notificationData = {
+  mobile: `91${userPhone}`,  // Replace with dynamic value if needed
+  templateid: "1193466729031008", // Template ID
+  overridebot: "yes", // Optional: Set to "yes" or "no"
+  template: {
+    components: [
+      {
+        type: "body",
+        parameters: [
+          { type: "text", text: fullname || "NA" },  
+          { type: "text", text: phone || "NA" },  
+          { type: "text", text: email || "NA" }, 
+          { type: "text", text: service || "NA" }, 
+          { type: "text", text: QTY || "NA" }  
+        ]
+      }
+    ]
+  }
+};
+  
+   const WHATSAPP =   await axios.post(process.env.WHATSAPPAPI, notificationData, {
+        headers: {
+          "API-KEY": process.env.WHATSAPPKEY,
+          "Content-Type": "application/json"
+        }
+      });
+       console.log('WHATSAPP',WHATSAPP);
     // Configure nodemailer transporter
     const transporter = nodemailer.createTransport({
       // SMTP configuration
