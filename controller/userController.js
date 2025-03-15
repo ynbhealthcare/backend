@@ -6168,7 +6168,35 @@ export const PaymentSuccess = async (req, res) => {
         },
       },
       { new: true, upsert: true } // `new: true` returns the updated document, `upsert: true` creates a new document if not found
-    );
+    ).populate('userId'); // Assuming 'user' is the reference field to the user model
+    
+
+        // Send notification
+        const notificationData = {
+          mobile: `91${updatedTransaction?.userId.phone}`,
+          templateid: "947805560855158",
+          overridebot: "yes",
+          template: {
+            components: [
+              {
+                type: "body",
+                parameters: [
+                  { type: "text", text: updatedTransaction?.userId.username },
+                  { type: "text", text: `https://ynbhealthcare.com/card-view/${updatedTransaction._id}` }
+                ]
+              }
+            ]
+          }
+        };
+
+   await axios.post(process.env.WHATSAPPAPI, notificationData, {
+      headers: {
+        "API-KEY": process.env.WHATSAPPKEY,
+        "Content-Type": "application/json"
+      }
+    });
+
+
 
     if (!updatedTransaction) {
       res.redirect(process.env.RFAILURL);
