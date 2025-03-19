@@ -39,6 +39,7 @@ import planCategoryModel from "../models/planCategoryModel.js";
 import planModel from "../models/planModel.js";
 import departmentsModel from "../models/departmentsModel.js";
 import buyPlanModel from "../models/buyPlanModel.js";
+import consultationModel from "../models/ConsultationModel.js";
 
 
 const storage = multer.diskStorage({
@@ -1768,6 +1769,54 @@ export const getAllEnquireAdmin = async (req, res) => {
   }
 };
 
+export const getAllConsultationEnquireAdmin = async (req, res) => {
+  try {
+    const page = parseInt(req.query.page) || 1; // Current page, default is 1
+    const limit = parseInt(req.query.limit) || 10; // Number of documents per page, default is 10
+    const searchTerm = req.query.search || ""; // Get search term from the query parameters
+
+    const skip = (page - 1) * limit;
+
+    const query = {};
+    if (searchTerm) {
+      // If search term is provided, add it to the query
+      query.$or = [
+        { fullname: { $regex: searchTerm, $options: "i" } }, // Case-insensitive username search
+        { email: { $regex: searchTerm, $options: "i" } }, // Case-insensitive email search
+      ];
+    }
+
+    const totalpage = await consultationModel.countDocuments(query); // Count documents matching the query
+
+    const Enquire = await consultationModel
+      .find(query)
+      .sort({ _id: -1 }) // Sort by _id in descending order
+      .skip(skip)
+      .limit(limit)
+      .lean();
+
+    if (!Enquire || Enquire.length === 0) {
+      return res.status(200).send({
+        message: "No Enquire found",
+        success: false,
+      });
+    }
+    return res.status(200).send({
+      message: "All Enquire list",
+      ratingCount: Enquire.length,
+      currentPage: page,
+      totalPages: Math.ceil(totalpage / limit),
+      success: true,
+      Enquire,
+    });
+  } catch (error) {
+    return res.status(500).send({
+      message: `Error while getting Enquire: ${error}`,
+      success: false,
+      error,
+    });
+  }
+};
 
 export const deleteRatingAdmin = async (req, res) => {
   try {
