@@ -40,6 +40,7 @@ import multer from "multer";
 import { exec } from "child_process";
 import util from "util";
 import crypto from "crypto";  // Ensure you require the crypto module if you haven't
+import consultationModel from "../models/ConsultationModel.js";
 
 const execPromise = util.promisify(exec);
 
@@ -1674,6 +1675,63 @@ const notificationData = {
       to: recipients, // Update with your email address
       subject: "New Enquire Form Submission",
       text: `Name: ${fullname}\nEmail: ${email}\nPhone: ${phone}\nService: ${service}\nQTY:${QTY}`,
+    };
+
+    // Send email
+    transporter.sendMail(mailOptions, (error, info) => {
+      if (error) {
+        console.error(error);
+        res.status(500).send("Failed to send email");
+      } else {
+        console.log("Email sent: " + info.response);
+        res.status(200).send("Email sent successfully");
+      }
+    });
+  } catch (error) {
+    console.error("Error in send data:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Internal Server Error",
+    });
+  }
+};
+
+export const ConsultationSendEnquire = async (req, res) => {
+  const { fullname, email, phone, service, requirement } = req.body;
+
+  try {
+    // Save data to the database
+    const newEnquire = new consultationModel({
+      fullname,
+      email,
+      phone,
+      requirement
+    });
+
+    await newEnquire.save();
+
+ 
+
+    // Configure nodemailer transporter
+    const transporter = nodemailer.createTransport({
+      // SMTP configuration
+      host: process.env.MAIL_HOST, // Update with your SMTP host
+      port: process.env.MAIL_PORT, // Update with your SMTP port
+      secure: process.env.MAIL_ENCRYPTION, // Set to true if using SSL/TLS
+      auth: {
+        user: process.env.MAIL_USERNAME, // Update with your email address
+        pass: process.env.MAIL_PASSWORD, // Update with your email password
+      },
+    });
+
+    const recipients = process.env.MAIL_TO_ADDRESS;
+
+    // Email message
+    const mailOptions = {
+      from: process.env.MAIL_FROM_ADDRESS, // Update with your email address
+      to: recipients, // Update with your email address
+      subject: "New Enquire Free Consultation",
+      text: `Name: ${fullname}\nEmail: ${email}\nPhone: ${phone}\nRequirement: ${service}`,
     };
 
     // Send email
