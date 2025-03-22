@@ -6481,7 +6481,7 @@ export const PaymentSuccess = async (req, res) => {
         const notificationData = {
           mobile: `91${updatedTransaction?.userId.phone}`,
           templateid: "947805560855158",
-          overridebot: "yes",
+          overridebot: "yes/no",
           template: {
             components: [
               {
@@ -6495,14 +6495,14 @@ export const PaymentSuccess = async (req, res) => {
           }
         };
 
-   await axios.post(process.env.WHATSAPPAPI, notificationData, {
+     const WHATSAPP =  await axios.post(process.env.WHATSAPPAPI, notificationData, {
       headers: {
         "API-KEY": process.env.WHATSAPPKEY,
         "Content-Type": "application/json"
       }
     });
 
-
+   console.log('WHATSAPP',WHATSAPP,updatedTransaction?.userId.phone );
     const userEmail = updatedTransaction?.userId.email;
 
     // Send payment ID to the user's email using nodemailer
@@ -6521,7 +6521,12 @@ export const PaymentSuccess = async (req, res) => {
       to: userEmail, // User's email
       subject: "Payment Successful - Your Payment ID",
       text: `Hello, \n\nYour payment has been successfully processed. Your payment ID is: ${txnid}. \n\nThank you for choosing us!  \n\n
-      <a href="https://ynbhealthcare.com/assets/pdf/t&c.pdf" traget="blank" style="padding:10px;rounded:10px;background:blue;color:white"> Terms And Condition </a>`,
+       Terms & condition:- https://ynbhealthcare.com/assets/pdf/t&c.pdf
+        \n\n
+         health card link:- https://ynbhealthcare.com/card-view/${updatedTransaction._id}
+         \n\n
+         Best Regards,\n 
+         YNB Healthcare Team`,
     };
 
     // Send email
@@ -6544,6 +6549,7 @@ export const PaymentSuccess = async (req, res) => {
   }
 
 };
+
 
 export const PaymentFail = async (req, res) => {
   res.redirect(process.env.RFAILURL);
