@@ -6520,7 +6520,7 @@ export const PaymentSuccess = async (req, res) => {
       from: process.env.MAIL_FROM_ADDRESS, // Your email address
       to: userEmail, // User's email
       subject: "Payment Successful - Your Payment ID",
-      text: `Hello, \n\nYour payment has been successfully processed. Your payment ID is: ${razorpay_payment_id}. \n\nThank you for choosing us!  \n\n
+      text: `Hello, \n\nYour payment has been successfully processed. Your payment ID is: ${txnid}. \n\nThank you for choosing us!  \n\n
       <a href="https://ynbhealthcare.com/assets/pdf/t&c.pdf" traget="blank" style="padding:10px;rounded:10px;background:blue;color:white"> Terms And Condition </a>`,
     };
 
