@@ -6523,7 +6523,7 @@ export const PaymentSuccess = async (req, res) => {
       text: `Hello, \n\nYour payment has been successfully processed. Your payment ID is: ${txnid}. \n\nThank you for choosing us!  \n\n
        Terms & condition:- https://ynbhealthcare.com/assets/pdf/t&c.pdf
         \n\n
-         health card link:- https://ynbhealthcare.com/card-view/${updatedTransaction._id}
+        Health card link:- https://ynbhealthcare.com/card-view/${updatedTransaction._id}
          \n\n
          Best Regards,\n 
          YNB Healthcare Team`,
