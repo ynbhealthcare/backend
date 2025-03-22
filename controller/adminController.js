@@ -3719,6 +3719,24 @@ export const getAllPlanCategoryAdmin = async (req, res) => {
 };
 
 
+export const deletePlanCategoryAdmin = async (req, res) => {
+  try {
+    await planCategoryModel.findByIdAndDelete(req.params.id);
+
+    return res.status(200).send({
+      success: true,
+      message: "Plan Catgeory Deleted!",
+    });
+  } catch (error) {
+    console.log(error);
+    return res.status(400).send({
+      success: false,
+      message: "Erorr while deleteing",
+      error,
+    });
+  }
+};
+
 // Add Plan
 
 export const AddPlanController = async (req, res) => {
