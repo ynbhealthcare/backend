@@ -8,7 +8,7 @@ import {
   getAllDepartmentFillAdmin,
   getDepartmentIdAdmin,
   updateDepartmentAdmin,
-  deleteDepartmentAdmin, editUserVerifyAdmin, AllPaymentAdmin, AdminAllEnquireStatus, profileImageHealth
+  deleteDepartmentAdmin, editUserVerifyAdmin, AllPaymentAdmin, AdminAllEnquireStatus, profileImageHealth,deletePlanCategoryAdmin
 } from "../controller/adminController.js";
 
 import {
@@ -115,7 +115,7 @@ router.post('/admin/add-plan-category', AddPlanCategoryController);
 router.get('/admin/all-plan-category', getAllPlanCategoryAdmin);
 router.get('/admin/get-plan-category/:id', GetFolderIDAdmin);
 router.put('/admin/update-plan-category/:id', UpdateFolderAdmin);
-router.delete('/admin/delete-plan-category/:id', deleteFolderAdmin);
+router.delete('/admin/delete-plan-category/:id', deletePlanCategoryAdmin);
 
 // for Plan
 
