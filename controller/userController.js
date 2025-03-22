@@ -6201,7 +6201,7 @@ export const paymentVerification = async (req, res) => {
       }
 
       res.redirect(
-        `${process.env.LIVEWEB}paymentsuccess?reference=${razorpay_payment_id}`
+        `${process.env.LIVEWEB}paymentsuccess/${razorpay_payment_id}`
       );
     } else {
       res.status(404).send("Payment not found");
