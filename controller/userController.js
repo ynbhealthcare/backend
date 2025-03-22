@@ -6201,7 +6201,7 @@ export const paymentVerification = async (req, res) => {
       }
 
       res.redirect(
-        `${process.env.LIVEWEB}paymentsuccess/${razorpay_payment_id}`
+        `${process.env.LIVEWEB}paymentsuccess?reference=${razorpay_payment_id}`
       );
     } else {
       res.status(404).send("Payment not found");
@@ -6503,6 +6503,36 @@ export const PaymentSuccess = async (req, res) => {
     });
 
 
+    const userEmail = updatedTransaction?.userId.email;
+
+    // Send payment ID to the user's email using nodemailer
+    const transporter = nodemailer.createTransport({
+      host: process.env.MAIL_HOST, // Your SMTP host
+      port: process.env.MAIL_PORT, // Your SMTP port
+      secure: process.env.MAIL_ENCRYPTION === 'true', // If using SSL/TLS
+      auth: {
+        user: process.env.MAIL_USERNAME, // Your email address
+        pass: process.env.MAIL_PASSWORD, // Your email password
+      },
+    });
+
+    const mailOptions = {
+      from: process.env.MAIL_FROM_ADDRESS, // Your email address
+      to: userEmail, // User's email
+      subject: "Payment Successful - Your Payment ID",
+      text: `Hello, \n\nYour payment has been successfully processed. Your payment ID is: ${razorpay_payment_id}. \n\nThank you for choosing us!  \n\n
+      <a href="https://ynbhealthcare.com/assets/pdf/t&c.pdf" traget="blank" style="padding:10px;rounded:10px;background:blue;color:white"> Terms And Condition </a>`,
+    };
+
+    // Send email
+    transporter.sendMail(mailOptions, (error, info) => {
+      if (error) {
+        console.error(error);
+        res.status(500).send("Failed to send email");
+      } else {
+        console.log("Payment ID sent to user email: " + info.response);
+      }
+    });
 
     if (!updatedTransaction) {
       res.redirect(process.env.RFAILURL);
