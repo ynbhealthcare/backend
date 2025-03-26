@@ -6305,16 +6305,15 @@ any time without notice.
     return res.status(500).json({ message: "Internal Server Error" });
   }
 };
+
+ const generateUserAttachPDFFinal = async (id) => {
  
-
-const generateUserAttachPDFFinal = async (id, res) => {
-  try {
     const invoiceData = await buyPlanModel.findById(id).populate('userId');
-    const Plan = await planModel.findById(invoiceData.planId).populate('Category');
 
-    if (!invoiceData) {
-      return res.status(404).json({ message: "Invoice not found" });
-    }
+    const Plan = await planModel.findById(invoiceData.planId)
+    .populate('Category')  // This can be removed if Category is not directly in buyPlanModel.
+
+
 
     const browser = await puppeteer.launch({
       headless: "new",
@@ -6356,98 +6355,348 @@ const generateUserAttachPDFFinal = async (id, res) => {
 
     const htmlContent = `
       <div class="invoice">
-        <div style="min-height:100vh;">
-          <div class="invoice-header" style="border-bottom:2px solid green">
-            <div class="invoice-header-left">
-              <img src="https://backend-2o7f.onrender.com/uploads/new/image-1726306777273.webp" alt="Company Logo" width="250">
-            </div>
-            <div class="invoice-header-right">
-              <p>WZ 10C, A-2 Block, Asalatpur Near Mata Chanan Devi Hospital, Janakpuri, New Delhi, 110058</p>
-              <p>Email: info@ynbhealthcare.com</p>
-              <p>Phone: +91 8100188188</p>
-            </div>
+
+      <div style="min-height:100vh;">
+
+         <div class="invoice-header" style="border-bottom:2px solid green">
+          <div class="invoice-header-left">
+            <img src="https://backend-2o7f.onrender.com/uploads/new/image-1726306777273.webp" alt="Company Logo" width="250">
+           
           </div>
-
-          <p>
-            TO<br/><br/>
-            <b>${invoiceData.userId?.username}</b>,<br/>
-            <b>Email Id</b>: ${invoiceData.userId?.email}<br/>
-            <b>Phone No.</b>: ${invoiceData.userId?.phone}<br/> 
-            Dear Customer,<br/><br/>
-            Thank you for choosing the YNB Super Health Card. This card offers a comprehensive range of healthcare services
-            at discounted rates, ensuring that you have access to high-quality care when needed. Please review the following
-            details to understand the benefits and services offered under this plan.
-          </p>
-
-          <br><br>
-          <p style="color:blue;">Benefits and Services:</p>
-          <ul>
-            <li>Cost: ₹${Plan?.price}</li>
-            <li>Validity: ${Plan?.validity} Days from the date of activation</li>
-          </ul>
-
-          <hr>
-          <p style="color:blue;">Annual Membership Fee:</p>
-          <ol>
-            ${Plan?.Category?.map(category => `<li>${category.name}</li>`).join('')}
-          </ol>
+          <div class="invoice-header-right">
+            <p>WZ 10C, A-2 Block, Asalatpur Near Mata Chanan Devi Hospital, Janakpuri, New Delhi, 110058</p>
+            <p>Email: info@ynbhealthcare.com</p>
+            <p>Phone: +91 8100188188</p>
+          </div>
         </div>
 
-        <div style="min-height:200vh;">
-          <br/>
-          <h2 style="text-align:center">TERMS AND CONDITION</h2>
-          <ol>
-            <!-- You can copy your terms and conditions here -->
-          </ol>
+        <p>
+        TO<br/><br/>
+<b>${invoiceData.userId?.username}</b>,<br/>
+<b>Email Id</b>: ${invoiceData.userId?.email}<br/>
+<b>Phone No.</b>: ${invoiceData.userId?.phone}<br/> 
+Dear Customer,<br/><br/>
+Thank you for choosing the YNB Super Health Card. This card offers a comprehensive range of healthcare services
+at discounted rates, ensuring that you have access to high-quality care when needed. Please review the following
+details to understand the benefits and services offered under this plan.
+</p>
+
+<br>
+<br>
+<p style="color:blue;">Benefits and Services:</p> 
+<ul>
+<li>
+   Cost: ₹${Plan?.price}
+  </li>
+<li>
+  Validity: ${Plan?.validity} Days from the date of activation
+  </li>
+</ul>
+  
+<hr>
+<p style="color:blue;">Annual Membership Fee:</p> 
+<ol>
+ 
+${Plan?.Category?.map(category => `<li>${category.name}</li>`).join('')}
+ 
+</ol>
+
+  </div>
+      <div style="min-height:200vh;">
+
+<br/>
+ <h2 style="text-align:center">  TERMS AND CONDITION </h2>
+
+ <ol>
+
+ <li>
+ Doctor Recommendation Paper or Discharge Summary Requirement
+A valid doctor recommendation paper or discharge summary, dated with the current date, is
+mandatory to avail any services, excluding doctor consultations.
+</li>
+<li>
+Service Booking Procedure
+To avail any service, please contact our helpline at 8100-188-188 to book the service. Services
+will be provided only after the booking is confirmed.
+</li>
+<li>
+Service Timings
+Services will be provided as per the specific timings mentioned for each service. Please ensure
+that you are aware of the timings before booking.</li>
+<li>
+Card and ID Verification
+At the time of booking and availing the service, you must present your Card along with a valid
+Aadhar card for verification purposes.</li>
+<li>
+Service Delivery Time
+The service delivery will take approximately 4 to 6 hours, or will be completed at the earliest
+possible time, depending on availability and scheduling.</li>
+<li> Doctor Consultation Booking
+For doctor consultations, please call 8100-188-188 to book your appointment slot. Kindly
+ensure that you are available at the scheduled time for the consultation.
+</li>
+<li> Eligibility Criteria
+Services are available to cardholders only. You must be a valid cardholder to access any
+of the services listed. Proof of eligibility, such as the card and Aadhar card, will be
+required at the time of booking and service delivery.
+</li>
+<li>Service Modifications or Cancellations
+Any changes or cancellations to the booked service must be made at least 24 hours prior
+to the scheduled service. Failure to do so may result in a service fee or non-refund of
+booking charges.
+</li>
+<li>
+ Appointment Delays
+While we strive to deliver services within the designated timeframe (4 to 6 hours),
+occasional delays may occur due to unforeseen circumstances. We will keep you
+informed of any delays and do our best to reschedule at the earliest convenience
+</li>
+<li> Availability of Services
+The availability of services is subject to location, service type, and professional
+availability. We reserve the right to limit or deny services in certain circumstances,
+including but not limited to high demand or resource shortages.
+</li>
+<li> Service Payment
+Payment for services, if applicable, must be made at the time of booking or as per the
+agreed terms. Failure to make payment as required will result in the cancellation of the
+booking.
+</li>
+<li> Service Compliance and Conduct
+All individuals availing services must comply with the guidelines set by the service
+provider. Any inappropriate behaviour or failure to adhere to the conduct rules may result
+in the cancellation of services without refund.
+</li>
+<li> Confidentiality and Data Security
+All personal data, including card details and medical records, will be handled with the
+highest level of confidentiality and in accordance with applicable data protection laws.
+We ensure that your information is securely processed.
+</li>
+<li>
+ Liability Disclaimer
+We will not be held responsible for any indirect, incidental, or consequential damages
+arising from the use of our services. Any medical concerns or health-related issues should
+be consulted with the appropriate medical professional.
+</li>
+<li>
+ Service Scope
+The scope of each service is defined clearly and must be adhered to. Additional services
+requested outside of the initial scope may incur extra charges, and will be subject to
+availability
+</li>
+<li>  Non-transferability
+Services and appointments are non-transferable. Only the cardholder and verified
+individual can avail the services as per the booking.
+</li>
+<li> Force Majeure
+We will not be held liable for any failure to deliver services due to circumstances beyond our control, including natural disasters, pandemics, governmental restrictions, or any
+other unforeseen events.
+</li>
+<li> Updates to Terms and Conditions
+These terms and conditions are subject to change at any time. It is your responsibility to
+review them regularly. Continued use of our services implies acceptance of the revised
+terms and conditions.
+</li>
+<li> Service Availability & Accessibility
+Services may not be available in certain regions or during specified blackout periods. We
+reserve the right to adjust service availability based on regional restrictions, holidays, or
+other operational constraints. It is your responsibility to confirm availability before
+booking.
+</li>
+<li> Medical Emergency Disclaimer
+The SERVICES provided through our platform are not intended as a substitute for
+emergency medical care. In case of a medical emergency, you are advised to seek
+immediate attention at the nearest medical facility or contact emergency services.
+</li>
+<li>  Service Provider Qualifications
+All professionals providing services through our platform are licensed and qualified.
+However, we do not assume liability for any direct or indirect consequences resulting
+from the services rendered. It is important to verify qualifications when required.
+</li>
+<li> No Guarantee of Results
+While we strive to deliver services in the best possible manner, we do not guarantee
+specific outcomes or results from the services rendered. The effectiveness of services
+may vary depending on individual circumstances and health conditions.
+</li>
+<li> Cardholder Responsibility
+As a cardholder, you are responsible for keeping your card and Aadhar card details
+secure. We are not liable for any misuse or fraudulent activity resulting from the loss or
+unauthorized use of your card or associated credentials.
+</li>
+<li>
+ Changes in Service Charges
+We reserve the right to revise service charges or introduce additional fees as necessary.
+Any changes in charges will be communicated clearly before booking, and will only
+apply to future bookings or services, not existing bookings.
+</li>
+<li>
+Dispute Resolution
+In case of any dispute or dissatisfaction with the service provided, the cardholder must
+contact our customer support at 8100-188-188. If the issue is not resolved through
+customer support, disputes may be resolved through mediation or other legal channels as
+outlined in the service agreement.
+</li>
+<li>
+ Health Information Consent
+By booking certain services, you consent to sharing relevant medical history or health
+information required for the provision of that service. This information will be handled
+according to applicable privacy laws and will only be shared with professionals providing
+the service.
+</li>
+<li>
+Third-Party Services
+Some services may involve third-party providers. We are not responsible for the quality
+or accuracy of the services provided by these third parties, and their terms and conditions
+may apply in addition to our own.
+
+</li>
+
+<li>
+Right to Refuse Service
+We reserve the right to refuse or cancel any service booking at our discretion, especially
+if we believe that the service may not be appropriate or safe for the cardholder, or if the
+booking violates our terms and conditions.
+</li>
+<li>
+Service Complaints & Feedback
+If you have any complaints or feedback regarding the service, you must notify us within
+48 hours after receiving the service. We will investigate and resolve the matter as
+quickly as possible. Your feedback helps improve our service quality.
+</li>
+<li>
+Age Restrictions
+Some services may have age restrictions. You must ensure that you or the individual
+receiving the service meet the necessary age requirements. For services related to
+children, a legal guardian must provide consent.
+
+</li>
+<li>
+Promotional Offers and Discounts
+Any discounts or promotional offers are valid only as per the terms specified and cannot
+be combined with other offers. Offers are subject to availability and may be withdrawn at
+any time without notice.
+
+</li>
+ 
+</ol>
+  </div>
+
+  <div style="height:100vh;">
+
+
+        <div class="invoice-header">
+          <div class="invoice-header-left">
+            <img src="https://backend-2o7f.onrender.com/uploads/new/image-1726306777273.webp" alt="Company Logo" width="250">
+            <p>WZ 10C, A-2 Block, Asalatpur Near Mata Chanan Devi Hospital, Janakpuri, New Delhi, 110058</p>
+            <p>Email: info@ynbhealthcare.com</p>
+            <p>Phone: +91 8100188188</p>
+          </div>
+          <div class="invoice-header-right">
+            <h2>Invoice</h2>
+            <p>Invoice Number: #${invoiceData?.paymentId}</p>
+            <p>Date: ${formatDate(invoiceData?.createdAt)}</p>
+            <p>Full Name: ${invoiceData.userId?.username}</p>
+            <p>Email: ${invoiceData.userId?.email}</p>
+            <p>Phone No.: ${invoiceData.userId?.phone}</p>
+            <p style="color: ${paymentColor}">Payment Status: ${paymentText}</p>
+          </div>
         </div>
 
-        <div style="height:100vh;">
-          <div class="invoice-header">
-            <div class="invoice-header-left">
-              <img src="https://backend-2o7f.onrender.com/uploads/new/image-1726306777273.webp" alt="Company Logo" width="250">
-              <p>WZ 10C, A-2 Block, Asalatpur Near Mata Chanan Devi Hospital, Janakpuri, New Delhi, 110058</p>
-              <p>Email: info@ynbhealthcare.com</p>
-              <p>Phone: +91 8100188188</p>
-            </div>
-            <div class="invoice-header-right">
-              <h2>Invoice</h2>
-              <p>Invoice Number: #${invoiceData?.paymentId}</p>
-              <p>Date: ${formatDate(invoiceData?.createdAt)}</p>
-              <p>Full Name: ${invoiceData.userId?.username}</p>
-              <p>Email: ${invoiceData.userId?.email}</p>
-              <p>Phone No.: ${invoiceData.userId?.phone}</p>
-              <p style="color: ${paymentColor}">Payment Status: ${paymentText}</p>
-            </div>
-          </div>
+        <table class="invoice-table">
+          <thead>
+            <tr>
+              <th>Item</th>
+              <th>Total</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>${invoiceData.planId?.name}</td>
+              <td>₹${parseFloat(amountWithoutGST.toFixed(2))}</td>
+            </tr>
+          </tbody>
+        </table>
 
-          <table class="invoice-table">
-            <thead>
-              <tr>
-                <th>Item</th>
-                <th>Total</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td>${invoiceData.planId?.name}</td>
-                <td>₹${parseFloat(amountWithoutGST.toFixed(2))}</td>
-              </tr>
-            </tbody>
-          </table>
+        <div class="invoice-total">
+          <p>Subtotal: ₹${parseFloat(amountWithoutGST.toFixed(2))}</p>
+          ${gstSection}
+          <p>Total: ₹${invoiceData?.totalAmount.toFixed(2)}</p>
+        </div>
 
-          <div class="invoice-total">
-            <p>Subtotal: ₹${parseFloat(amountWithoutGST.toFixed(2))}</p>
-            ${gstSection}
-            <p>Total: ₹${invoiceData?.totalAmount.toFixed(2)}</p>
-          </div>
-
-          <div class="invoice-footer">
-            <div class="text-center mt-3">
-              <p>Thank you for your support</p>
-            </div>
+        <div class="invoice-footer">
+          <div class="text-center mt-3">
+            <p>Thank you for your support</p>
           </div>
         </div>
       </div>
+  </div>
+   
+  
+  
+ <div style="height:100vh;">
+   <div class="d-flex">
+  <div class="mycard myheight">
+    <div class="d-flex">
+    <img src="https://backend-2o7f.onrender.com/uploads/new/image-1726306777273.webp" width="200"/>
+    <h4 style="text-align: right;width:100%;"> HEALTH CARD</h4>
+  </div>
+      <h4> Registration ID : ${invoiceData?.paymentId} </h4>
+
+       
+          <h4 style="margin:0px;margin-bottom:5px;" > Full Name : ${invoiceData.userId?.username} </h4>
+          <h4 style="margin:0px;margin-bottom:5px;" > Email ID : ${invoiceData.userId?.email} </h4>
+        
+    <h4 style="margin:0px;margin-bottom:5px;"> Phone No. : ${invoiceData.userId?.phone} </h4>
+  </div>
+    <div class="mycard myheight">
+        <div class="d-flex" style="justify-content:center;">
+
+  <svg width="20" height="20" xmlns="http://www.w3.org/2000/svg" shape-rendering="geometricPrecision" text-rendering="geometricPrecision" image-rendering="optimizeQuality" fill-rule="evenodd" clip-rule="evenodd" viewBox="0 0 279 512.01"><path fill-rule="nonzero" d="M122.89 495.31h33.22c29.19 0 55.74-11.95 74.99-31.2 19.24-19.25 31.2-45.8 31.2-74.99V275.56H16.7v113.56c0 29.19 11.96 55.74 31.2 74.99 19.25 19.25 45.8 31.2 74.99 31.2zm5.23-412.59V64.69c0-9.7-1.53-17.63-4.22-23.92-3.06-7.16-7.7-12.31-13.31-15.63-5.76-3.4-12.72-5.02-20.22-5.02-8.35 0-17.26 1.99-25.9 5.68-5.1 2.16-11-.21-13.16-5.31-2.17-5.1.21-10.99 5.3-13.16C67.77 2.56 79.38 0 90.37 0c10.96 0 21.43 2.52 30.44 7.85 9.17 5.43 16.7 13.7 21.56 25.06 3.74 8.77 5.88 19.33 5.88 31.78v18.03h7.86c33.8 0 64.53 13.82 86.8 36.09 22.27 22.27 36.09 53 36.09 86.8v183.51c0 33.8-13.82 64.53-36.09 86.8-22.27 22.27-53 36.09-86.8 36.09h-33.22c-33.8 0-64.53-13.82-86.8-36.09C13.82 453.65 0 422.92 0 389.12V205.61c0-33.8 13.82-64.53 36.09-86.8 22.27-22.27 53-36.09 86.8-36.09h5.23zM262.3 258.86v-53.25c0-29.19-11.96-55.74-31.2-74.99-19.25-19.25-45.8-31.2-74.99-31.2h-6.55v50.99c7.28 3.71 12.3 11.29 12.3 19.94v35.75c0 8.64-5.03 16.22-12.3 19.93v32.83H262.3zm-132.86 0v-32.82c-7.26-3.7-12.3-11.26-12.3-19.94v-35.75c0-8.68 5.02-16.25 12.3-19.94V99.42h-6.55c-29.19 0-55.74 11.95-74.99 31.2-19.24 19.25-31.2 45.8-31.2 74.99v53.25h112.74z"/></svg>
+  <h4 style="font-weight:100;margin:0px;margin-bottom:5px;"> www.ynbhealthcare.com </h4>
+    </div>
+    
+    
+    <div class="mycard " style="border-radius:0px;width:auto;text-align:center;padding:8px;margin-bottom:5px;">
+    <div class="d-flex" style="padding:0px;">
+
+    <svg width="20px" height="20px" viewBox="0 0 20 20" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+     
+ 
+    <g id="Page-1" stroke="none" stroke-width="1" fill="none" fill-rule="evenodd">
+        <g id="Dribbble-Light-Preview" transform="translate(-300.000000, -7599.000000)" fill="#000000">
+            <g id="icons" transform="translate(56.000000, 160.000000)">
+                <path d="M259.821,7453.12124 C259.58,7453.80344 258.622,7454.36761 257.858,7454.53266 C257.335,7454.64369 256.653,7454.73172 254.355,7453.77943 C251.774,7452.71011 248.19,7448.90097 248.19,7446.36621 C248.19,7445.07582 248.934,7443.57337 250.235,7443.57337 C250.861,7443.57337 250.999,7443.58538 251.205,7444.07952 C251.446,7444.6617 252.034,7446.09613 252.104,7446.24317 C252.393,7446.84635 251.81,7447.19946 251.387,7447.72462 C251.252,7447.88266 251.099,7448.05372 251.27,7448.3478 C251.44,7448.63589 252.028,7449.59418 252.892,7450.36341 C254.008,7451.35771 254.913,7451.6748 255.237,7451.80984 C255.478,7451.90987 255.766,7451.88687 255.942,7451.69881 C256.165,7451.45774 256.442,7451.05762 256.724,7450.6635 C256.923,7450.38141 257.176,7450.3464 257.441,7450.44643 C257.62,7450.50845 259.895,7451.56477 259.991,7451.73382 C260.062,7451.85686 260.062,7452.43903 259.821,7453.12124 M254.002,7439 L253.997,7439 L253.997,7439 C248.484,7439 244,7443.48535 244,7449 C244,7451.18666 244.705,7453.21526 245.904,7454.86076 L244.658,7458.57687 L248.501,7457.3485 C250.082,7458.39482 251.969,7459 254.002,7459 C259.515,7459 264,7454.51465 264,7449 C264,7443.48535 259.515,7439 254.002,7439" id="whatsapp-[#128]">
+
+</path>
+            </g>
+        </g>
+    </g>
+</svg> 
+ 
+
+<p style="margin:0px;font-size:12px; " > Whatsapp </p>
+<h4 style="margin:0px;font-size:12px;"> 9871582633 </h4>
+
+    </div>
+
+    </div>
+     
+      <h4 style="margin:0px;"> Disclaimer </h4>
+      <ol style="
+    font-size: 11px;
+">
+      <li> This card is not transferable
+      </li>
+      <li>  Use of this card is governed by the policy terms 
+      </li>
+      <li>To avail cashless facility.this card needs to be produced along with photo
+      </li>
+      <li>valid upto policy period end date or cancellation date,whichever is earlier Registration ID. ${invoiceData?.paymentId}    </li>
+      </ol>
+     
+
+  </div>
+    </div>
+    </div>
 
       <style>
         body {
@@ -6479,7 +6728,8 @@ const generateUserAttachPDFFinal = async (id, res) => {
           border-collapse: collapse;
           margin-bottom: 10%;
         }
-        .invoice-table th, .invoice-table td {
+        .invoice-table th,
+        .invoice-table td {
           border: 1px solid #000;
           padding: 10px;
           text-align: center;
@@ -6490,50 +6740,31 @@ const generateUserAttachPDFFinal = async (id, res) => {
         .invoice-total {
           float: right;
         }
-        .d-flex {
-          display: flex;
-          gap: 20px;
-          align-items: center;
-        }
-        .mycard {
-          border: 2px solid black;
-          border-radius: 20px;
-          padding: 10px;
-          width: 100%;
-        }
-        .myheight {
-          min-height: 200px;
-        }
+           .d-flex{
+      display:flex;
+      gap:20px;
+      align-items:center;
+      }
+      .mycard{
+      border:2px solid black;
+     border-radius:20px;
+     padding:10px;
+     width:100%;
+      }
+      .myheight{
+      min-height:200px;
+      }
       </style>
     `;
 
     await page.setContent(htmlContent);
-    const pdfPath = `invoice-${invoiceData.paymentId}.pdf`;
-
-    await page.pdf({
-      path: pdfPath,
-      format: 'A4',
-      printBackground: true,
-    });
+    const pdfBuffer = await page.pdf({ format: "A4" });
 
     await browser.close();
-
-    // Send the response only once after PDF generation is completed
-    return res.status(200).send({
-      message: "PDF generated successfully",
-      pdfPath: pdfPath,
-    });
-
-  } catch (error) {
-    console.error("Error generating PDF:", error);
-    // Send error response only once if an exception occurs
-    if (!res.headersSent) {
-      return res.status(500).json({ message: "Error generating PDF", error });
-    }
-  }
+  
+    return  pdfBuffer;
 };
 
- 
 
 
 export const checkUserPlan = async (req, res) => {
@@ -7161,7 +7392,7 @@ export const BuyPlanAddUser = async (req, res) => {
 };
 
 
-export const PaymentSuccess_old = async (req, res) => {
+export const PaymentSuccess = async (req, res) => {
   // Extract the PayU response params sent to successUrl
   const { txnid, status } = req.body;
 
@@ -7205,7 +7436,7 @@ export const PaymentSuccess_old = async (req, res) => {
 
    console.log('WHATSAPP',WHATSAPP,updatedTransaction?.userId.phone );
     const userEmail = updatedTransaction?.userId.email;
-    const pdfBuffer = await generateUserAttachPDFFinal(updatedTransaction._id,res);
+    const pdfBuffer = await generateUserAttachPDFFinal(updatedTransaction._id);
 
 
     // Send payment ID to the user's email using nodemailer
@@ -7259,114 +7490,6 @@ export const PaymentSuccess_old = async (req, res) => {
   }
 
 };
-
-export const PaymentSuccess = async (req, res) => {
-  try {
-    // Extract the PayU response params sent to successUrl
-    const { txnid, status } = req.body;
-
-    if (status === 'success') {
-      // Update the payment status if the transaction exists, or create a new one
-      const updatedTransaction = await buyPlanModel.findOneAndUpdate(
-        { razorpay_order_id: txnid }, // Find the transaction by txnid
-        {
-          $set: {
-            payment: 1, // Payment successful
-          },
-        },
-        { new: true, upsert: true } // `new: true` returns the updated document, `upsert: true` creates a new document if not found
-      ).populate('userId'); // Assuming 'user' is the reference field to the user model
-
-      if (!updatedTransaction) {
-        // If no transaction is found, redirect to fail URL
-        return res.redirect(process.env.RFAILURL);
-      }
-
-      // Send notification
-      const notificationData = {
-        mobile: `91${updatedTransaction?.userId.phone}`,
-        templateid: "947805560855158",
-        overridebot: "yes/no",
-        template: {
-          components: [
-            {
-              type: "body",
-              parameters: [
-                { type: "text", text: updatedTransaction?.userId.username },
-                { type: "text", text: `https://ynbhealthcare.com/card-view/${updatedTransaction._id}` }
-              ]
-            }
-          ]
-        }
-      };
-
-      const WHATSAPP = await axios.post(process.env.WHATSAPPAPI, notificationData, {
-        headers: {
-          "API-KEY": process.env.WHATSAPPKEY,
-          "Content-Type": "application/json"
-        }
-      });
-
-      console.log('WHATSAPP', WHATSAPP, updatedTransaction?.userId.phone);
-
-      const userEmail = updatedTransaction?.userId.email;
-      const pdfBuffer = await generateUserAttachPDFFinal(updatedTransaction._id,res);
-
-      // Send payment ID to the user's email using nodemailer
-      const transporter = nodemailer.createTransport({
-        host: process.env.MAIL_HOST, // Your SMTP host
-        port: process.env.MAIL_PORT, // Your SMTP port
-        secure: process.env.MAIL_ENCRYPTION === 'true', // If using SSL/TLS
-        auth: {
-          user: process.env.MAIL_USERNAME, // Your email address
-          pass: process.env.MAIL_PASSWORD, // Your email password
-        },
-      });
-
-      const mailOptions = {
-        from: process.env.MAIL_FROM_ADDRESS, // Your email address
-        to: userEmail, // User's email
-        subject: "Payment Successful - Your Payment ID",
-        text: `Hello, \n\nYour payment has been successfully processed. Your payment ID is: ${txnid}. \n\nThank you for choosing us!  \n\n
-          Terms & condition:- https://ynbhealthcare.com/assets/pdf/t&c.pdf
-          \n\n
-          Health card link:- https://ynbhealthcare.com/card-view/${updatedTransaction._id}
-          \n\n
-          Best Regards,\n
-          YNB Healthcare Team`,
-        attachments: [
-          {
-            filename: 'invoice.pdf',
-            content: pdfBuffer, // Attach the PDF buffer here
-            encoding: 'base64',
-          },
-        ],
-      };
-
-      // Send email
-      transporter.sendMail(mailOptions, (error, info) => {
-        if (error) {
-          console.error(error);
-          return res.status(500).send("Failed to send email");
-        } else {
-          console.log("Payment ID sent to user email: " + info.response);
-        }
-      });
-
-      return res.redirect(`${process.env.RSUCCESSURL}/${txnid}`);
-
-    } else {
-      // If payment status is not 'success', redirect to fail URL
-      return res.redirect(process.env.RFAILURL);
-    }
-
-  } catch (error) {
-    console.error('Error processing payment success:', error);
-    // Send a failure response in case of unexpected error
-    return res.status(500).send("An error occurred while processing the payment.");
-  }
-};
-
 
 export const PaymentFail = async (req, res) => {
   res.redirect(process.env.RFAILURL);
