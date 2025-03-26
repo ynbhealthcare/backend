@@ -6305,6 +6305,7 @@ any time without notice.
     return res.status(500).json({ message: "Internal Server Error" });
   }
 };
+ 
  const generateUserAttachPDFFinal = async (id) => {
   try {
  
@@ -7403,7 +7404,7 @@ export const BuyPlanAddUser = async (req, res) => {
 };
 
 
-export const PaymentSuccess = async (req, res) => {
+export const PaymentSuccess_old = async (req, res) => {
   // Extract the PayU response params sent to successUrl
   const { txnid, status } = req.body;
 
@@ -7501,6 +7502,114 @@ export const PaymentSuccess = async (req, res) => {
   }
 
 };
+
+export const PaymentSuccess = async (req, res) => {
+  try {
+    // Extract the PayU response params sent to successUrl
+    const { txnid, status } = req.body;
+
+    if (status === 'success') {
+      // Update the payment status if the transaction exists, or create a new one
+      const updatedTransaction = await buyPlanModel.findOneAndUpdate(
+        { razorpay_order_id: txnid }, // Find the transaction by txnid
+        {
+          $set: {
+            payment: 1, // Payment successful
+          },
+        },
+        { new: true, upsert: true } // `new: true` returns the updated document, `upsert: true` creates a new document if not found
+      ).populate('userId'); // Assuming 'user' is the reference field to the user model
+
+      if (!updatedTransaction) {
+        // If no transaction is found, redirect to fail URL
+        return res.redirect(process.env.RFAILURL);
+      }
+
+      // Send notification
+      const notificationData = {
+        mobile: `91${updatedTransaction?.userId.phone}`,
+        templateid: "947805560855158",
+        overridebot: "yes/no",
+        template: {
+          components: [
+            {
+              type: "body",
+              parameters: [
+                { type: "text", text: updatedTransaction?.userId.username },
+                { type: "text", text: `https://ynbhealthcare.com/card-view/${updatedTransaction._id}` }
+              ]
+            }
+          ]
+        }
+      };
+
+      const WHATSAPP = await axios.post(process.env.WHATSAPPAPI, notificationData, {
+        headers: {
+          "API-KEY": process.env.WHATSAPPKEY,
+          "Content-Type": "application/json"
+        }
+      });
+
+      console.log('WHATSAPP', WHATSAPP, updatedTransaction?.userId.phone);
+
+      const userEmail = updatedTransaction?.userId.email;
+      const pdfBuffer = await generateUserAttachPDFFinal(updatedTransaction._id);
+
+      // Send payment ID to the user's email using nodemailer
+      const transporter = nodemailer.createTransport({
+        host: process.env.MAIL_HOST, // Your SMTP host
+        port: process.env.MAIL_PORT, // Your SMTP port
+        secure: process.env.MAIL_ENCRYPTION === 'true', // If using SSL/TLS
+        auth: {
+          user: process.env.MAIL_USERNAME, // Your email address
+          pass: process.env.MAIL_PASSWORD, // Your email password
+        },
+      });
+
+      const mailOptions = {
+        from: process.env.MAIL_FROM_ADDRESS, // Your email address
+        to: userEmail, // User's email
+        subject: "Payment Successful - Your Payment ID",
+        text: `Hello, \n\nYour payment has been successfully processed. Your payment ID is: ${txnid}. \n\nThank you for choosing us!  \n\n
+          Terms & condition:- https://ynbhealthcare.com/assets/pdf/t&c.pdf
+          \n\n
+          Health card link:- https://ynbhealthcare.com/card-view/${updatedTransaction._id}
+          \n\n
+          Best Regards,\n
+          YNB Healthcare Team`,
+        attachments: [
+          {
+            filename: 'invoice.pdf',
+            content: pdfBuffer, // Attach the PDF buffer here
+            encoding: 'base64',
+          },
+        ],
+      };
+
+      // Send email
+      transporter.sendMail(mailOptions, (error, info) => {
+        if (error) {
+          console.error(error);
+          return res.status(500).send("Failed to send email");
+        } else {
+          console.log("Payment ID sent to user email: " + info.response);
+        }
+      });
+
+      return res.redirect(`${process.env.RSUCCESSURL}/${txnid}`);
+
+    } else {
+      // If payment status is not 'success', redirect to fail URL
+      return res.redirect(process.env.RFAILURL);
+    }
+
+  } catch (error) {
+    console.error('Error processing payment success:', error);
+    // Send a failure response in case of unexpected error
+    return res.status(500).send("An error occurred while processing the payment.");
+  }
+};
+
 
 export const PaymentFail = async (req, res) => {
   res.redirect(process.env.RFAILURL);
