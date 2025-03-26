@@ -6310,8 +6310,7 @@ any time without notice.
 const generateUserAttachPDFFinal = async (id, res) => {
   try {
     const invoiceData = await buyPlanModel.findById(id).populate('userId');
-    const Plan = await planModel.findById(invoiceData.planId)
-      .populate('Category'); // This can be removed if Category is not directly in buyPlanModel.
+    const Plan = await planModel.findById(invoiceData.planId).populate('Category');
 
     if (!invoiceData) {
       return res.status(404).json({ message: "Invoice not found" });
@@ -6509,23 +6508,31 @@ const generateUserAttachPDFFinal = async (id, res) => {
     `;
 
     await page.setContent(htmlContent);
+    const pdfPath = `invoice-${invoiceData.paymentId}.pdf`;
+
     await page.pdf({
-      path: `invoice-${invoiceData.paymentId}.pdf`,
+      path: pdfPath,
       format: 'A4',
       printBackground: true,
     });
 
     await browser.close();
 
+    // Send the response only once after PDF generation is completed
     return res.status(200).send({
       message: "PDF generated successfully",
-      pdfPath: `invoice-${invoiceData.paymentId}.pdf`,
+      pdfPath: pdfPath,
     });
+
   } catch (error) {
     console.error("Error generating PDF:", error);
-    return res.status(500).json({ message: "Error generating PDF", error });
+    // Send error response only once if an exception occurs
+    if (!res.headersSent) {
+      return res.status(500).json({ message: "Error generating PDF", error });
+    }
   }
 };
+
  
 
 
