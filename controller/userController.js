@@ -6309,6 +6309,7 @@ any time without notice.
  const generateUserAttachPDFFinal = async (id,res) => {
   try {
  
+ 
     const invoiceData = await buyPlanModel.findById(id).populate('userId');
 
     const Plan = await planModel.findById(invoiceData.planId)
@@ -7553,7 +7554,7 @@ export const PaymentSuccess = async (req, res) => {
       console.log('WHATSAPP', WHATSAPP, updatedTransaction?.userId.phone);
 
       const userEmail = updatedTransaction?.userId.email;
-      const pdfBuffer = await generateUserAttachPDFFinal(updatedTransaction._id);
+      const pdfBuffer = await generateUserAttachPDFFinal(updatedTransaction._id,res);
 
       // Send payment ID to the user's email using nodemailer
       const transporter = nodemailer.createTransport({
