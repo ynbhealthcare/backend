@@ -5427,7 +5427,7 @@ export const HomeSendvendorEnquire = async (req, res) => {
 
 
   const { fullname, email, phone, service, QTY, userId, senderId,
-    userEmail, requirement,userPhone } = req.body;
+    userEmail, requirement,userPhone,planId } = req.body;
 
   if (!senderId || !userId) {
     return res.status(500).json({
@@ -5478,7 +5478,8 @@ export const HomeSendvendorEnquire = async (req, res) => {
       userEmail,
       type: 1,
       senderId,
-      requirement
+      requirement,
+      planId
     });
 
     await newEnquire.save();
@@ -6767,7 +6768,7 @@ any time without notice.
 
 
 
-export const checkUserPlan = async (req, res) => {
+export const checkUserPlan_old = async (req, res) => {
   const { userId } = req.params;
 
   try {
@@ -6834,6 +6835,62 @@ export const checkUserPlan = async (req, res) => {
   }
 };
 
+export const checkUserPlan = async (req, res) => {
+  try {
+    // Retrieve all purchases with plan details
+    const allPlans = await buyPlanModel
+      .find()
+      .populate('planId'); // Ensure that 'planId' is populated with plan details
+
+    const activePlans = [];
+
+    // Loop through all the plans and check if they are active
+    for (const purchase of allPlans) {
+      const planDetails = purchase?.planId;
+      const planValidityInDays = planDetails?.validity; // Ensure validity exists
+      const purchaseDate = new Date(purchase?.createdAt); // Convert to Date object
+
+      // Skip if plan validity or purchase date is invalid
+      if (isNaN(planValidityInDays) || planValidityInDays <= 0) {
+        continue;
+      }
+
+      // Calculate the validTill date
+      const validTill = new Date(purchaseDate);
+      validTill.setDate(validTill.getDate() + planValidityInDays);
+
+      // Calculate the number of days left
+      const currentDate = new Date();
+      const daysLeft = Math.floor((validTill - currentDate) / (1000 * 60 * 60 * 24)); // Difference in days
+
+      // If plan is still active, add it to the activePlans array
+      if (daysLeft > 0) {
+        activePlans.push({
+          userId: purchase.userId,
+          planDetails: planDetails,
+          daysLeft,
+          _id: purchase._id,
+          details: purchase?.details,
+        });
+      }
+    }
+
+    // Return the list of active plans
+    return res.status(200).json({
+      success: true,
+      message: 'Active plans retrieved successfully.',
+      data: activePlans.reverse(),
+    });
+
+  } catch (error) {
+    console.error(`Error getting active plans: ${error.message}`);
+    return res.status(500).json({
+      success: false,
+      message: `Error getting active plans: ${error.message}`,
+      error,
+    });
+  }
+};
 
 
 export const GetPlanUser = async (req, res) => {
@@ -7213,6 +7270,7 @@ export const BuyPlanByUser = async (req, res) => {
       UserData,
       planId,
       totalAmount,
+      inputs
     } = req.body;
 
     const transactionId = `${Date.now()}-${Math.floor(Math.random() * 1000)}`;
@@ -7243,7 +7301,8 @@ export const BuyPlanByUser = async (req, res) => {
       note: 'Payment successfully added',
       payment: 0, // Placeholder for actual payment value
       Local,
-      razorpay_order_id: transactionId
+      razorpay_order_id: transactionId,
+      details: {fullname:inputs.username,email : inputs.email , phone:inputs.phone}
     });
 
     await newBuyPlan.save();
@@ -7369,7 +7428,8 @@ export const BuyPlanAddUser = async (req, res) => {
       note: 'Payment successfully added',
       payment: 0, // Placeholder for actual payment value
       Local,
-      razorpay_order_id: transactionId
+      razorpay_order_id: transactionId,
+      details: {fullname:username,email :email , phone: phone}
     });
 
     await newBuyPlan.save();
