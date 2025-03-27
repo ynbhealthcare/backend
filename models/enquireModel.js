@@ -30,6 +30,11 @@ const enquireSchema = mongoose.Schema({
   requirement : {
     type: String,
   },
+  planId : {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "buyplan",
+  },
+  
 },
   { timestamps: true }
 );
