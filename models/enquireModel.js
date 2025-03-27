@@ -1,4 +1,4 @@
-import mongoose from "mongoose";
+ import mongoose from "mongoose";
 
 const enquireSchema = mongoose.Schema({
   fullname: {
@@ -30,6 +30,11 @@ const enquireSchema = mongoose.Schema({
   requirement : {
     type: String,
   },
+  planId : {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "buyplan",
+  },
+  
 },
   { timestamps: true }
 );
