@@ -45,6 +45,10 @@ const buyplanSchema = new mongoose.Schema(
           Local: {
             type: Number,
           },
+
+          details: {
+            type: Object,
+        },
     },
     { timestamps: true }
 );
