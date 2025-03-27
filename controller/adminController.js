@@ -1,4 +1,4 @@
-import adminModel from "../models/adminModel.js";
+ import adminModel from "../models/adminModel.js";
 import bcrypt from "bcrypt";
 import galleryModel from "../models/galleryModel.js";
 import blogModel from "../models/blogModel.js";
