@@ -5897,7 +5897,7 @@ export const generateUserAttachPDF = async (req, res) => {
 
          <div class="invoice-header" style="border-bottom:2px solid green">
           <div class="invoice-header-left">
-            <img src="https://backend-2o7f.onrender.com/uploads/new/image-1726306777273.webp" alt="Company Logo" width="250">
+            <img src="https://ynbhealthcare.com/assets/img/logo-final.webp" alt="Company Logo" width="250">
            
           </div>
           <div class="invoice-header-right">
@@ -6122,7 +6122,7 @@ any time without notice.
 
         <div class="invoice-header">
           <div class="invoice-header-left">
-            <img src="https://backend-2o7f.onrender.com/uploads/new/image-1726306777273.webp" alt="Company Logo" width="250">
+            <img src="https://ynbhealthcare.com/assets/img/logo-final.webp" alt="Company Logo" width="250">
             <p>WZ 10C, A-2 Block, Asalatpur Near Mata Chanan Devi Hospital, Janakpuri, New Delhi, 110058</p>
             <p>Email: info@ynbhealthcare.com</p>
             <p>Phone: +91 8100188188</p>
@@ -6173,17 +6173,64 @@ any time without notice.
    <div class="d-flex">
   <div class="mycard myheight">
     <div class="d-flex">
-    <img src="https://backend-2o7f.onrender.com/uploads/new/image-1726306777273.webp" width="200"/>
+    <img src="https://ynbhealthcare.com/assets/img/logo-final.webp" width="200"/>
     <h4 style="text-align: right;width:100%;"> HEALTH CARD</h4>
   </div>
-      <h4> Registration ID : ${invoiceData?.paymentId} </h4>
 
-       
-          <h4 style="margin:0px;margin-bottom:5px;" > Full Name : ${invoiceData.userId?.username} </h4>
-          <h4 style="margin:0px;margin-bottom:5px;" > Email ID : ${invoiceData.userId?.email} </h4>
-        
-    <h4 style="margin:0px;margin-bottom:5px;"> Phone No. : ${invoiceData.userId?.phone} </h4>
+   <div class="d-flex" style="
+    background: #ffeded;
+    padding: 8px;
+">
+     <img src="https://backend-2o7f.onrender.com/${invoiceData?.details?.profile}" alt="Profile Image" width="80" style="
+    aspect-ratio: 1/1;
+    object-fit: cover;
+    border-radius: 10px;
+">  
+<div>
+    <p class="m-0 p-0"> <b> Rahul Rana </b> </p>
+  <p class="m-0 p-0">
+ 
+  ${(() => {
+    const dob = invoiceData.details.DOB; // The DOB in 'YYYY-MM-DD' format
+
+    // Create Date objects for the DOB and the current date
+    const dobDate = new Date(dob);
+    const currentDate = new Date();
+
+    // Calculate the difference in years (age)
+    let age = currentDate.getFullYear() - dobDate.getFullYear();
+    const monthDiff = currentDate.getMonth() - dobDate.getMonth();
+
+    // Adjust the age if the current date is before the birthday in the current year
+    if (monthDiff < 0 || (monthDiff === 0 && currentDate.getDate() < dobDate.getDate())) {
+      age--;
+    }
+
+    // Display the age
+    return age;
+  })()} | ${(() => {
+      const gender = invoiceData.details.gender;
+  
+      if (gender === 1 || gender === "1" ) {
+        return "Male";
+      } else if (gender === 2 || gender === "2" ) {
+        return "Female";
+      } else {
+        return "Other";
+      }
+    })()}    
+</p>
+<p class="m-0 p-0" style="margin-top:5px">
+    Registration ID : ${invoiceData?.paymentId}  </p>
+</div>
   </div>
+ 
+ 
+    <h4 style="margin:0px;margin-bottom:5px;" > Email ID : ${invoiceData.details?.email} </h4>
+    <h4 style="margin:0px;margin-bottom:5px;"> Phone No. : ${invoiceData.details?.phone} </h4>
+
+    
+      </div>
     <div class="mycard myheight">
         <div class="d-flex" style="justify-content:center;">
 
@@ -6210,8 +6257,8 @@ any time without notice.
 </svg> 
  
 
-<p style="margin:0px;font-size:12px; " > Whatsapp </p>
-<h4 style="margin:0px;font-size:12px;"> 9871582633 </h4>
+<p style="margin:0px;font-size:12px; " > Toll Free: </p>
+<h4 style="margin:0px;font-size:12px;"> +918100188188 </h4>
 
     </div>
 
@@ -6288,8 +6335,14 @@ any time without notice.
      padding:10px;
      width:100%;
       }
-      .myheight{
-      min-height:200px;
+     .myheight{
+      min-height:250px;
+      }
+      .m-0{
+          margin:0px;
+      }
+      .p-0{
+          padding:0px;
       }
       </style>
     `;
@@ -6364,7 +6417,7 @@ any time without notice.
 
          <div class="invoice-header" style="border-bottom:2px solid green">
           <div class="invoice-header-left">
-            <img src="https://backend-2o7f.onrender.com/uploads/new/image-1726306777273.webp" alt="Company Logo" width="250">
+            <img src="https://ynbhealthcare.com/assets/img/logo-final.webp" alt="Company Logo" width="250">
            
           </div>
           <div class="invoice-header-right">
@@ -6589,7 +6642,7 @@ any time without notice.
 
         <div class="invoice-header">
           <div class="invoice-header-left">
-            <img src="https://backend-2o7f.onrender.com/uploads/new/image-1726306777273.webp" alt="Company Logo" width="250">
+            <img src="https://ynbhealthcare.com/assets/img/logo-final.webp" alt="Company Logo" width="250">
             <p>WZ 10C, A-2 Block, Asalatpur Near Mata Chanan Devi Hospital, Janakpuri, New Delhi, 110058</p>
             <p>Email: info@ynbhealthcare.com</p>
             <p>Phone: +91 8100188188</p>
@@ -6635,22 +6688,68 @@ any time without notice.
   </div>
    
   
-  
- <div style="height:100vh;">
+  <div style="height:100vh;">
    <div class="d-flex">
   <div class="mycard myheight">
     <div class="d-flex">
-    <img src="https://backend-2o7f.onrender.com/uploads/new/image-1726306777273.webp" width="200"/>
+    <img src="https://ynbhealthcare.com/assets/img/logo-final.webp" width="200"/>
     <h4 style="text-align: right;width:100%;"> HEALTH CARD</h4>
   </div>
-      <h4> Registration ID : ${invoiceData?.paymentId} </h4>
 
-       
-          <h4 style="margin:0px;margin-bottom:5px;" > Full Name : ${invoiceData.userId?.username} </h4>
-          <h4 style="margin:0px;margin-bottom:5px;" > Email ID : ${invoiceData.userId?.email} </h4>
-        
-    <h4 style="margin:0px;margin-bottom:5px;"> Phone No. : ${invoiceData.userId?.phone} </h4>
+   <div class="d-flex" style="
+    background: #ffeded;
+    padding: 8px;
+">
+     <img src="https://backend-2o7f.onrender.com/${invoiceData?.details?.profile}" alt="Profile Image" width="80" style="
+    aspect-ratio: 1/1;
+    object-fit: cover;
+    border-radius: 10px;
+">  
+<div>
+    <p class="m-0 p-0"> <b> Rahul Rana </b> </p>
+  <p class="m-0 p-0">
+ 
+  ${(() => {
+    const dob = invoiceData.details.DOB; // The DOB in 'YYYY-MM-DD' format
+
+    // Create Date objects for the DOB and the current date
+    const dobDate = new Date(dob);
+    const currentDate = new Date();
+
+    // Calculate the difference in years (age)
+    let age = currentDate.getFullYear() - dobDate.getFullYear();
+    const monthDiff = currentDate.getMonth() - dobDate.getMonth();
+
+    // Adjust the age if the current date is before the birthday in the current year
+    if (monthDiff < 0 || (monthDiff === 0 && currentDate.getDate() < dobDate.getDate())) {
+      age--;
+    }
+
+    // Display the age
+    return age;
+  })()} | ${(() => {
+      const gender = invoiceData.details.gender;
+  
+      if (gender === 1 || gender === "1" ) {
+        return "Male";
+      } else if (gender === 2 || gender === "2" ) {
+        return "Female";
+      } else {
+        return "Other";
+      }
+    })()}    
+</p>
+<p class="m-0 p-0" style="margin-top:5px">
+    Registration ID : ${invoiceData?.paymentId}  </p>
+</div>
   </div>
+ 
+ 
+    <h4 style="margin:0px;margin-bottom:5px;" > Email ID : ${invoiceData.details?.email} </h4>
+    <h4 style="margin:0px;margin-bottom:5px;"> Phone No. : ${invoiceData.details?.phone} </h4>
+
+    
+      </div>
     <div class="mycard myheight">
         <div class="d-flex" style="justify-content:center;">
 
@@ -6677,8 +6776,8 @@ any time without notice.
 </svg> 
  
 
-<p style="margin:0px;font-size:12px; " > Whatsapp </p>
-<h4 style="margin:0px;font-size:12px;"> 9871582633 </h4>
+<p style="margin:0px;font-size:12px; " > Toll Free: </p>
+<h4 style="margin:0px;font-size:12px;"> +918100188188 </h4>
 
     </div>
 
@@ -6755,8 +6854,14 @@ any time without notice.
      padding:10px;
      width:100%;
       }
-      .myheight{
-      min-height:200px;
+     .myheight{
+      min-height:250px;
+      }
+      .m-0{
+          margin:0px;
+      }
+      .p-0{
+          padding:0px;
       }
       </style>
     `;
@@ -7287,8 +7392,11 @@ export const BuyPlanByUser = async (req, res) => {
       return res.status(500).json({ success: false, message: 'Profile image is required.' });
     }
 
-    const profileImg = req.files ? req.files.profile : profileImg;
+    let profileImg = req.files ? req.files.profile : profileImg;
 
+    if (profileImg && profileImg[0]) {
+      profileImg = profileImg[0].path.replace('public/', ''); // Remove 'public/' from the path
+    }
 
     const transactionId = `${Date.now()}-${Math.floor(Math.random() * 1000)}`;
 
@@ -7420,7 +7528,7 @@ export const BuyPlanAddUser = async (req, res) => {
       aadharno
     };
     if (profileImg && profileImg[0]) {
-      updateField.profile = profileImg[0].path; // Assumes profile[0] is the uploaded file
+      updateField.profile = profileImg[0].path.replace('public/', ''); // Assumes profile[0] is the uploaded file
     }
 
     const newUser = new userModel(updateField);
