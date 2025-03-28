@@ -17,7 +17,7 @@ import {
   , EmailVerify, postman, PaymentResponse, PaymentRequest, getProductsByFilterUser, cancelOrderUser, ViewAllZones, getProductsByHSN, AuthUserByID, updateProfileUser, SignupNewUser, LoginUserWithOTP, LoginUserWithPass, SendOTP,SignupLoginNew, SignupLoginUser, getTaxIdUser, ViewAllUserTaxes, ViewCompareByUser, applyPromoCode, getHomeLayoutData, AddWishListByUser, deleteCompareByUser, deleteWishListByUser, ViewWishListByUser, AddCompareByUser, ViewProductRating, ViewCategoryRating, AddRating, UsergetAllCategories, UsergetAllProducts, UsergetAllHomeProducts, userOrdersViewController, getAllAttributeUser, getProductIdUser, updateUserController, createOrderController, updateUserAndCreateOrderController, userOrdersController, getHomeData, GetAllCategoriesByParentIdController, GetAllCategoriesBySlugController
   , BuyPlanUser, GetPlanUser, HomeSendEnquire,ConsultationSendEnquire, getAllPlanCategoryController, uploadDataZone, deleteAllZones, SignupUserType, updateDetailsUser, updateDetailsUserHealth, getAllPlanUser, getProductIdUserBySlug
   , getAllVendor, getAllDepartment, profileVendorImage, ApiGetKey, PaymentSuccess, PaymentFail,
-  updateVendorProfileUser, paymentVerification, BuyPlanAddUser, BuyPlanByUser, PayuHash, userPlanIdController, ViewAllZonesDepartment, getVendorById, HomeSendvendorEnquire, ApplyEnquireStatus, SenderEnquireStatus, AllPayment, downloadUserInvoice, checkUserPlan, GetWebsiteData, GetWebsiteData_old
+  generateUserAttachPDF, updateVendorProfileUser, paymentVerification, BuyPlanAddUser, BuyPlanByUser, PayuHash, userPlanIdController, ViewAllZonesDepartment, getVendorById, HomeSendvendorEnquire, ApplyEnquireStatus, SenderEnquireStatus, AllPayment, downloadUserInvoice, checkUserPlan, GetWebsiteData, GetWebsiteData_old
 } from "../controller/userController.js"
 import authenticateToken from "../middleware/authMiddleware.js";
 import { uploadImage, handleImageUpload } from "../controller/adminController.js";
@@ -370,11 +370,13 @@ router.post("/buy-plan-add-user", profileImageHealth, BuyPlanAddUser);
 router.post("/paymentverification-plan", paymentVerification);
 
 router.get("/api/get-key", checkOrigin, ApiGetKey);
+router.get("/getpdf/:id", generateUserAttachPDF);
 
+ 
 
 router.get("/get-plan/:id", userPlanIdController);
 
-router.post("/buy-plan-by-user", BuyPlanByUser);
+router.post("/buy-plan-by-user", profileImageHealth, BuyPlanByUser);
 
 router.put(
   "/update-user-vendor/:id",
