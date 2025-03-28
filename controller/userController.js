@@ -3027,6 +3027,7 @@ export const SignupLoginUser_old = async (req, res) => {
             phone: existingUser.phone,
             email: existingUser.email,
             type: existingUser.type,
+            profile: existingUser.profile,
           },
           token: existingUser.token,
           otp: ecryptOTP,
@@ -3281,6 +3282,7 @@ export const SignupNewUser = async (req, res) => {
         phone: user.phone,
         email: user.email,
         type: user.type,
+        profile: user.profile,
       },
       otp: ecryptOTP,
       token,
@@ -3392,6 +3394,7 @@ export const LoginUserWithPass = async (req, res) => {
         phone: user.phone,
         email: user.email,
         type: user.type,
+        profile: user.profile,
       },
       token: user.token,
       checkpass: true,
@@ -7270,12 +7273,26 @@ export const BuyPlanByUser = async (req, res) => {
       UserData,
       planId,
       totalAmount,
-      inputs
+      username,
+      phone,
+      email,
+      pHealthHistory,
+      cHealthStatus,
+      DOB,
+      gender
     } = req.body;
+     
+    if (!req.files || !req.files.profile) {
+      Console.log('req.files',req.files);
+      return res.status(500).json({ success: false, message: 'Profile image is required.' });
+    }
+
+    const profileImg = req.files ? req.files.profile : profileImg;
+
 
     const transactionId = `${Date.now()}-${Math.floor(Math.random() * 1000)}`;
 
-    const paymentData = PayuHash(totalAmount, UserData.username, UserData.email, UserData.phone, transactionId);
+    const paymentData = PayuHash(totalAmount, UserData?.username, UserData?.email, UserData?.phone, transactionId );
 
     // Determine 'Local' based on the state
     let Local = 0;
@@ -7302,7 +7319,15 @@ export const BuyPlanByUser = async (req, res) => {
       payment: 0, // Placeholder for actual payment value
       Local,
       razorpay_order_id: transactionId,
-      details: {fullname:inputs.username,email : inputs.email , phone:inputs.phone}
+      details: {fullname:username,
+        email : email,
+         phone:phone,
+          gender:gender,
+           DOB:DOB,
+           pHealthHistory:pHealthHistory,
+           cHealthStatus: cHealthStatus ,
+           profile : profileImg
+          }
     });
 
     await newBuyPlan.save();
@@ -7337,7 +7362,7 @@ export const BuyPlanAddUser = async (req, res) => {
       country,
       password,
       pincode,
-      Gender,
+      gender,
       DOB,
       address,
       city,
@@ -7382,7 +7407,7 @@ export const BuyPlanAddUser = async (req, res) => {
       email,
       password: hashedPassword,
       pincode,
-      gender: Gender,
+      gender: gender,
       DOB,
       address,
       state,
@@ -7429,7 +7454,7 @@ export const BuyPlanAddUser = async (req, res) => {
       payment: 0, // Placeholder for actual payment value
       Local,
       razorpay_order_id: transactionId,
-      details: {fullname:username,email :email , phone: phone}
+      details: {fullname:username,email :email , phone: phone,profile:profileImg,gender,pHealthHistory,cHealthStatus,DOB}
     });
 
     await newBuyPlan.save();
@@ -7690,6 +7715,7 @@ export const updateVendorProfileUser = async (req, res) => {
 };
 
 
+
 export const SenderEnquireStatus = async (req, res) => {
   try {
     const page = parseInt(req.query.page) || 1; // Current page, default is 1
@@ -7724,6 +7750,7 @@ export const SenderEnquireStatus = async (req, res) => {
       .sort({ _id: -1 }) // Sort by _id in descending order
       .skip(skip)
       .limit(limit)
+      .populate('planId')
       .populate('userId', 'username email phone address') // Populate userId with username and address only
       .lean();
 
