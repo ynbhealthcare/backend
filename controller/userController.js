@@ -7772,7 +7772,7 @@ export const updateVendorProfileUser = async (req, res) => {
     const Doc3 = req.files ? req.files.Doc3 : undefined;
     const profileImg = req.files ? req.files.profile : undefined;
 
-    console.log("req.body", req.body, profileImg);
+    console.log("req.body", req.body, Doc1[0].path.replace(/\\/g, "/").replace(/^public\//, ""));
 
     let updateFields = {
       username,
