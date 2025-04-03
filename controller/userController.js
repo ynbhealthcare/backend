@@ -1,4 +1,4 @@
- import mongoose from "mongoose";
+import mongoose from "mongoose";
 import blogModel from "../models/blogModel.js";
 import userModel from "../models/userModel.js";
 import chatModel from "../models/chatModel.js";
@@ -6171,14 +6171,20 @@ any time without notice.
   
  <div style="height:100vh;">
    <div class="d-flex">
-  <div class="mycard myheight">
+  <div class="mycard myheight" style="position: relative;
+    overflow: hidden;" >
+<img src="https://img.freepik.com/free-vector/pastel-blue-banner-background_1048-11857.jpg" style="
+    position: absolute;
+    left: 0px;
+    top: 0px;
+    z-index: -1;
+">
     <div class="d-flex">
-    <img src="https://ynbhealthcare.com/assets/img/logo-final.webp" width="200"/>
+    <img src="https://ynbhealthcare.com/assets/img/logo-final.webp" width="200" style="padding:5px;" class="rounded bg-white" />
     <h4 style="text-align: right;width:100%;"> HEALTH CARD</h4>
   </div>
 
    <div class="d-flex" style="
-    background: #ffeded;
     padding: 8px;
 ">
      <img src="https://backend-2o7f.onrender.com/${invoiceData?.details?.profile}" alt="Profile Image" width="80" style="
@@ -6189,7 +6195,7 @@ any time without notice.
 <div>
     <p class="m-0 p-0"> <b> Rahul Rana </b> </p>
   <p class="m-0 p-0">
- 
+ <b> Gender </b>
   ${(() => {
     const dob = invoiceData.details.DOB; // The DOB in 'YYYY-MM-DD' format
 
@@ -6206,9 +6212,11 @@ any time without notice.
       age--;
     }
 
-    // Display the age
-    return age;
-  })()} | ${(() => {
+     
+  return age;
+  })()} 
+
+  ${(() => {
       const gender = invoiceData.details.gender;
   
       if (gender === 1 || gender === "1" ) {
@@ -6230,8 +6238,15 @@ any time without notice.
     <h4 style="margin:0px;margin-bottom:5px;"> Phone No. : ${invoiceData.details?.phone} </h4>
 
     
-      </div>
-    <div class="mycard myheight">
+      </div> 
+    <div class="mycard myheight" style="position: relative;
+    overflow: hidden;" >
+<img src="https://img.freepik.com/free-vector/pastel-blue-banner-background_1048-11857.jpg" style="
+    position: absolute;
+    left: 0px;
+    top: 0px;
+    z-index: -1;
+">
         <div class="d-flex" style="justify-content:center;">
 
   <svg width="20" height="20" xmlns="http://www.w3.org/2000/svg" shape-rendering="geometricPrecision" text-rendering="geometricPrecision" image-rendering="optimizeQuality" fill-rule="evenodd" clip-rule="evenodd" viewBox="0 0 279 512.01"><path fill-rule="nonzero" d="M122.89 495.31h33.22c29.19 0 55.74-11.95 74.99-31.2 19.24-19.25 31.2-45.8 31.2-74.99V275.56H16.7v113.56c0 29.19 11.96 55.74 31.2 74.99 19.25 19.25 45.8 31.2 74.99 31.2zm5.23-412.59V64.69c0-9.7-1.53-17.63-4.22-23.92-3.06-7.16-7.7-12.31-13.31-15.63-5.76-3.4-12.72-5.02-20.22-5.02-8.35 0-17.26 1.99-25.9 5.68-5.1 2.16-11-.21-13.16-5.31-2.17-5.1.21-10.99 5.3-13.16C67.77 2.56 79.38 0 90.37 0c10.96 0 21.43 2.52 30.44 7.85 9.17 5.43 16.7 13.7 21.56 25.06 3.74 8.77 5.88 19.33 5.88 31.78v18.03h7.86c33.8 0 64.53 13.82 86.8 36.09 22.27 22.27 36.09 53 36.09 86.8v183.51c0 33.8-13.82 64.53-36.09 86.8-22.27 22.27-53 36.09-86.8 36.09h-33.22c-33.8 0-64.53-13.82-86.8-36.09C13.82 453.65 0 422.92 0 389.12V205.61c0-33.8 13.82-64.53 36.09-86.8 22.27-22.27 53-36.09 86.8-36.09h5.23zM262.3 258.86v-53.25c0-29.19-11.96-55.74-31.2-74.99-19.25-19.25-45.8-31.2-74.99-31.2h-6.55v50.99c7.28 3.71 12.3 11.29 12.3 19.94v35.75c0 8.64-5.03 16.22-12.3 19.93v32.83H262.3zm-132.86 0v-32.82c-7.26-3.7-12.3-11.26-12.3-19.94v-35.75c0-8.68 5.02-16.25 12.3-19.94V99.42h-6.55c-29.19 0-55.74 11.95-74.99 31.2-19.24 19.25-31.2 45.8-31.2 74.99v53.25h112.74z"/></svg>
@@ -6257,7 +6272,7 @@ any time without notice.
 </svg> 
  
 
-<p style="margin:0px;font-size:12px; " > Toll Free: </p>
+<p style="margin:0px;font-size:12px; " > Helpline No: </p>
 <h4 style="margin:0px;font-size:12px;"> +918100188188 </h4>
 
     </div>
@@ -6433,9 +6448,10 @@ any time without notice.
 <b>Email Id</b>: ${invoiceData.userId?.email}<br/>
 <b>Phone No.</b>: ${invoiceData.userId?.phone}<br/> 
 Dear Customer,<br/><br/>
-Thank you for choosing the YNB Super Health Card. This card offers a comprehensive range of healthcare services
-at discounted rates, ensuring that you have access to high-quality care when needed. Please review the following
-details to understand the benefits and services offered under this plan.
+Thank you for choosing the YNB Super Health Card. This card offers a cashless home
+healthcare services upto Rs50,000 and discounted vendor services, ensuring that you have access to high-quality care when
+needed. Please review the following details to understand the benefits and services offered under this
+plan.
 </p>
 
 <br>
@@ -6451,7 +6467,7 @@ details to understand the benefits and services offered under this plan.
 </ul>
   
 <hr>
-<p style="color:blue;">Annual Membership Fee:</p> 
+<p style="color:blue;">Annual Membership Includes:</p> 
 <ol>
  
 ${Plan?.Category?.map(category => `<li>${category.name}</li>`).join('')}
@@ -6667,7 +6683,7 @@ any time without notice.
           </thead>
           <tbody>
             <tr>
-              <td>${invoiceData.planId?.name}</td>
+              <td>${Plan?.name}</td>
               <td>₹${parseFloat(amountWithoutGST.toFixed(2))}</td>
             </tr>
           </tbody>
@@ -6690,14 +6706,20 @@ any time without notice.
   
   <div style="height:100vh;">
    <div class="d-flex">
-  <div class="mycard myheight">
+ <div class="mycard myheight" style="position: relative;
+    overflow: hidden;" >
+<img src="https://img.freepik.com/free-vector/pastel-blue-banner-background_1048-11857.jpg" style="
+    position: absolute;
+    left: 0px;
+    top: 0px;
+    z-index: -1;
+">
     <div class="d-flex">
-    <img src="https://ynbhealthcare.com/assets/img/logo-final.webp" width="200"/>
+    <img src="https://ynbhealthcare.com/assets/img/logo-final.webp" width="200" class="p-1 bg-white rounded" />
     <h4 style="text-align: right;width:100%;"> HEALTH CARD</h4>
   </div>
 
    <div class="d-flex" style="
-    background: #ffeded;
     padding: 8px;
 ">
      <img src="https://backend-2o7f.onrender.com/${invoiceData?.details?.profile}" alt="Profile Image" width="80" style="
@@ -6709,25 +6731,7 @@ any time without notice.
     <p class="m-0 p-0"> <b> Rahul Rana </b> </p>
   <p class="m-0 p-0">
  
-  ${(() => {
-    const dob = invoiceData.details.DOB; // The DOB in 'YYYY-MM-DD' format
-
-    // Create Date objects for the DOB and the current date
-    const dobDate = new Date(dob);
-    const currentDate = new Date();
-
-    // Calculate the difference in years (age)
-    let age = currentDate.getFullYear() - dobDate.getFullYear();
-    const monthDiff = currentDate.getMonth() - dobDate.getMonth();
-
-    // Adjust the age if the current date is before the birthday in the current year
-    if (monthDiff < 0 || (monthDiff === 0 && currentDate.getDate() < dobDate.getDate())) {
-      age--;
-    }
-
-    // Display the age
-    return age;
-  })()} | ${(() => {
+ <b> Gender </b>  ${(() => {
       const gender = invoiceData.details.gender;
   
       if (gender === 1 || gender === "1" ) {
@@ -6747,10 +6751,18 @@ any time without notice.
  
     <h4 style="margin:0px;margin-bottom:5px;" > Email ID : ${invoiceData.details?.email} </h4>
     <h4 style="margin:0px;margin-bottom:5px;"> Phone No. : ${invoiceData.details?.phone} </h4>
+    <h4 style="margin:0px;margin-bottom:5px;"> DOB : ${invoiceData.details?.DOB} </h4>
 
     
       </div>
-    <div class="mycard myheight">
+    <div class="mycard myheight" style="position: relative;
+    overflow: hidden;" >
+<img src="https://img.freepik.com/free-vector/pastel-blue-banner-background_1048-11857.jpg" style="
+    position: absolute;
+    left: 0px;
+    top: 0px;
+    z-index: -1;
+">
         <div class="d-flex" style="justify-content:center;">
 
   <svg width="20" height="20" xmlns="http://www.w3.org/2000/svg" shape-rendering="geometricPrecision" text-rendering="geometricPrecision" image-rendering="optimizeQuality" fill-rule="evenodd" clip-rule="evenodd" viewBox="0 0 279 512.01"><path fill-rule="nonzero" d="M122.89 495.31h33.22c29.19 0 55.74-11.95 74.99-31.2 19.24-19.25 31.2-45.8 31.2-74.99V275.56H16.7v113.56c0 29.19 11.96 55.74 31.2 74.99 19.25 19.25 45.8 31.2 74.99 31.2zm5.23-412.59V64.69c0-9.7-1.53-17.63-4.22-23.92-3.06-7.16-7.7-12.31-13.31-15.63-5.76-3.4-12.72-5.02-20.22-5.02-8.35 0-17.26 1.99-25.9 5.68-5.1 2.16-11-.21-13.16-5.31-2.17-5.1.21-10.99 5.3-13.16C67.77 2.56 79.38 0 90.37 0c10.96 0 21.43 2.52 30.44 7.85 9.17 5.43 16.7 13.7 21.56 25.06 3.74 8.77 5.88 19.33 5.88 31.78v18.03h7.86c33.8 0 64.53 13.82 86.8 36.09 22.27 22.27 36.09 53 36.09 86.8v183.51c0 33.8-13.82 64.53-36.09 86.8-22.27 22.27-53 36.09-86.8 36.09h-33.22c-33.8 0-64.53-13.82-86.8-36.09C13.82 453.65 0 422.92 0 389.12V205.61c0-33.8 13.82-64.53 36.09-86.8 22.27-22.27 53-36.09 86.8-36.09h5.23zM262.3 258.86v-53.25c0-29.19-11.96-55.74-31.2-74.99-19.25-19.25-45.8-31.2-74.99-31.2h-6.55v50.99c7.28 3.71 12.3 11.29 12.3 19.94v35.75c0 8.64-5.03 16.22-12.3 19.93v32.83H262.3zm-132.86 0v-32.82c-7.26-3.7-12.3-11.26-12.3-19.94v-35.75c0-8.68 5.02-16.25 12.3-19.94V99.42h-6.55c-29.19 0-55.74 11.95-74.99 31.2-19.24 19.25-31.2 45.8-31.2 74.99v53.25h112.74z"/></svg>
@@ -6776,7 +6788,7 @@ any time without notice.
 </svg> 
  
 
-<p style="margin:0px;font-size:12px; " > Toll Free: </p>
+<p style="margin:0px;font-size:12px; " > Helpline No: </p>
 <h4 style="margin:0px;font-size:12px;"> +918100188188 </h4>
 
     </div>
@@ -7772,7 +7784,7 @@ export const updateVendorProfileUser = async (req, res) => {
     const Doc3 = req.files ? req.files.Doc3 : undefined;
     const profileImg = req.files ? req.files.profile : undefined;
 
-    console.log("req.body", req.body);
+    console.log("req.body", req.body, profileImg);
 
     let updateFields = {
       username,
@@ -7998,3 +8010,4 @@ export const GetWebsiteData = async (req, res) => {
     `);
   }
 };
+
