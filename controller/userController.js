@@ -7792,17 +7792,17 @@ export const updateVendorProfileUser = async (req, res) => {
       updateFields.password = hashedPassword;
     }
     // If the files exist, update the corresponding fields
-    if (Doc1 && Doc1[0]) {
-      updateFields.Doc1 = Doc1[0].path;
+      if (Doc1 && Doc1[0]) {
+      updateFields.Doc1 = Doc1[0].path.replace(/\\/g, "/").replace(/^public\//, "");
     }
     if (Doc2 && Doc2[0]) {
-      updateFields.Doc2 = Doc2[0].path;
+      updateFields.Doc2 = Doc2[0].path.replace(/\\/g, "/").replace(/^public\//, "");
     }
     if (Doc3 && Doc3[0]) {
-      updateFields.Doc3 = Doc3[0].path;
+      updateFields.Doc3 = Doc3[0].path.replace(/\\/g, "/").replace(/^public\//, "");
     }
     if (profileImg && profileImg[0]) {
-      updateFields.profile = profileImg[0].path;
+      updateFields.profile = profileImg[0].path.replace(/\\/g, "/").replace(/^public\//, "");
     }
 
     const user = await userModel.findByIdAndUpdate(id, updateFields, {
