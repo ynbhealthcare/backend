@@ -64,6 +64,10 @@ const userSchema = mongoose.Schema({
     type: String,
     default: "",
   },
+    Doc1: {
+    type: String,
+    default: "",
+  },
   Doc2: {
     type: String,
     default: "",
