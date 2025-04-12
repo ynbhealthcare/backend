@@ -1,4 +1,4 @@
- import mongoose from "mongoose";
+import mongoose from "mongoose";
 import blogModel from "../models/blogModel.js";
 import userModel from "../models/userModel.js";
 import chatModel from "../models/chatModel.js";
@@ -7393,7 +7393,7 @@ export const BuyPlanByUser = async (req, res) => {
       UserData,
       planId,
       totalAmount,
-      username,
+      username, 
       phone,
       email,
       pHealthHistory,
@@ -7402,10 +7402,6 @@ export const BuyPlanByUser = async (req, res) => {
       gender
     } = req.body;
      
-    if (!req.files || !req.files.profile) {
-      console.log('req.files',req.files);
-      return res.status(500).json({ success: false, message: 'Profile image is required.' });
-    }
 
     let profileImg = req.files ? req.files.profile : profileImg;
 
