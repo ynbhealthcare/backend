@@ -1,4 +1,4 @@
-import mongoose from "mongoose";
+ import mongoose from "mongoose";
 import blogModel from "../models/blogModel.js";
 import userModel from "../models/userModel.js";
 import chatModel from "../models/chatModel.js";
@@ -6956,10 +6956,13 @@ export const checkUserPlan_old = async (req, res) => {
 };
 
 export const checkUserPlan = async (req, res) => {
+  const { userId } = req.params;
+
   try {
+
     // Retrieve all purchases with plan details
     const allPlans = await buyPlanModel
-      .find()
+      .find({ userId })
       .populate('planId'); // Ensure that 'planId' is populated with plan details
 
     const activePlans = [];
@@ -7400,7 +7403,7 @@ export const BuyPlanByUser = async (req, res) => {
     } = req.body;
      
     if (!req.files || !req.files.profile) {
-      Console.log('req.files',req.files);
+      console.log('req.files',req.files);
       return res.status(500).json({ success: false, message: 'Profile image is required.' });
     }
 
