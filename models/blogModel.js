@@ -1,4 +1,4 @@
-import mongoose from "mongoose";
+ import mongoose from "mongoose";
 
 const blogSchema = new mongoose.Schema(
   {
@@ -16,6 +16,7 @@ const blogSchema = new mongoose.Schema(
     },
     slug: {
       type: String,
+      unique: true,
     },
     user: {
       type: mongoose.Types.ObjectId,
