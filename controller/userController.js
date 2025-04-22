@@ -1,4 +1,4 @@
-import mongoose from "mongoose";
+ import mongoose from "mongoose";
 import blogModel from "../models/blogModel.js";
 import userModel from "../models/userModel.js";
 import chatModel from "../models/chatModel.js";
@@ -392,6 +392,7 @@ export const SignupUserType = async (req, res) => {
       DOB,
       address,
       city,
+      empType
     } = req.body;
 
 
@@ -416,6 +417,7 @@ export const SignupUserType = async (req, res) => {
       userId = 1;
     }
 
+    
     const newUser = new userModel({
       type,
       username,
@@ -430,7 +432,7 @@ export const SignupUserType = async (req, res) => {
       statename,
       country,
       city,
-
+      empType : empType ? empType : 0 ,
       userId,
     });
 
@@ -567,7 +569,7 @@ export const updateBlogController = async (req, res) => {
 export const getBlogIdController = async (req, res) => {
   try {
     const { id } = req.params;
-    const blog = await blogModel.findById(id);
+    const blog = await blogModel.findOne({slug:id});
     if (!blog) {
       return res.status(200).send({
         message: "Blog Not Found By Id",
@@ -761,7 +763,7 @@ export const UsergetAllProducts = async (req, res) => {
   try {
     const products = await productModel.find(
       { status: "true" },
-      "_id title slug"
+      "_id title slug regularPrice salePrice oneto7 eightto14 fivto30 monthto3month threemonthto6month"
     );
 
     if (!products) {
