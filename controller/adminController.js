@@ -559,6 +559,74 @@ export const AddAdminCategoryController = async (req, res) => {
   }
 };
 
+
+export const AddAdminOrderController = async (req, res) => {
+  try {
+    const {
+      order, discount,subtotal,shipping,applyIGST,applyCGST,applySGST,finalTotal,taxTotal,  addRental,addReceived,addReturn,addProduct,
+      userId,UserDetails,employeeSaleId,PickupDate,ReturnDate,SecurityAmt,AdvanceAmt,employeeId
+    } = req.body;
+
+    console.log(req.body)
+    // Validation
+    if (!order || !finalTotal) {
+      return res.status(400).send({
+        success: false,
+        message: "Please Provide All Fields",
+      });
+    }
+
+    // Calculate the auto-increment ID
+        const lastOrder = await orderModel.findOne().sort({ _id: -1 }).limit(1);
+        let order_id;
+    
+        if (lastOrder) {
+          // Convert lastOrder.orderId to a number before adding 1
+          const lastOrderId = parseInt(lastOrder.orderId);
+          order_id = lastOrderId + 1;
+        } else {
+          order_id = 1;
+        }
+
+    // Create a new category with the specified parent
+    const newData = new orderModel({
+      type: order,
+      userId,
+      UserDetails,
+      employeeSaleId,
+      employeeId,
+      PickupDate,ReturnDate,SecurityAmt,AdvanceAmt,
+       addRental,
+       addReceived,
+       addReturn,
+       addProduct,
+       discount,
+       subtotal,
+       shipping,
+       applyIGST,
+       applyCGST,
+       applySGST,
+       totalAmount: finalTotal,
+       taxTotal, 
+       order_id
+    });
+    await newData.save();
+
+    return res.status(201).send({
+      success: true,
+      message: "Order Created!",
+      newData,
+    });
+  } catch (error) {
+    console.error("Error while creating category:", error);
+    return res.status(400).send({
+      success: false,
+      message: "Error While Creating Category",
+      error,
+    });
+  }
+};
+
 export const GetAllCategoriesByParentIdController_new = async (req, res) => {
   try {
     const { parentId } = req.params;
@@ -1051,7 +1119,7 @@ export const updateProductAdmin = async (req, res) => {
       metaKeywords,
       Category,
       tag, features,
-      specifications, weight, gst, hsn, sku, variant_products, type, canonical, testimonials
+      specifications, weight, gst, hsn, sku, variant_products, type, canonical, testimonials, oneto7, eightto14, fivto30, monthto3month, threemonthto6month
     } = req.body;
 
     console.log('typp', type);
@@ -1072,7 +1140,8 @@ export const updateProductAdmin = async (req, res) => {
       metaKeywords,
       Category,
       tag, features,
-      specifications, weight, gst, hsn, sku, variant_products, type, canonical, testimonials
+      specifications, weight, gst, hsn, sku, variant_products, type, canonical, testimonials,
+      oneto7, eightto14, fivto30, monthto3month, threemonthto6month
     };
 
     const Product = await productModel.findByIdAndUpdate(id, updateFields, {
@@ -1908,8 +1977,19 @@ export const getAllOrderAdmin = async (req, res) => {
       .populate({
         path: "userId",
         model: userModel,
-        select: "username",
-      }).lean();
+        select: "username email phone",
+      })
+      .populate({
+        path: "employeeId",
+        model: userModel,
+        select: "username email phone",
+      })
+      .populate({
+        path: "employeeSaleId",
+        model: userModel,
+        select: "username email phone",
+      })
+      .lean();
 
 
     if (!Order || Order.length === 0) { // Check if no users found
@@ -1953,9 +2033,9 @@ export const editOrderAdmin = async (req, res) => {
       });
     }
 
-    const user = order.userId[0]; // Assuming there's only one user associated with the order
+    // const user = order.userId[0]; // Assuming there's only one user associated with the order
 
-    const { email, username, _id } = user; // Extract user email
+    // const { email, username, _id } = user; // Extract user email
 
     let updateFields = {
       status,
@@ -1965,102 +2045,107 @@ export const editOrderAdmin = async (req, res) => {
       new: true,
     });
 
-    // Configure nodemailer transporter
-    const transporter = nodemailer.createTransport({
-      // SMTP configuration
-      host: process.env.MAIL_HOST, // Update with your SMTP host
-      port: process.env.MAIL_PORT, // Update with your SMTP port
-      secure: process.env.MAIL_ENCRYPTION, // Set to true if using SSL/TLS
-      auth: {
-        user: process.env.MAIL_USERNAME, // Update with your email address
-        pass: process.env.MAIL_PASSWORD, // Update with your email password
-      }
-    });
+    // // Configure nodemailer transporter
+    // const transporter = nodemailer.createTransport({
+    //   // SMTP configuration
+    //   host: process.env.MAIL_HOST, // Update with your SMTP host
+    //   port: process.env.MAIL_PORT, // Update with your SMTP port
+    //   secure: process.env.MAIL_ENCRYPTION, // Set to true if using SSL/TLS
+    //   auth: {
+    //     user: process.env.MAIL_USERNAME, // Update with your email address
+    //     pass: process.env.MAIL_PASSWORD, // Update with your email password
+    //   }
+    // });
 
-    // Email message
-    const mailOptions = {
-      from: process.env.MAIL_FROM_ADDRESS, // Update with your email address
-      to: email, // Use the extracted email here
-      subject: `cayroshop.com Order ${status === '0' ? 'cancel' :
-        status === '1' ? 'Placed' :
-          status === '2' ? 'Accepted' :
-            status === '3' ? 'Packed' :
-              status === '4' ? 'Shipped' :
-                status === '5' ? 'Delivered' :
-                  'Unknown'
-        }`,
-      html: `
-          <div class="bg-light w-100 h-100" style="background-color:#f8f9fa!important;width: 90%;font-family:sans-serif;padding:20px;border-radius:10px;padding: 100px 0px;margin: auto;">
-     <div class="modal d-block" style="
-        width: 500px;
-        background: white;
-        padding: 20px;
-        margin: auto;
-        border: 2px solid #8080802e;
-        border-radius: 10px;
-    ">
-      <div class="modal-dialog">
-        <div class="modal-content" style="
-        text-align: center;
-    ">
-          <div class="modal-header">
-    <h1 style="color:black;"> Cayro Shop <h1>
-          </div>
-          <div class="modal-body text-center">
-            <h5 style="
-        margin: 0px;
-        margin-top: 14px;
-        font-size: 20px;color:black;
-    "> Order Id : #${order.orderId} </h5>
-           <p style="color:black;" >Hey ${username},</p>
-          <svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 24 24" fill="none" stroke="#47ca00" stroke-width="2" stroke-linecap="square" stroke-linejoin="arcs"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
-           <h2 style="color:black;"> Your Order Is ${status === '1' ? 'Placed' :
-          status === '2' ? 'Accepted' :
-            status === '3' ? 'Packed' :
-              status === '4' ? 'Shipped' :
-                status === '5' ? 'Delivered' :
-                  'Unknown'
-        }! </h2>
+    // // Email message
+    // const mailOptions = {
+    //   from: process.env.MAIL_FROM_ADDRESS, // Update with your email address
+    //   to: email, // Use the extracted email here
+    //   subject: `cayroshop.com Order ${status === '0' ? 'cancel' :
+    //     status === '1' ? 'Placed' :
+    //       status === '2' ? 'Accepted' :
+    //         status === '3' ? 'Packed' :
+    //           status === '4' ? 'Shipped' :
+    //             status === '5' ? 'Delivered' :
+    //               'Unknown'
+    //     }`,
+    //   html: `
+    //       <div class="bg-light w-100 h-100" style="background-color:#f8f9fa!important;width: 90%;font-family:sans-serif;padding:20px;border-radius:10px;padding: 100px 0px;margin: auto;">
+    //  <div class="modal d-block" style="
+    //     width: 500px;
+    //     background: white;
+    //     padding: 20px;
+    //     margin: auto;
+    //     border: 2px solid #8080802e;
+    //     border-radius: 10px;
+    // ">
+    //   <div class="modal-dialog">
+    //     <div class="modal-content" style="
+    //     text-align: center;
+    // ">
+    //       <div class="modal-header">
+    // <h1 style="color:black;"> Cayro Shop <h1>
+    //       </div>
+    //       <div class="modal-body text-center">
+    //         <h5 style="
+    //     margin: 0px;
+    //     margin-top: 14px;
+    //     font-size: 20px;color:black;
+    // "> Order Id : #${order.orderId} </h5>
+    //        <p style="color:black;" >Hey ${username},</p>
+    //       <svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 24 24" fill="none" stroke="#47ca00" stroke-width="2" stroke-linecap="square" stroke-linejoin="arcs"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+    //        <h2 style="color:black;"> Your Order Is ${status === '1' ? 'Placed' :
+    //       status === '2' ? 'Accepted' :
+    //         status === '3' ? 'Packed' :
+    //           status === '4' ? 'Shipped' :
+    //             status === '5' ? 'Delivered' :
+    //               'Unknown'
+    //     }! </h2>
          
-           <p style="color:black;" > We'll send you a shipping confirmation email
-    as soon as your order ${status === '1' ? 'Placed' :
-          status === '2' ? 'Accepted' :
-            status === '3' ? 'Packed' :
-              status === '4' ? 'Shipped' :
-                status === '5' ? 'Delivered' :
-                  'Unknown'
-        }. </p>
-          </div>
-          <div class="modal-footer">
+    //        <p style="color:black;" > We'll send you a shipping confirmation email
+    // as soon as your order ${status === '1' ? 'Placed' :
+    //       status === '2' ? 'Accepted' :
+    //         status === '3' ? 'Packed' :
+    //           status === '4' ? 'Shipped' :
+    //             status === '5' ? 'Delivered' :
+    //               'Unknown'
+    //     }. </p>
+    //       </div>
+    //       <div class="modal-footer">
       
-            <a href="https://cayroshop.com/account/order/${_id}/${updatedOrder._id}" style="
-        background: green;
-        color: white;
-        padding: 10px;
-        display: block;
-        margin: auto;
-        border-radius: 6px;
-        text-decoration: none;
-    "> Track Order</a>
-          </div>
-        </div>
-      </div>
-    </div> </div>
-          `
-    };
+    //         <a href="https://cayroshop.com/account/order/${_id}/${updatedOrder._id}" style="
+    //     background: green;
+    //     color: white;
+    //     padding: 10px;
+    //     display: block;
+    //     margin: auto;
+    //     border-radius: 6px;
+    //     text-decoration: none;
+    // "> Track Order</a>
+    //       </div>
+    //     </div>
+    //   </div>
+    // </div> </div>
+    //       `
+    // };
 
-    // Send email
-    transporter.sendMail(mailOptions, (error, info) => {
-      if (error) {
-        console.error(error);
-        res.status(500).send('Failed to send email');
-      } else {
-        return res.status(200).json({
-          message: "Order Updated!",
-          success: true,
-        });
-      }
-    });
+    // // Send email
+    // transporter.sendMail(mailOptions, (error, info) => {
+    //   if (error) {
+    //     console.error(error);
+    //     res.status(500).send('Failed to send email');
+    //   } else {
+    //     return res.status(200).json({
+    //       message: "Order Updated!",
+    //       success: true,
+    //     });
+    //   }
+    // });
+
+    return res.status(200).json({
+            message: "Order Updated!",
+            success: true,
+          });
 
   } catch (error) {
     return res.status(400).json({
@@ -4307,3 +4392,66 @@ export const AdminAllEnquireStatus = async (req, res) => {
 export const profileImageHealth = upload.fields([
   { name: "profile", maxCount: 1 },
 ]);
+
+
+export const AdminGetAllEmployee = async (req, res) => { 
+  try {
+    // Extract the category (which can be an array of ObjectIds), type, and coordinates from query parameters
+    const { type,filter } = req.query;
+
+    if (!type) {
+      return res.status(200).send({
+        message: 'Missing required parameters.',
+        success: false,
+      });
+    }
+
+    // Build the filter object
+    const fillter = { type };  // Only fetch employees with the type (assuming "employee")
+  if(filter !== 'none'){
+    if(filter === '5' ){
+      fillter.empType = 5;
+    }
+    else if(filter === '4' ){
+      fillter.empType = 4;
+    }else if(filter === '3'){
+      fillter.empType = 3;
+    }else if(filter === '2'){
+      fillter.empType = 2;
+    }else{
+      fillter.empType = 5;
+    }
+  }
+   
+
+    //  if (category) {
+    //    const categories = Array.isArray(category) ? category : [category];
+    //   filter.department = { $in: categories.map(id => new mongoose.Types.ObjectId(id)) };  // Use 'new' to create ObjectIds
+    // }
+
+    // Fetch users based on the filter
+    const users = await userModel.find(fillter, '_id username email phone');
+
+    if (!users || users.length === 0) {
+      return res.status(200).send({
+        message: 'No User Found',
+        success: false,
+      });
+    }
+ 
+
+    return res.status(200).send({
+      message: 'All User List',
+      success: true,
+      Users: users,
+    });
+
+  } catch (error) {
+    return res.status(500).send({
+      message: `Error while fetching employees: ${error.message}`,
+      success: false,
+      error,
+    });
+  }
+};
+
