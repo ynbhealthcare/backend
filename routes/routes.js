@@ -1,6 +1,6 @@
 import express from "express";
 import {
-  UserloginAll, SignupAdmin, Adminlogin, getAllGalleryController, deleteGalleryController, AddAdminBlogController, AdmindeleteBlogController, AddAdminCategoryController
+  UserloginAll, SignupAdmin, Adminlogin, getAllGalleryController, deleteGalleryController, AddAdminBlogController, AdmindeleteBlogController, AddAdminCategoryController,AddAdminOrderController
   , getAllReviewsAdmin, AdmingetAllCategories, AddAdminProduct, getAllcategoryFillAdmin, updateCategoryAdmin, getCategoryIdAdmin, deleteCategoryAdmin, getAllProductFillAdmin, updateProductAdmin, getProductIdAdmin, deleteProductAdmin,
   AddAdminPromoController, getAllPromoAdmin, updatePromoAdmin, getPromoIdAdmin, deletePromoAdmin
   , getAllEnquireAdmin, getAllConsultationEnquireAdmin, ChangePassAdmin, ForgotAdminPassword, editOrderAdmin, deleteOrderAdmin, AddAdminPageController, getAllPageAdmin, updatePageAdmin, getPageIdAdmin, deletePageAdmin, getAllBlogAdmin, exportAllProAdmin, importAllProAdmin, getAllUserAdmin, AddAdminTaxController, getAllTaxAdmin, updateTaxAdmin, getTaxIdAdmin, deleteTaxAdmin, ViewAllAdminZones, AddAdminZonesController, getAllZonesAdmin, updateZonesAdmin, getZonesIdAdmin, deleteZonesAdmin, GetImageAdmin, deleteFolderAdmin, UpdateFolderAdmin, getUserIdAdmin, GetFolderIDAdmin, AddAdminFolderController, GetFolderAdmin, editUserAdmin, AddAdminAttributeController, deleteRatingAdmin, editReviewAdmin, getAllOrderAdmin, getAllAttributeFillAdmin, updateAttributeAdmin, getAttributeIdAdmin, deleteAttributeAdmin, getAllAttribute, AddAdminTagController, getAllTagFillAdmin, updateTagAdmin, getTagIdAdmin, deleteTagAdmin, getAllTag, editHomeData, editHomeLayoutData,
@@ -8,7 +8,7 @@ import {
   getAllDepartmentFillAdmin,
   getDepartmentIdAdmin,
   updateDepartmentAdmin,
-  deleteDepartmentAdmin, editUserVerifyAdmin, AllPaymentAdmin, AdminAllEnquireStatus, profileImageHealth,deletePlanCategoryAdmin
+  deleteDepartmentAdmin, editUserVerifyAdmin, AdminGetAllEmployee,AllPaymentAdmin, AdminAllEnquireStatus, profileImageHealth,deletePlanCategoryAdmin
 } from "../controller/adminController.js";
 
 import {
@@ -43,6 +43,9 @@ router.delete('/admin/delete-blog/:id', AdmindeleteBlogController);
 router.post('/admin/add-category', AddAdminCategoryController);
 router.get('/all/category/:parentId', GetAllCategoriesByParentIdController);
 router.get('/all/category-slug/:parentSlug', GetAllCategoriesBySlugController);
+router.post('/admin/add-order', AddAdminOrderController);
+
+
 
 router.get('/all-category', UsergetAllCategories);
 router.get('/all-products', UsergetAllProducts);
@@ -171,6 +174,8 @@ router.get('/admin/get-image', GetImageAdmin);
 
 router.get('/admin/export/allproducts/', exportAllProAdmin);
 router.post('/admin/import/allproducts/', importAllProAdmin);
+
+router.get("/all-employee", AdminGetAllEmployee);
 
 
 // --------------------    user routes start  -------------------//
