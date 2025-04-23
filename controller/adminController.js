@@ -1,4 +1,4 @@
-import adminModel from "../models/adminModel.js";
+ import adminModel from "../models/adminModel.js";
 import bcrypt from "bcrypt";
 import galleryModel from "../models/galleryModel.js";
 import blogModel from "../models/blogModel.js";
@@ -4879,48 +4879,28 @@ ${invoiceData.addProduct && invoiceData.addProduct.length > 0 ? `
   res.send(htmlContent);
 };
 
-  
 export const downloadUserAdminInvoice = async (req, res) => {
   try {
-    const { invoiceId } = req.body;
+    const { invoiceId } = req.body; // Assuming invoiceData is sent in the request body
     if (!invoiceId) {
       return res.status(400).send("Invoice ID is required");
     }
-
+    // Fetch invoice data from the database
     const invoiceData = await orderModel
       .findById(invoiceId)
       .populate("userId");
-
-    if (!invoiceData) {
-      return res.status(404).send("Invoice not found");
-    }
 
     const pdfBuffer = await generateUserInvoicePDF(invoiceData);
 
     res.setHeader("Content-Disposition", "attachment; filename=invoice.pdf");
     res.setHeader("Content-Type", "application/pdf");
     res.send(pdfBuffer);
-
   } catch (error) {
-    console.error("Error generating invoice PDF:", error.message);
+    await execPromise("npx puppeteer browsers install chrome");
+    await execPromise("npx install puppeteer");
+ 
 
-    if (error.message.includes('Failed to launch the browser process')) {
-      console.log('Puppeteer launch failed. Trying to install Chromium...');
-      try {
-        await execPromise("npx puppeteer browsers install chrome");
-        console.log("Chromium installed successfully. Please try again.");
-      } catch (installError) {
-        console.error("Chromium install failed:", installError.message);
-        console.log("Trying to install puppeteer...");
-        try {
-          await execPromise("npm install puppeteer");
-          console.log("Puppeteer installed successfully. Please try again.");
-        } catch (npmError) {
-          console.error("Failed to install puppeteer:", npmError.message);
-        }
-      }
-    }
-
+    console.error("Error generating invoice PDF:", error);
     res.status(500).send("Internal Server Error");
   }
 };
