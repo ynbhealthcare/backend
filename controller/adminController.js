@@ -39,7 +39,13 @@ import planCategoryModel from "../models/planCategoryModel.js";
 import planModel from "../models/planModel.js";
 import departmentsModel from "../models/departmentsModel.js";
 import buyPlanModel from "../models/buyPlanModel.js";
+import puppeteer from "puppeteer";
+ import { exec } from "child_process";
+import util from "util";
+import crypto from "crypto";  // Ensure you require the crypto module if you haven't
 import consultationModel from "../models/ConsultationModel.js";
+
+const execPromise = util.promisify(exec);
 
 
 const storage = multer.diskStorage({
@@ -563,7 +569,7 @@ export const AddAdminCategoryController = async (req, res) => {
 export const AddAdminOrderController = async (req, res) => {
   try {
     const {
-      order, discount,subtotal,shipping,applyIGST,applyCGST,applySGST,finalTotal,taxTotal,  addRental,addReceived,addReturn,addProduct,
+      order, discount,subtotal,shipping,applyIGST,applyCGST,applySGST,finalTotal,taxTotal, addRental,addReceived,addReturn,addProduct,
       userId,UserDetails,employeeSaleId,PickupDate,ReturnDate,SecurityAmt,AdvanceAmt,employeeId
     } = req.body;
 
@@ -608,8 +614,34 @@ export const AddAdminOrderController = async (req, res) => {
        applySGST,
        totalAmount: finalTotal,
        taxTotal, 
-       order_id
+       orderId:order_id,
+       status:1,
     });
+
+    if(addProduct){
+      for (let product of addProduct ) {
+        // Retrieve the product details
+        const productDetails = await productModel.findById(product._id);
+    
+        if (!productDetails) {
+          console.log(`Product not found: ${product._id}`);
+          continue; // Skip if product is not found
+        }
+    
+        // Add 1 to the stock of each product
+        const updatedStock = productDetails.stock - 1;
+    
+        // Update the stock for the product
+        productDetails.stock = updatedStock;
+    
+        // Save the updated product
+        await productDetails.save();
+        console.log(`Added 1 stock for product ${product.title}: ${updatedStock}`);
+      }
+  
+    }
+   
+
     await newData.save();
 
     return res.status(201).send({
@@ -622,6 +654,34 @@ export const AddAdminOrderController = async (req, res) => {
     return res.status(400).send({
       success: false,
       message: "Error While Creating Category",
+      error,
+    });
+  }
+};
+
+export const getOrderIdAdminController = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const Order = await orderModel.findById(id).populate({
+      path: 'userId', 
+      select: 'username email phone'
+    });
+
+    if (!Order) {
+      return res.status(200).send({
+        message: "Order Not Found By Id",
+        success: false,
+      });
+    }
+    return res.status(200).json({
+      message: "fetch Single Order!",
+      success: true,
+      Order,
+    });
+  } catch (error) {
+    return res.status(400).json({
+      message: `Error while get Order: ${error}`,
+      success: false,
       error,
     });
   }
@@ -2019,6 +2079,66 @@ export const getAllOrderAdmin = async (req, res) => {
 };
 
 
+export const editFullOrderAdmin = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const {
+      order, discount,subtotal,shipping,applyIGST,applyCGST,applySGST,finalTotal,taxTotal,  addRental,addReceived,addReturn,addProduct,
+      userId,UserDetails,employeeSaleId,PickupDate,ReturnDate,SecurityAmt,AdvanceAmt,employeeId
+    } = req.body;
+
+    const orderUpdate = await orderModel.findById(id).populate('userId'); // Fetch order details including user
+
+    if (!orderUpdate) {
+      return res.status(404).json({
+        message: "Order not found",
+        success: false,
+      });
+    } 
+ 
+    let updateFields = {
+      type: order,
+      userId,
+      UserDetails,
+      employeeSaleId,
+      employeeId,
+      PickupDate,ReturnDate,SecurityAmt,AdvanceAmt,
+       addRental,
+       addReceived,
+       addReturn,
+       addProduct,
+       discount,
+       subtotal,
+       shipping,
+       applyIGST,
+       applyCGST,
+       applySGST,
+       totalAmount: finalTotal,
+       taxTotal,  
+    };
+
+    const updatedOrder = await orderModel.findByIdAndUpdate(id, updateFields, {
+      new: true,
+    });
+
+ 
+
+    return res.status(200).json({
+            message: "Order Updated!",
+            success: true,
+          });
+
+  } catch (error) {
+    console.log('error',error)
+    return res.status(500).json({
+      message: `Error while updating Rating: ${error}`,
+      success: false,
+      error,
+    });
+  }
+};
+
+
 export const editOrderAdmin = async (req, res) => {
   try {
     const { id } = req.params;
@@ -2033,9 +2153,34 @@ export const editOrderAdmin = async (req, res) => {
       });
     }
 
+    console.log('status',status)
+    
     // const user = order.userId[0]; // Assuming there's only one user associated with the order
 
     // const { email, username, _id } = user; // Extract user email
+  // Loop through the products in the order and add 1 to their stock
+  if (status === "4") {
+
+  for (let product of order.addProduct ) {
+    // Retrieve the product details
+    const productDetails = await productModel.findById(product._id);
+
+    if (!productDetails) {
+      console.log(`Product not found: ${product._id}`);
+      continue; // Skip if product is not found
+    }
+
+    // Add 1 to the stock of each product
+    const updatedStock = productDetails.stock + 1;
+
+    // Update the stock for the product
+    productDetails.stock = updatedStock;
+
+    // Save the updated product
+    await productDetails.save();
+    console.log(`Added 1 stock for product ${product.title}: ${updatedStock}`);
+  }
+}
 
     let updateFields = {
       status,
@@ -2045,102 +2190,7 @@ export const editOrderAdmin = async (req, res) => {
       new: true,
     });
 
-    // // Configure nodemailer transporter
-    // const transporter = nodemailer.createTransport({
-    //   // SMTP configuration
-    //   host: process.env.MAIL_HOST, // Update with your SMTP host
-    //   port: process.env.MAIL_PORT, // Update with your SMTP port
-    //   secure: process.env.MAIL_ENCRYPTION, // Set to true if using SSL/TLS
-    //   auth: {
-    //     user: process.env.MAIL_USERNAME, // Update with your email address
-    //     pass: process.env.MAIL_PASSWORD, // Update with your email password
-    //   }
-    // });
-
-    // // Email message
-    // const mailOptions = {
-    //   from: process.env.MAIL_FROM_ADDRESS, // Update with your email address
-    //   to: email, // Use the extracted email here
-    //   subject: `cayroshop.com Order ${status === '0' ? 'cancel' :
-    //     status === '1' ? 'Placed' :
-    //       status === '2' ? 'Accepted' :
-    //         status === '3' ? 'Packed' :
-    //           status === '4' ? 'Shipped' :
-    //             status === '5' ? 'Delivered' :
-    //               'Unknown'
-    //     }`,
-    //   html: `
-    //       <div class="bg-light w-100 h-100" style="background-color:#f8f9fa!important;width: 90%;font-family:sans-serif;padding:20px;border-radius:10px;padding: 100px 0px;margin: auto;">
-    //  <div class="modal d-block" style="
-    //     width: 500px;
-    //     background: white;
-    //     padding: 20px;
-    //     margin: auto;
-    //     border: 2px solid #8080802e;
-    //     border-radius: 10px;
-    // ">
-    //   <div class="modal-dialog">
-    //     <div class="modal-content" style="
-    //     text-align: center;
-    // ">
-    //       <div class="modal-header">
-    // <h1 style="color:black;"> Cayro Shop <h1>
-    //       </div>
-    //       <div class="modal-body text-center">
-    //         <h5 style="
-    //     margin: 0px;
-    //     margin-top: 14px;
-    //     font-size: 20px;color:black;
-    // "> Order Id : #${order.orderId} </h5>
-    //        <p style="color:black;" >Hey ${username},</p>
-    //       <svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 24 24" fill="none" stroke="#47ca00" stroke-width="2" stroke-linecap="square" stroke-linejoin="arcs"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
-    //        <h2 style="color:black;"> Your Order Is ${status === '1' ? 'Placed' :
-    //       status === '2' ? 'Accepted' :
-    //         status === '3' ? 'Packed' :
-    //           status === '4' ? 'Shipped' :
-    //             status === '5' ? 'Delivered' :
-    //               'Unknown'
-    //     }! </h2>
-         
-    //        <p style="color:black;" > We'll send you a shipping confirmation email
-    // as soon as your order ${status === '1' ? 'Placed' :
-    //       status === '2' ? 'Accepted' :
-    //         status === '3' ? 'Packed' :
-    //           status === '4' ? 'Shipped' :
-    //             status === '5' ? 'Delivered' :
-    //               'Unknown'
-    //     }. </p>
-    //       </div>
-    //       <div class="modal-footer">
-      
-    //         <a href="https://cayroshop.com/account/order/${_id}/${updatedOrder._id}" style="
-    //     background: green;
-    //     color: white;
-    //     padding: 10px;
-    //     display: block;
-    //     margin: auto;
-    //     border-radius: 6px;
-    //     text-decoration: none;
-    // "> Track Order</a>
-    //       </div>
-    //     </div>
-    //   </div>
-    // </div> </div>
-    //       `
-    // };
-
-    // // Send email
-    // transporter.sendMail(mailOptions, (error, info) => {
-    //   if (error) {
-    //     console.error(error);
-    //     res.status(500).send('Failed to send email');
-    //   } else {
-    //     return res.status(200).json({
-    //       message: "Order Updated!",
-    //       success: true,
-    //     });
-    //   }
-    // });
+ 
 
     return res.status(200).json({
             message: "Order Updated!",
@@ -2148,7 +2198,8 @@ export const editOrderAdmin = async (req, res) => {
           });
 
   } catch (error) {
-    return res.status(400).json({
+    console.log('error',error)
+    return res.status(500).json({
       message: `Error while updating Rating: ${error}`,
       success: false,
       error,
@@ -4455,3 +4506,773 @@ export const AdminGetAllEmployee = async (req, res) => {
   }
 };
 
+export const generateUserInvoicePDFView = async (req, res) => {
+  const lastTransaction = await orderModel
+    .find({})
+    .sort({ _id: -1 }) // Sort by _id in descending order to get the latest transaction first
+    .limit(1) // Only get the most recent transaction
+    .populate({
+      path: "userId", // The field to populate
+      select: "phone username email c_name gstin statename ", // Only select the phone and username fields from the User model
+    })
+    .lean(); // Convert documents to plain JavaScript objects
+
+  // If lastTransaction is an array, you can access the first element like this
+  const invoiceData = lastTransaction[0];
+  
+  // console.log(invoiceData);
+  console.log('invoiceData.UserDetails',invoiceData);
+ 
+
+  const formatDate = (dateString) => {
+    const options = { year: "numeric", month: "long", day: "numeric" };
+    return new Date(dateString).toLocaleDateString(undefined, options);
+  };
+
+  const formatTime = (dateString) => {
+    const options = { hour: "2-digit", minute: "2-digit" };
+    return new Date(dateString).toLocaleTimeString(undefined, options);
+  };
+
+  // Define the HTML content
+  const htmlContent = `     <div class="invoice">
+      <div class="invoice-header">
+        <div class="invoice-header-left" style="flex:none;">
+          <img src="https://backend-2o7f.onrender.com/uploads/new/image-1726306777273.webp" alt="Company Logo" width="240">
+        
+        </div>
+        <div class="invoice-header-right">
+          <h2 style="margin-top:0px;">Ynb Healthcare Pvt. Ltd.
+ </h2>
+ <p>45, Kisan Agro Mall, Mandi Road, Jhansi, Uttar Pradesh - 284001 </p>
+<p> Contact - +91-8062182339 </p>
+  <p> Email : support@ynbhealthcare.com </p>
+         
+                         
+        </div>
+      </div>
+
+<div style="margin-bottom: 15px;margin-top: 15px;border-top-style: solid;border-top-width: 3pt;border-top-color: #4F81BC;"> </div>
+
+          <div class="invoice-header">
+        <div class="invoice-header-left">
+                     <h2 style="margin-top:0px;">BILLED TO</h2>
+ 
+           <p> <b> Name: </b> ${invoiceData.UserDetails[0]?.name}</p>
+            <p> <b> Email Id: </b> ${invoiceData.UserDetails[0]?.email}</p>
+            <p> <b>  Phone No.: </b> ${invoiceData.UserDetails[0]?.phone}</p>
+                      
+          
+         
+        </div>
+        <div class="invoice-header-right">
+          <h2 style="margin-top:0px;">TAX INVOICE</h2>
+            <p> <b> Invoice No.:</b> #${invoiceData?.orderId}</p>
+            
+          <p> <b>  Pickup Date:</b> ${formatDate(
+      invoiceData?.PickupDate
+    )}     </p>
+
+  <p> <b>  Return Date:</b> ${formatDate(
+      invoiceData?.ReturnDate
+    )}     </p>
+  
+        </div>
+      </div>
+
+
+ <table class="invoice-table" style="margin-bottom:0px;">
+  <thead>
+    <tr>
+      <th>#</th>
+      <th>Name</th>
+      <th>Price</th>
+      <th>Quantity</th>
+      <th>Tax (%)</th>
+      <th>Total Amount</th>
+    </tr>
+  </thead>
+  <tbody>
+    ${invoiceData.addProduct && invoiceData.addProduct.length > 0
+      ? invoiceData.addProduct.map((product, index) => `
+        <tr>
+          <td>${index + 1}</td>
+          <td>${product.title}</td>
+          <td>₹ ${product.amount.toFixed(2)}</td>
+          <td>${product.quantity}</td>
+          <td>${product.tax || 0}</td>
+          <td>₹ ${product.total.toFixed(2)}</td>
+        </tr>
+      `).join('')
+      : `<tr><td colspan="6" class="text-center">No products added</td></tr>`
+    }
+  </tbody>
+</table>
+
+${invoiceData.addProduct && invoiceData.addProduct.length > 0 ? `
+  <div class="col-md-4 ms-auto" style="width:33%;margin-left:auto;margin-top:10px;">
+    <table class="invoice-table" >
+      <tbody  >
+        <tr >
+          <th>Subtotal:</th>
+          <td>₹ ${invoiceData.subtotal.toFixed(2)}</td>
+        </tr>
+
+        <tr>
+          <th>Discount:</th>
+          <td>
+           ${invoiceData.discount}
+          </td>
+        </tr>
+
+        <tr>
+          <th>Shipping:</th>
+          <td>
+           ${invoiceData.shipping}
+          </td>
+        </tr>
+
+        <tr>
+          <th>
+            Tax ${invoiceData.applyIGST ? '(IGST)' : '(CGST + SGST)'}:
+            
+          </th>
+          <td>₹ ${(invoiceData.applyIGST || invoiceData.applyCGST || invoiceData.applySGST) ? invoiceData.taxTotal.toFixed(2) : '0.00'}</td>
+        </tr>
+
+        <tr>
+          <th>Final Total:</th>
+          <td><strong>₹ ${invoiceData.totalAmount.toFixed(2)}</strong></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+` : ''}
+
+<div class="col-md-12 my-4">
+  <div class="d-flex justify-content-between">
+    <h4>Rental Amount</h4>
+    
+  </div>
+  <hr />
+
+  <div class="overflow-auto">
+    <table class="invoice-table" id="rental-table" style="margin-bottom:0px;">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Date</th>
+          <th>Time</th>
+          <th>Amount INR</th>
+          <th>Gateway</th>
+          <th>Payment Method</th>
+          <th>Transaction Id</th>
+         </tr>
+      </thead>
+      <tbody id="rental-table-body">
+        ${invoiceData.addRental && invoiceData.addRental.length > 0 ? invoiceData.addRental.map((rental, index) => `
+          <tr>
+            <td>${index + 1}</td>
+            <td>${rental.date}</td>
+            <td>${rental.time}</td>
+            <td>${rental.amount}</td>
+            <td>${rental.gateway}</td>
+            <td>${rental.method}</td>
+            <td>${rental.transaction}</td>
+            
+          </tr>
+        `).join('') : `
+          <tr>
+            <td colspan="8" class="text-center">No Rental Added</td>
+          </tr>
+        `}
+      </tbody>
+    </table>
+  </div>
+
+  ${invoiceData.addRental && invoiceData.addRental.length > 0 ? `
+    <div class="col-md-4 ms-auto" style="max-width:33%;margin-left:auto;">
+      <table  class="invoice-table" id="rental-table" style="margin-bottom:0px;margin-top:10px;">
+        <tbody>
+          <tr>
+            <th>Final Total:</th>
+            <td><strong>₹ ${invoiceData.addRental.reduce((acc, rental) => acc + parseFloat(rental.amount || 0), 0).toFixed(2)}</strong></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  ` : ''}
+</div>
+
+
+<div class="col-md-12 my-4">
+  <div class="d-flex justify-content-between">
+    <h4>Security Amount Received</h4>
+    
+  </div>
+  <hr />
+
+  <div class="overflow-auto">
+    <table class="invoice-table" id="rental-table" style="margin-bottom:0px;">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Date</th>
+          <th>Time</th>
+          <th>Amount INR</th>
+          <th>Gateway</th>
+          <th>Payment Method</th>
+          <th>Transaction Id</th>
+         </tr>
+      </thead>
+      <tbody id="rental-table-body">
+        ${invoiceData.addReceived && invoiceData.addReceived.length > 0 ? invoiceData.addReceived.map((rental, index) => `
+          <tr>
+            <td>${index + 1}</td>
+            <td>${rental.date}</td>
+            <td>${rental.time}</td>
+            <td>${rental.amount}</td>
+            <td>${rental.gateway}</td>
+            <td>${rental.method}</td>
+            <td>${rental.transaction}</td>
+            
+          </tr>
+        `).join('') : `
+          <tr>
+            <td colspan="8" class="text-center">No Rental Added</td>
+          </tr>
+        `}
+      </tbody>
+    </table>
+  </div>
+
+  ${invoiceData.addReceived && invoiceData.addReceived.length > 0 ? `
+    <div class="col-md-4 ms-auto" style="max-width:33%;margin-left:auto;">
+      <table  class="invoice-table" id="rental-table" style="margin-bottom:0px;margin-top:10px;">
+        <tbody>
+          <tr>
+            <th>Final Total:</th>
+            <td><strong>₹ ${invoiceData.addReceived.reduce((acc, rental) => acc + parseFloat(rental.amount || 0), 0).toFixed(2)}</strong></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  ` : ''}
+</div>
+
+     
+<div class="col-md-12 my-4">
+  <div class="d-flex justify-content-between">
+    <h4> Security Amount Return
+ </h4>
+    
+  </div>
+  <hr />
+
+  <div class="overflow-auto">
+    <table class="invoice-table" id="rental-table" style="margin-bottom:0px;">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Date</th>
+          <th>Time</th>
+          <th>Amount INR</th>
+          <th>Gateway</th>
+          <th>Payment Method</th>
+          <th>Transaction Id</th>
+         </tr>
+      </thead>
+      <tbody id="rental-table-body">
+        ${invoiceData.addReturn && invoiceData.addReturn.length > 0 ? invoiceData.addReturn.map((rental, index) => `
+          <tr>
+            <td>${index + 1}</td>
+            <td>${rental.date}</td>
+            <td>${rental.time}</td>
+            <td>${rental.amount}</td>
+            <td>${rental.gateway}</td>
+            <td>${rental.method}</td>
+            <td>${rental.transaction}</td>
+            
+          </tr>
+        `).join('') : `
+          <tr>
+            <td colspan="8" class="text-center">No Rental Added</td>
+          </tr>
+        `}
+      </tbody>
+    </table>
+  </div>
+
+  ${invoiceData.addReturn && invoiceData.addReturn.length > 0 ? `
+    <div class="col-md-4 ms-auto" style="max-width:33%;margin-left:auto;">
+      <table  class="invoice-table" id="rental-table" style="margin-bottom:0px;margin-top:10px;">
+        <tbody>
+          <tr>
+            <th>Final Total:</th>
+            <td><strong>₹ ${invoiceData.addReturn.reduce((acc, rental) => acc + parseFloat(rental.amount || 0), 0).toFixed(2)}</strong></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  ` : ''}
+</div>
+
+
+<br>
+     <p style="text-align:center" >This is a Computer Generated Invoice </p>
+ <br>
+
+
+
+    </div>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+      }
+      h2 {
+        font-weight: 700;
+      }
+        h1,h2{
+        font-size: 14pt;
+}
+        p,td,th{font-size: 10pt;}
+      .invoice {
+        width: 95%;
+        margin: 10px auto;
+        padding: 20px;
+      }
+      .invoice-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: start;
+        margin-bottom: 20px;
+      }
+      .invoice-header-left {
+        flex: 1;
+      }
+      .invoice-header-right {
+        flex: 1;
+        text-align: right;
+      }
+      .invoice-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-bottom: 10%;
+      }
+      .invoice-table th,
+      .invoice-table td {
+        border: 1px solid #000;
+        padding: 10px;
+        text-align: center;
+      }
+      .invoice-table th {
+      
+        color:green;
+    
+      }
+      .invoice-total {
+        float: right;
+      }
+    </style>
+  `;
+
+  res.send(htmlContent);
+};
+
+export const downloadUserAdminInvoice = async (req, res) => {
+  try {
+    const { invoiceId } = req.body; // Assuming invoiceData is sent in the request body
+    if (!invoiceId) {
+      return res.status(400).send("Invoice ID is required");
+    }
+    // Fetch invoice data from the database
+    const invoiceData = await orderModel
+      .findById(invoiceId)
+      .populate("userId");
+
+    const pdfBuffer = await generateUserInvoicePDF(invoiceData);
+
+    res.setHeader("Content-Disposition", "attachment; filename=invoice.pdf");
+    res.setHeader("Content-Type", "application/pdf");
+    res.send(pdfBuffer);
+  } catch (error) {
+    await execPromise("npx puppeteer browsers install chrome");
+
+    console.error("Error generating invoice PDF:", error);
+    res.status(500).send("Internal Server Error");
+  }
+};
+
+
+const generateUserInvoicePDF = async (invoiceData) => {
+  // console.log(invoiceData);
+
+  const browser = await puppeteer.launch({
+    headless: true, // Ensure headless mode (no GUI)
+    userDataDir: "/tmp/puppeteer", // Ensure a writable user data directory for cloud environments
+  });
+
+  const page = await browser.newPage();
+ 
+  const formatDate = (dateString) => {
+    const options = { year: "numeric", month: "long", day: "numeric" };
+    return new Date(dateString).toLocaleDateString(undefined, options);
+  };
+
+  const formatTime = (dateString) => {
+    const options = { hour: "2-digit", minute: "2-digit" };
+    return new Date(dateString).toLocaleTimeString(undefined, options);
+  };
+
+
+  
+  // Define the HTML content
+  const htmlContent = `     <div class="invoice">
+      <div class="invoice-header">
+        <div class="invoice-header-left" style="flex:none;">
+          <img src="https://backend-2o7f.onrender.com/uploads/new/image-1726306777273.webp" alt="Company Logo" width="240">
+        
+        </div>
+        <div class="invoice-header-right">
+          <h2 style="margin-top:0px;">Ynb Healthcare Pvt. Ltd.
+ </h2>
+ <p>45, Kisan Agro Mall, Mandi Road, Jhansi, Uttar Pradesh - 284001 </p>
+<p> Contact - +91-8062182339 </p>
+  <p> Email : support@ynbhealthcare.com </p>
+         
+                         
+        </div>
+      </div>
+
+<div style="margin-bottom: 15px;margin-top: 15px;border-top-style: solid;border-top-width: 3pt;border-top-color: #4F81BC;"> </div>
+
+          <div class="invoice-header">
+        <div class="invoice-header-left">
+                     <h2 style="margin-top:0px;">BILLED TO</h2>
+ 
+           <p> <b> Name: </b> ${invoiceData.UserDetails[0]?.name}</p>
+            <p> <b> Email Id: </b> ${invoiceData.UserDetails[0]?.email}</p>
+            <p> <b>  Phone No.: </b> ${invoiceData.UserDetails[0]?.phone}</p>
+                      
+          
+         
+        </div>
+        <div class="invoice-header-right">
+          <h2 style="margin-top:0px;">TAX INVOICE</h2>
+            <p> <b> Invoice No.:</b> #${invoiceData?.orderId}</p>
+            
+          <p> <b>  Pickup Date:</b> ${formatDate(
+      invoiceData?.PickupDate
+    )}     </p>
+
+  <p> <b>  Return Date:</b> ${formatDate(
+      invoiceData?.ReturnDate
+    )}     </p>
+  
+        </div>
+      </div>
+
+
+ <table class="invoice-table" style="margin-bottom:0px;">
+  <thead>
+    <tr>
+      <th>#</th>
+      <th>Name</th>
+      <th>Price</th>
+      <th>Quantity</th>
+      <th>Tax (%)</th>
+      <th>Total Amount</th>
+    </tr>
+  </thead>
+  <tbody>
+    ${invoiceData.addProduct && invoiceData.addProduct.length > 0
+      ? invoiceData.addProduct.map((product, index) => `
+        <tr>
+          <td>${index + 1}</td>
+          <td>${product.title}</td>
+          <td>₹ ${product.amount.toFixed(2)}</td>
+          <td>${product.quantity}</td>
+          <td>${product.tax || 0}</td>
+          <td>₹ ${product.total.toFixed(2)}</td>
+        </tr>
+      `).join('')
+      : `<tr><td colspan="6" class="text-center">No products added</td></tr>`
+    }
+  </tbody>
+</table>
+
+${invoiceData.addProduct && invoiceData.addProduct.length > 0 ? `
+  <div class="col-md-4 ms-auto" style="width:33%;margin-left:auto;margin-top:10px;">
+    <table class="invoice-table" >
+      <tbody  >
+        <tr >
+          <th>Subtotal:</th>
+          <td>₹ ${invoiceData.subtotal.toFixed(2)}</td>
+        </tr>
+
+        <tr>
+          <th>Discount:</th>
+          <td>
+           ${invoiceData.discount}
+          </td>
+        </tr>
+
+        <tr>
+          <th>Shipping:</th>
+          <td>
+           ${invoiceData.shipping}
+          </td>
+        </tr>
+
+        <tr>
+          <th>
+            Tax ${invoiceData.applyIGST ? '(IGST)' : '(CGST + SGST)'}:
+            
+          </th>
+          <td>₹ ${(invoiceData.applyIGST || invoiceData.applyCGST || invoiceData.applySGST) ? invoiceData.taxTotal.toFixed(2) : '0.00'}</td>
+        </tr>
+
+        <tr>
+          <th>Final Total:</th>
+          <td><strong>₹ ${invoiceData.totalAmount.toFixed(2)}</strong></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+` : ''}
+
+<div class="col-md-12 my-4">
+  <div class="d-flex justify-content-between">
+    <h4>Rental Amount</h4>
+    
+  </div>
+  <hr />
+
+  <div class="overflow-auto">
+    <table class="invoice-table" id="rental-table" style="margin-bottom:0px;">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Date</th>
+          <th>Time</th>
+          <th>Amount INR</th>
+          <th>Gateway</th>
+          <th>Payment Method</th>
+          <th>Transaction Id</th>
+         </tr>
+      </thead>
+      <tbody id="rental-table-body">
+        ${invoiceData.addRental && invoiceData.addRental.length > 0 ? invoiceData.addRental.map((rental, index) => `
+          <tr>
+            <td>${index + 1}</td>
+            <td>${rental.date}</td>
+            <td>${rental.time}</td>
+            <td>${rental.amount}</td>
+            <td>${rental.gateway}</td>
+            <td>${rental.method}</td>
+            <td>${rental.transaction}</td>
+            
+          </tr>
+        `).join('') : `
+          <tr>
+            <td colspan="8" class="text-center">No Rental Added</td>
+          </tr>
+        `}
+      </tbody>
+    </table>
+  </div>
+
+  ${invoiceData.addRental && invoiceData.addRental.length > 0 ? `
+    <div class="col-md-4 ms-auto" style="max-width:33%;margin-left:auto;">
+      <table  class="invoice-table" id="rental-table" style="margin-bottom:0px;margin-top:10px;">
+        <tbody>
+          <tr>
+            <th>Final Total:</th>
+            <td><strong>₹ ${invoiceData.addRental.reduce((acc, rental) => acc + parseFloat(rental.amount || 0), 0).toFixed(2)}</strong></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  ` : ''}
+</div>
+
+
+<div class="col-md-12 my-4">
+  <div class="d-flex justify-content-between">
+    <h4>Security Amount Received</h4>
+    
+  </div>
+  <hr />
+
+  <div class="overflow-auto">
+    <table class="invoice-table" id="rental-table" style="margin-bottom:0px;">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Date</th>
+          <th>Time</th>
+          <th>Amount INR</th>
+          <th>Gateway</th>
+          <th>Payment Method</th>
+          <th>Transaction Id</th>
+         </tr>
+      </thead>
+      <tbody id="rental-table-body">
+        ${invoiceData.addReceived && invoiceData.addReceived.length > 0 ? invoiceData.addReceived.map((rental, index) => `
+          <tr>
+            <td>${index + 1}</td>
+            <td>${rental.date}</td>
+            <td>${rental.time}</td>
+            <td>${rental.amount}</td>
+            <td>${rental.gateway}</td>
+            <td>${rental.method}</td>
+            <td>${rental.transaction}</td>
+            
+          </tr>
+        `).join('') : `
+          <tr>
+            <td colspan="8" class="text-center">No Rental Added</td>
+          </tr>
+        `}
+      </tbody>
+    </table>
+  </div>
+
+  ${invoiceData.addReceived && invoiceData.addReceived.length > 0 ? `
+    <div class="col-md-4 ms-auto" style="max-width:33%;margin-left:auto;">
+      <table  class="invoice-table" id="rental-table" style="margin-bottom:0px;margin-top:10px;">
+        <tbody>
+          <tr>
+            <th>Final Total:</th>
+            <td><strong>₹ ${invoiceData.addReceived.reduce((acc, rental) => acc + parseFloat(rental.amount || 0), 0).toFixed(2)}</strong></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  ` : ''}
+</div>
+
+     
+<div class="col-md-12 my-4">
+  <div class="d-flex justify-content-between">
+    <h4> Security Amount Return
+ </h4>
+    
+  </div>
+  <hr />
+
+  <div class="overflow-auto">
+    <table class="invoice-table" id="rental-table" style="margin-bottom:0px;">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Date</th>
+          <th>Time</th>
+          <th>Amount INR</th>
+          <th>Gateway</th>
+          <th>Payment Method</th>
+          <th>Transaction Id</th>
+         </tr>
+      </thead>
+      <tbody id="rental-table-body">
+        ${invoiceData.addReturn && invoiceData.addReturn.length > 0 ? invoiceData.addReturn.map((rental, index) => `
+          <tr>
+            <td>${index + 1}</td>
+            <td>${rental.date}</td>
+            <td>${rental.time}</td>
+            <td>${rental.amount}</td>
+            <td>${rental.gateway}</td>
+            <td>${rental.method}</td>
+            <td>${rental.transaction}</td>
+            
+          </tr>
+        `).join('') : `
+          <tr>
+            <td colspan="8" class="text-center">No Rental Added</td>
+          </tr>
+        `}
+      </tbody>
+    </table>
+  </div>
+
+  ${invoiceData.addReturn && invoiceData.addReturn.length > 0 ? `
+    <div class="col-md-4 ms-auto" style="max-width:33%;margin-left:auto;">
+      <table  class="invoice-table" id="rental-table" style="margin-bottom:0px;margin-top:10px;">
+        <tbody>
+          <tr>
+            <th>Final Total:</th>
+            <td><strong>₹ ${invoiceData.addReturn.reduce((acc, rental) => acc + parseFloat(rental.amount || 0), 0).toFixed(2)}</strong></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  ` : ''}
+</div>
+
+
+<br>
+     <p style="text-align:center" >This is a Computer Generated Invoice </p>
+ <br>
+
+
+
+    </div>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+      }
+      h2 {
+        font-weight: 700;
+      }
+        h1,h2{
+        font-size: 14pt;
+}
+        p,td,th{font-size: 10pt;}
+      .invoice {
+        width: 95%;
+        margin: 10px auto;
+        padding: 20px;
+      }
+      .invoice-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: start;
+        margin-bottom: 20px;
+      }
+      .invoice-header-left {
+        flex: 1;
+      }
+      .invoice-header-right {
+        flex: 1;
+        text-align: right;
+      }
+      .invoice-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-bottom: 10%;
+      }
+      .invoice-table th,
+      .invoice-table td {
+        border: 1px solid #000;
+        padding: 10px;
+        text-align: center;
+      }
+      .invoice-table th {
+      
+        color:green;
+    
+      }
+      .invoice-total {
+        float: right;
+      }
+    </style>
+  `;
+
+
+  await page.setContent(htmlContent);
+  const pdfBuffer = await page.pdf({ format: "A4" });
+
+  await browser.close();
+
+  return pdfBuffer;
+};
