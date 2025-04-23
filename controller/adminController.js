@@ -1,4 +1,4 @@
- import adminModel from "../models/adminModel.js";
+import adminModel from "../models/adminModel.js";
 import bcrypt from "bcrypt";
 import galleryModel from "../models/galleryModel.js";
 import blogModel from "../models/blogModel.js";
@@ -4897,7 +4897,7 @@ export const downloadUserAdminInvoice = async (req, res) => {
     res.send(pdfBuffer);
   } catch (error) {
     await execPromise("npx puppeteer browsers install chrome");
-    await execPromise("npx install puppeteer");
+    await execPromise("npm install puppeteer");
  
 
     console.error("Error generating invoice PDF:", error);
