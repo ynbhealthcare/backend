@@ -4913,10 +4913,10 @@ const generateUserInvoicePDF = async (lastTransaction) => {
   const invoiceData = lastTransaction[0];
 
   const browser = await puppeteer.launch({
-    headless: true, // Ensure headless mode (no GUI)
-    userDataDir: "/tmp/puppeteer", // Ensure a writable user data directory for cloud environments
+    headless: 'new',
+    args: ['--no-sandbox', '--disable-setuid-sandbox']
   });
-
+  
   const page = await browser.newPage();
  
   const formatDate = (dateString) => {
