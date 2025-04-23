@@ -4890,7 +4890,7 @@ export const downloadUserAdminInvoice = async (req, res) => {
       .findById(invoiceId)
       .populate("userId");
 
-    const pdfBuffer = await generateUserInvoicePDF(invoiceData);
+    const pdfBuffer = await generateUserInvoicePDF(invoiceData[0]);
 
     res.setHeader("Content-Disposition", "attachment; filename=invoice.pdf");
     res.setHeader("Content-Type", "application/pdf");
