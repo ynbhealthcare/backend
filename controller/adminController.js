@@ -4890,15 +4890,14 @@ export const downloadUserAdminInvoice = async (req, res) => {
       .findById(invoiceId)
       .populate("userId");
 
-      console.log(invoiceData)
     const pdfBuffer = await generateUserInvoicePDF(invoiceData);
 
     res.setHeader("Content-Disposition", "attachment; filename=invoice.pdf");
     res.setHeader("Content-Type", "application/pdf");
     res.send(pdfBuffer);
   } catch (error) {
-    await execPromise("npx puppeteer browsers install chrome");
-    await execPromise("npm install puppeteer");
+      await execPromise("npx puppeteer browsers install chrome");
+    await execPromise("npx install puppeteer");
  
 
     console.error("Error generating invoice PDF:", error);
@@ -4907,16 +4906,14 @@ export const downloadUserAdminInvoice = async (req, res) => {
 };
 
 
-const generateUserInvoicePDF = async (lastTransaction) => {
+const generateUserInvoicePDF = async (invoiceData) => {
   // console.log(invoiceData);
-
-  const invoiceData = lastTransaction[0];
 
   const browser = await puppeteer.launch({
     headless: 'new',
     args: ['--no-sandbox', '--disable-setuid-sandbox']
   });
-  
+
   const page = await browser.newPage();
  
   const formatDate = (dateString) => {
