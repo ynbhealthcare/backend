@@ -4890,6 +4890,7 @@ export const downloadUserAdminInvoice = async (req, res) => {
       .findById(invoiceId)
       .populate("userId");
 
+      console.log('invoiceData',invoiceData)
     const pdfBuffer = await generateUserInvoicePDF(invoiceData);
 
     res.setHeader("Content-Disposition", "attachment; filename=invoice.pdf");
@@ -4907,7 +4908,7 @@ export const downloadUserAdminInvoice = async (req, res) => {
 
 
 const generateUserInvoicePDF = async (invoiceData) => {
-  // console.log(invoiceData);
+    console.log('invoiceData',invoiceData);
 
   const browser = await puppeteer.launch({
     headless: 'new',
@@ -4952,9 +4953,9 @@ const generateUserInvoicePDF = async (invoiceData) => {
         <div class="invoice-header-left">
                      <h2 style="margin-top:0px;">BILLED TO</h2>
  
-           <p> <b> Name: </b> ${invoiceData.UserDetails[0]?.name}</p>
-            <p> <b> Email Id: </b> ${invoiceData.UserDetails[0]?.email}</p>
-            <p> <b>  Phone No.: </b> ${invoiceData.UserDetails[0]?.phone}</p>
+           <p> <b> Name: </b> ${invoiceData?.UserDetails[0]?.name}</p>
+            <p> <b> Email Id: </b> ${invoiceData?.UserDetails[0]?.email}</p>
+            <p> <b>  Phone No.: </b> ${invoiceData?.UserDetails[0]?.phone}</p>
                       
           
          
