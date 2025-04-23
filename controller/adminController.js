@@ -4890,7 +4890,8 @@ export const downloadUserAdminInvoice = async (req, res) => {
       .findById(invoiceId)
       .populate("userId");
 
-    const pdfBuffer = await generateUserInvoicePDF(invoiceData[0]);
+      console.log(invoiceData)
+    const pdfBuffer = await generateUserInvoicePDF(invoiceData);
 
     res.setHeader("Content-Disposition", "attachment; filename=invoice.pdf");
     res.setHeader("Content-Type", "application/pdf");
@@ -4906,8 +4907,10 @@ export const downloadUserAdminInvoice = async (req, res) => {
 };
 
 
-const generateUserInvoicePDF = async (invoiceData) => {
+const generateUserInvoicePDF = async (lastTransaction) => {
   // console.log(invoiceData);
+
+  const invoiceData = lastTransaction[0];
 
   const browser = await puppeteer.launch({
     headless: true, // Ensure headless mode (no GUI)
