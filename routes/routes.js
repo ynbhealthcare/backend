@@ -1,14 +1,14 @@
 import express from "express";
 import {
-  UserloginAll, SignupAdmin, Adminlogin, getAllGalleryController, deleteGalleryController, AddAdminBlogController, AdmindeleteBlogController, AddAdminCategoryController,AddAdminOrderController
+  UserloginAll, SignupAdmin, Adminlogin, getAllGalleryController, deleteGalleryController, AddAdminBlogController, AdmindeleteBlogController, AddAdminCategoryController,AddAdminOrderController,getOrderIdAdminController
   , getAllReviewsAdmin, AdmingetAllCategories, AddAdminProduct, getAllcategoryFillAdmin, updateCategoryAdmin, getCategoryIdAdmin, deleteCategoryAdmin, getAllProductFillAdmin, updateProductAdmin, getProductIdAdmin, deleteProductAdmin,
   AddAdminPromoController, getAllPromoAdmin, updatePromoAdmin, getPromoIdAdmin, deletePromoAdmin
-  , getAllEnquireAdmin, getAllConsultationEnquireAdmin, ChangePassAdmin, ForgotAdminPassword, editOrderAdmin, deleteOrderAdmin, AddAdminPageController, getAllPageAdmin, updatePageAdmin, getPageIdAdmin, deletePageAdmin, getAllBlogAdmin, exportAllProAdmin, importAllProAdmin, getAllUserAdmin, AddAdminTaxController, getAllTaxAdmin, updateTaxAdmin, getTaxIdAdmin, deleteTaxAdmin, ViewAllAdminZones, AddAdminZonesController, getAllZonesAdmin, updateZonesAdmin, getZonesIdAdmin, deleteZonesAdmin, GetImageAdmin, deleteFolderAdmin, UpdateFolderAdmin, getUserIdAdmin, GetFolderIDAdmin, AddAdminFolderController, GetFolderAdmin, editUserAdmin, AddAdminAttributeController, deleteRatingAdmin, editReviewAdmin, getAllOrderAdmin, getAllAttributeFillAdmin, updateAttributeAdmin, getAttributeIdAdmin, deleteAttributeAdmin, getAllAttribute, AddAdminTagController, getAllTagFillAdmin, updateTagAdmin, getTagIdAdmin, deleteTagAdmin, getAllTag, editHomeData, editHomeLayoutData,
+  , getAllEnquireAdmin, getAllConsultationEnquireAdmin, ChangePassAdmin, ForgotAdminPassword, editOrderAdmin,editFullOrderAdmin, deleteOrderAdmin, AddAdminPageController, getAllPageAdmin, updatePageAdmin, getPageIdAdmin, deletePageAdmin, getAllBlogAdmin, exportAllProAdmin, importAllProAdmin, getAllUserAdmin, AddAdminTaxController, getAllTaxAdmin, updateTaxAdmin, getTaxIdAdmin, deleteTaxAdmin, ViewAllAdminZones, AddAdminZonesController, getAllZonesAdmin, updateZonesAdmin, getZonesIdAdmin, deleteZonesAdmin, GetImageAdmin, deleteFolderAdmin, UpdateFolderAdmin, getUserIdAdmin, GetFolderIDAdmin, AddAdminFolderController, GetFolderAdmin, editUserAdmin, AddAdminAttributeController, deleteRatingAdmin, editReviewAdmin, getAllOrderAdmin, getAllAttributeFillAdmin, updateAttributeAdmin, getAttributeIdAdmin, deleteAttributeAdmin, getAllAttribute, AddAdminTagController, getAllTagFillAdmin, updateTagAdmin, getTagIdAdmin, deleteTagAdmin, getAllTag, editHomeData, editHomeLayoutData,
   AddPlanCategoryController, getAllPlanCategoryAdmin, AddPlanController, getAllPlanAdmin, getPlanIdAdmin, updatePlanAdmin, deletePlanAdmin, AddAdminDepartmentController,
   getAllDepartmentFillAdmin,
   getDepartmentIdAdmin,
   updateDepartmentAdmin,
-  deleteDepartmentAdmin, editUserVerifyAdmin, AdminGetAllEmployee,AllPaymentAdmin, AdminAllEnquireStatus, profileImageHealth,deletePlanCategoryAdmin
+  deleteDepartmentAdmin,downloadUserAdminInvoice, generateUserInvoicePDFView, editUserVerifyAdmin, AdminGetAllEmployee,AllPaymentAdmin, AdminAllEnquireStatus, profileImageHealth,deletePlanCategoryAdmin
 } from "../controller/adminController.js";
 
 import {
@@ -44,8 +44,8 @@ router.post('/admin/add-category', AddAdminCategoryController);
 router.get('/all/category/:parentId', GetAllCategoriesByParentIdController);
 router.get('/all/category-slug/:parentSlug', GetAllCategoriesBySlugController);
 router.post('/admin/add-order', AddAdminOrderController);
-
-
+router.get("/admin/get-order/:id", getOrderIdAdminController);
+ 
 
 router.get('/all-category', UsergetAllCategories);
 router.get('/all-products', UsergetAllProducts);
@@ -96,6 +96,10 @@ router.get('/admin/all-consultation-enquire', getAllConsultationEnquireAdmin);
 
 router.get('/admin/all-order', getAllOrderAdmin);
 router.put('/admin/update-order/:id', editOrderAdmin);
+router.put('/admin/update-full-order/:id', editFullOrderAdmin);
+
+router.get("/last-invoice", generateUserInvoicePDFView);
+
 
 // user Admin
 
@@ -397,6 +401,8 @@ router.get("/ssr-data", GetWebsiteData);
 router.get("/full-ssr-data", GetWebsiteData_old);
 router.post("/payment-success", PaymentSuccess);
 router.post("/payment-fail", PaymentFail);
+
+router.post("/admin/download-invoice", downloadUserAdminInvoice);
 
 export default router;
 
