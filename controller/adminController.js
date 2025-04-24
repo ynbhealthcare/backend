@@ -2007,7 +2007,17 @@ export const getAllOrderAdmin = async (req, res) => {
     const page = parseInt(req.query.page) || 1; // Current page, default is 1
     const limit = parseInt(req.query.limit) || 10; // Number of documents per page, default is 10
     const searchTerm = req.query.search || ""; // Get search term from the query parameters
-    const statusFilter = req.query.status ? req.query.status.split(',') : []; // Get status filter from the query parameters and split into an array
+    const statusFilter = req.query.status || ''; // Get status filter from the query parameters and split into an array
+    const productId = req.query.productId || '';
+    const type = req.query.type || '';
+    
+    const notStatus = req.query.notStatus || ''; // Get status filter from the query parameters and split into an array
+
+
+    const startDate = req.query.startDate
+    ? new Date(req.query.startDate)
+    : null;
+  const endDate = req.query.endDate ? new Date(req.query.endDate) : null;
 
     const skip = (page - 1) * limit;
 
@@ -2026,6 +2036,35 @@ export const getAllOrderAdmin = async (req, res) => {
       query.status = { $in: statusFilter }; // Use $in operator to match any of the values in the array
     }
 
+    
+    if (notStatus) {
+      const notStatusArray = notStatus.split(',').map(Number);
+      query.status = { $nin: notStatusArray };
+    }
+
+    
+
+    
+
+ // Add status filter to the query if statusFilter is provided
+ if (type.length > 0) {
+  query.type = { $in: type }; // Use $in operator to match any of the values in the array
+ }
+
+    
+
+      // Add date range filtering to the query
+      if (startDate && endDate) {
+        query.createdAt = { $gte: startDate, $lte: endDate };
+      } else if (startDate) {
+        query.createdAt = { $gte: startDate };
+      } else if (endDate) {
+        query.createdAt = { $lte: endDate };
+      }
+      
+      if (productId) {
+        query['addProduct._id'] = productId; // Simple string match
+      }
 
     const total = await orderModel.countDocuments(query); // Count total documents matching the query
 
