@@ -1,4 +1,4 @@
- import express from "express";
+import express from "express";
 import {
   UserloginAll, SignupAdmin, Adminlogin, getAllGalleryController, deleteGalleryController, AddAdminBlogController, AdmindeleteBlogController, AddAdminCategoryController,AddAdminOrderController,getOrderIdAdminController
   , getAllReviewsAdmin, AdmingetAllCategories, AddAdminProduct, getAllcategoryFillAdmin, updateCategoryAdmin, getCategoryIdAdmin, deleteCategoryAdmin, getAllProductFillAdmin, updateProductAdmin, getProductIdAdmin, deleteProductAdmin,
@@ -98,7 +98,7 @@ router.get('/admin/all-order', getAllOrderAdmin);
 router.put('/admin/update-order/:id', editOrderAdmin);
 router.put('/admin/update-full-order/:id', editFullOrderAdmin);
 
-router.get("/last-invoice", generateUserInvoicePDFView);
+router.get("/user-invoice/:id", generateUserInvoicePDFView);
 
 
 // user Admin
