@@ -2001,7 +2001,7 @@ export const editReviewAdmin = async (req, res) => {
 
 
 
-export const getAllOrderAdmin = async (req, res) => {
+export const getAllOrderAdmin_old = async (req, res) => {
 
   try {
     const page = parseInt(req.query.page) || 1; // Current page, default is 1
@@ -2116,6 +2116,125 @@ export const getAllOrderAdmin = async (req, res) => {
 
 
 };
+
+export const getAllOrderAdmin = async (req, res) => {
+  try {
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const searchTerm = req.query.search || "";
+    const statusFilter = req.query.status || '';
+    const notStatus = req.query.notStatus || '';
+    const productId = req.query.productId || '';
+    const type = req.query.type || '';
+    const startDate = req.query.startDate ? new Date(req.query.startDate) : null;
+    const endDate = req.query.endDate ? new Date(req.query.endDate) : null;
+    const skip = (page - 1) * limit;
+
+    const query = {};
+
+     // if (startDate && endDate) {
+    //   query.createdAt = { $gte: startDate, $lte: endDate };
+    // } else if (startDate) {
+    //   query.createdAt = { $gte: startDate };
+    // } else if (endDate) {
+    //   query.createdAt = { $lte: endDate };
+    // }
+
+
+    // Date range filtering based on PickupDate and ReturnDate
+if (startDate && endDate) {
+  query.$and = [
+    { PickupDate: { $lte: endDate } },
+    { ReturnDate: { $gte: startDate } },
+  ];
+} else if (startDate) {
+  query.ReturnDate = { $gte: startDate };
+} else if (endDate) {
+  query.PickupDate = { $lte: endDate };
+}
+
+
+
+    if (statusFilter.length > 0) {
+      query.status = { $in: statusFilter.split(',').map(Number) };
+    }
+
+    if (notStatus.length > 0) {
+      query.status = { $nin: notStatus.split(',').map(Number) };
+    }
+
+    if (type.length > 0) {
+      query.type = { $in: type.split(',').map(Number) };
+    }
+
+    if (productId) {
+      query['addProduct._id'] = productId;
+    }
+
+    // Fetch with populate
+    const allOrders = await orderModel
+      .find(query)
+      .sort({ _id: -1 })
+      .populate({
+        path: "userId",
+        model: userModel,
+        select: "username email phone",
+      })
+      .populate({
+        path: "employeeId",
+        model: userModel,
+        select: "username email phone",
+      })
+      .populate({
+        path: "employeeSaleId",
+        model: userModel,
+        select: "username email phone",
+      })
+      .lean();
+
+    // Filter manually for searchTerm
+    const filteredOrders = allOrders.filter((order) => {
+      if (!searchTerm) return true;
+
+      const regex = new RegExp(searchTerm, 'i');
+      return (
+        regex.test(order.orderId?.toString()) ||
+        regex.test(order.mode || '') ||
+        regex.test(order.employeeId?.username || '') ||
+        regex.test(order.employeeId?.email || '') ||
+        regex.test(order.employeeSaleId?.username || '') ||
+        regex.test(order.employeeSaleId?.email || '') ||
+        regex.test(order.userId?.username || '') ||
+        regex.test(order.userId?.email || '')  
+      )
+    });
+
+    const paginatedOrders = filteredOrders.slice(skip, skip + limit);
+
+    if (paginatedOrders.length === 0) {
+      return res.status(404).send({
+        message: "No Order Found",
+        success: false,
+      });
+    }
+
+    return res.status(200).send({
+      message: "All Order list",
+      Count: paginatedOrders.length,
+      currentPage: page,
+      totalPages: Math.ceil(filteredOrders.length / limit),
+      success: true,
+      Order: paginatedOrders,
+    });
+  } catch (error) {
+    return res.status(500).send({
+      message: `Error while fetching Orders: ${error.message}`,
+      success: false,
+      error,
+    });
+  }
+};
+
 
 
 export const editFullOrderAdmin = async (req, res) => {
@@ -4513,6 +4632,7 @@ export const AdminGetAllEmployee = async (req, res) => {
     }
   }
    
+  console.log('fillter',filter)
 
     //  if (category) {
     //    const categories = Array.isArray(category) ? category : [category];
