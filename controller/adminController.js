@@ -4666,9 +4666,12 @@ export const AdminGetAllEmployee = async (req, res) => {
 };
 
 export const generateUserInvoicePDFView = async (req, res) => {
+  try {
+
+  const { id } = req.params;
+
   const lastTransaction = await orderModel
-    .find({})
-    .sort({ _id: -1 }) // Sort by _id in descending order to get the latest transaction first
+    .findById(id)
     .limit(1) // Only get the most recent transaction
     .populate({
       path: "userId", // The field to populate
@@ -4677,7 +4680,7 @@ export const generateUserInvoicePDFView = async (req, res) => {
     .lean(); // Convert documents to plain JavaScript objects
 
   // If lastTransaction is an array, you can access the first element like this
-  const invoiceData = lastTransaction[0];
+  const invoiceData = lastTransaction;
   
   // console.log(invoiceData);
   console.log('invoiceData.UserDetails',invoiceData);
@@ -4701,9 +4704,9 @@ export const generateUserInvoicePDFView = async (req, res) => {
         
         </div>
         <div class="invoice-header-right">
-          <h2 style="margin-top:0px;">Ynb Healthcare Pvt. Ltd.
+          <h2 style="margin-top:0px;">YNB Healthcare Pvt. Ltd.
  </h2>
- <p>45, Kisan Agro Mall, Mandi Road, Jhansi, Uttar Pradesh - 284001 </p>
+ <p>WZ 10C, A-2 Block, Asalatpur Near Mata Chanan Devi Hospital, Janakpuri, New Delhi, 110058 </p>
 <p> Contact - +91-8062182339 </p>
   <p> Email : support@ynbhealthcare.com </p>
          
@@ -4717,9 +4720,9 @@ export const generateUserInvoicePDFView = async (req, res) => {
         <div class="invoice-header-left">
                      <h2 style="margin-top:0px;">BILLED TO</h2>
  
-           <p> <b> Name: </b> ${invoiceData.UserDetails[0]?.name}</p>
-            <p> <b> Email Id: </b> ${invoiceData.UserDetails[0]?.email}</p>
-            <p> <b>  Phone No.: </b> ${invoiceData.UserDetails[0]?.phone}</p>
+           <p> <b> Name: </b> ${invoiceData?.UserDetails[0]?.name}</p>
+            <p> <b> Email Id: </b> ${invoiceData?.UserDetails[0]?.email}</p>
+            <p> <b>  Phone No.: </b> ${invoiceData?.UserDetails[0]?.phone}</p>
                       
           
          
@@ -4980,7 +4983,12 @@ ${invoiceData.addProduct && invoiceData.addProduct.length > 0 ? `
 <br>
      <p style="text-align:center" >This is a Computer Generated Invoice </p>
  <br>
+ <div style="text-align:center;">
+ 
+ </div>
 
+      <button class="btn" onclick="window.print()">Print Page</button>
+ <br>
 
 
     </div>
@@ -5032,10 +5040,113 @@ ${invoiceData.addProduct && invoiceData.addProduct.length > 0 ? `
       .invoice-total {
         float: right;
       }
+
+      
+    .btn {
+      display: inline-block;
+      text-decoration: none;
+      background-color: #007bff;
+      color: #fff;
+      padding: 12px 24px;
+      border-radius: 5px;
+      transition: background-color 0.3s ease;
+      cursor: pointer;
+    }
+
+    .btn:hover {
+      background-color: #0056b3;
+    }
+
+    @media print {
+      .btn {
+        display: none;
+      }
+    }
+
     </style>
   `;
 
   res.send(htmlContent);
+
+} catch (error) {
+  console.error("Error generating invoice PDF view:", error.message);
+  // Redirect to YNB.com on error
+  const htmlContent =`
+  <!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>404 Not Found</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: #f8f8f8;
+      font-family: Arial, sans-serif;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      text-align: center;
+      color: #333;
+    }
+
+    .container {
+      max-width: 600px;
+    }
+
+    h1 {
+      font-size: 120px;
+      margin-bottom: 20px;
+      color: #ff6b6b;
+    }
+
+    h2 {
+      font-size: 32px;
+      margin-bottom: 10px;
+    }
+
+    p {
+      font-size: 18px;
+      margin-bottom: 30px;
+    }
+
+    a {
+      display: inline-block;
+      text-decoration: none;
+      background-color: #007bff;
+      color: #fff;
+      padding: 12px 24px;
+      border-radius: 5px;
+      transition: background-color 0.3s ease;
+    }
+
+    a:hover {
+      background-color: #0056b3;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <h1>404</h1>
+    <h2>Page Not Found</h2>
+    <p>Sorry, the page you’re looking for doesn’t exist.</p>
+   </div>
+
+</body>
+</html>
+
+    `;
+
+  res.send(htmlContent);
+}
+
 };
 
 export const downloadUserAdminInvoice = async (req, res) => {
