@@ -70,7 +70,7 @@ const orderSchema = mongoose.Schema({
     default: 0,
   },
    
-  userDetails: {
+  UserDetails: {
     type: Array,
   },
   addProduct: {
@@ -85,10 +85,16 @@ const orderSchema = mongoose.Schema({
   addReturn: {
     type: Array,
   },
+  addHistory: {
+    type: Array,
+  },
   PickupDate: {
     type: Date,
   },
   ReturnDate: {
+    type: Date,
+  },
+  OnBoardDate: {
     type: Date,
   },
   
