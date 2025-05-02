@@ -41,6 +41,7 @@ import { exec } from "child_process";
 import util from "util";
 import crypto from "crypto";  // Ensure you require the crypto module if you haven't
 import consultationModel from "../models/ConsultationModel.js";
+import cron from "node-cron";
 
 const execPromise = util.promisify(exec);
 
@@ -763,7 +764,7 @@ export const UsergetAllProducts = async (req, res) => {
   try {
     const products = await productModel.find(
       { status: "true" },
-      "_id title slug regularPrice salePrice oneto7 eightto14 fivto30 monthto3month threemonthto6month stock"
+      "_id title slug regularPrice salePrice oneto7 eightto14 fivto30 monthto3month threemonthto6month stock reStock serialNumber"
     );
 
     if (!products) {
@@ -8012,3 +8013,246 @@ export const GetWebsiteData = async (req, res) => {
   }
 };
 
+export const getAllOrderUser = async (req, res) => {
+
+  try {
+    const page = parseInt(req.query.page) || 1; // Current page, default is 1
+    const limit = parseInt(req.query.limit) || 10; // Number of documents per page, default is 10
+    const searchTerm = req.query.search || ""; // Get search term from the query parameters
+    const statusFilter = req.query.status || ''; // Get status filter from the query parameters and split into an array
+    const productId = req.query.productId || '';
+    const type = req.query.type || '';
+    const userId = req.query.userId || '';
+
+    const notStatus = req.query.notStatus || ''; // Get status filter from the query parameters and split into an array
+
+
+    const startDate = req.query.startDate
+    ? new Date(req.query.startDate)
+    : null;
+  const endDate = req.query.endDate ? new Date(req.query.endDate) : null;
+
+    const skip = (page - 1) * limit;
+
+    const query = {};
+    if (searchTerm) {
+      const regex = new RegExp(searchTerm, "i"); // Case-insensitive regex pattern for the search term
+
+      // Add regex pattern to search both username and email fields for the full name
+      query.$or = [
+        { orderId: regex },
+        { mode: regex },
+      ];
+    }
+    // Add status filter to the query if statusFilter is provided
+    if (statusFilter.length > 0) {
+      query.status = { $in: statusFilter }; // Use $in operator to match any of the values in the array
+    }
+
+    
+    if (notStatus) {
+      const notStatusArray = notStatus.split(',').map(Number);
+      query.status = { $nin: notStatusArray };
+    }
+
+    
+
+    
+
+ // Add status filter to the query if statusFilter is provided
+ if (type.length > 0) {
+  query.type = { $in: type }; // Use $in operator to match any of the values in the array
+ }
+
+    
+
+      // Add date range filtering to the query
+      if (startDate && endDate) {
+        query.createdAt = { $gte: startDate, $lte: endDate };
+      } else if (startDate) {
+        query.createdAt = { $gte: startDate };
+      } else if (endDate) {
+        query.createdAt = { $lte: endDate };
+      }
+      
+      if (productId) {
+        query['addProduct._id'] = productId; // Simple string match
+      }
+      if (userId) {
+        query.userId = userId; // Simple string match
+      }
+      
+    const total = await orderModel.countDocuments(query); // Count total documents matching the query
+
+    const Order = await orderModel
+      .find(query)
+      .sort({ _id: -1 }) // Sort by _id in descending order
+      .skip(skip)
+      .limit(limit)
+      .populate({
+        path: "userId",
+        model: userModel,
+        select: "username email phone",
+      })
+      .populate({
+        path: "employeeId",
+        model: userModel,
+        select: "username email phone",
+      })
+      .populate({
+        path: "employeeSaleId",
+        model: userModel,
+        select: "username email phone",
+      })
+      .lean();
+
+
+    if (!Order || Order.length === 0) { // Check if no users found
+      return res.status(404).send({ // Send 404 Not Found response
+        message: "No Order Found",
+        success: false,
+      });
+    }
+
+    return res.status(200).send({ // Send successful response
+      message: "All Order list",
+      Count: Order.length,
+      currentPage: page,
+      totalPages: Math.ceil(total / limit),
+      success: true,
+      Order, // Return users array
+    });
+  } catch (error) {
+    return res.status(500).send({ // Send 500 Internal Server Error response
+      message: `Error while Order: ${error.message}`,
+      success: false,
+      error,
+    });
+  }
+
+
+};
+
+export const ReminderStatus = async (req, res) => {
+ 
+           // Send notification
+  const notificationData = {
+            mobile: `91${user.phone}`,
+            templateid: "1226912058276760",
+            overridebot: "yes/no",
+            template: {
+              components: [
+                {
+                  type: "body",
+                  parameters: [
+                    { type: "text", text: user.username }, 
+                  ]
+                }
+              ]
+            }
+          };
+  
+     await axios.post(process.env.WHATSAPPAPI, notificationData, {
+        headers: {
+          "API-KEY": process.env.WHATSAPPKEY,
+          "Content-Type": "application/json"
+        }
+      });
+
+      
+    }
+
+    
+ 
+      // cron.schedule("36 17 * * *", async () => { 5 36
+      
+        cron.schedule("0 11 * * *", async () => {
+        // Configure Nodemailer transporter once (outside the cron job)
+const transporter = nodemailer.createTransport({
+  host: process.env.MAIL_HOST,
+  port: process.env.MAIL_PORT,
+  secure: process.env.MAIL_ENCRYPTION === "true", // convert string to boolean
+  auth: {
+    user: process.env.MAIL_USERNAME,
+    pass: process.env.MAIL_PASSWORD,
+  },
+});
+
+        console.log('cron job start');
+        const today = new Date();
+        today.setHours(0, 0, 0, 0); // Start of today
+
+        const tomorrow = new Date(today.getTime() + 24 * 60 * 60 * 1000); // Add 24 hours to get tomorrow at midnight
+
+console.log("Tomorrow's date:", tomorrow.toLocaleDateString());
+ 
+        try {
+
+          // Get orders for tomorrow's pickup
+          const orders = await orderModel.find({
+            PickupDate: {
+              $gte: tomorrow, // Orders that have pickup >= tomorrow's midnight
+              $lt: new Date(tomorrow.getTime() + 24 * 60 * 60 * 1000), // Orders that have pickup < the start of the day after tomorrow
+            },
+          }).populate("userId").populate("employeeId");
+
+          console.log('orders',orders);
+
+          for (const order of orders) {
+            const users = [order.userId, order.employeeId];
+      
+            for (const user of users) {
+              // Send WhatsApp message
+              if (user?.phone) {
+                const notificationData = {
+                  mobile: `91${user.phone}`,
+                  templateid: "1226912058276760",
+                  overridebot: "yes",
+                  template: {
+                    components: [ 
+                      {
+                        type: "body",
+                        parameters: [
+                          { type: "text", text: tomorrow.toDateString() || "Date" },
+                        ],
+                      },
+                    ],
+                  },
+                };
+      
+                try {
+                  await axios.post(process.env.WHATSAPPAPI, notificationData, {
+                    headers: {
+                      "API-KEY": process.env.WHATSAPPKEY,
+                      "Content-Type": "application/json",
+                    },
+                  });
+                  console.log(`WhatsApp reminder sent to ${user.phone}`);
+                } catch (err) {
+                  console.error(`WhatsApp failed for ${user.phone}:`, err.message);
+                }
+              }
+      
+              // Send Email
+              if (user?.email) {
+                const mailOptions = {
+                  from: process.env.MAIL_FROM_ADDRESS,
+                  to: user.email,
+                  subject: "Reminder: Upcoming Pickup from ynbhealthcare.com",
+                  text: `Hello ${user.username || "Customer"},\n\nThis is a reminder that your order is scheduled for pickup on ${tomorrow.toDateString()}.\n\nThank you,\nynbhealthcare.com`,
+                };
+      
+                try {
+                  await transporter.sendMail(mailOptions);
+                  console.log(`Email sent to ${user.email}`);
+                } catch (emailErr) {
+                  console.error(`Failed to send email to ${user.email}:`, emailErr.message);
+                }
+              }
+            }
+          }
+        } catch (err) {
+          console.error("Error processing cron job:", err);
+        }
+      });
+ 
