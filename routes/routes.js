@@ -17,7 +17,7 @@ import {
   , EmailVerify, postman, PaymentResponse, PaymentRequest, getProductsByFilterUser, cancelOrderUser, ViewAllZones, getProductsByHSN, AuthUserByID, updateProfileUser, SignupNewUser, LoginUserWithOTP, LoginUserWithPass, SendOTP,SignupLoginNew, SignupLoginUser, getTaxIdUser, ViewAllUserTaxes, ViewCompareByUser, applyPromoCode, getHomeLayoutData, AddWishListByUser, deleteCompareByUser, deleteWishListByUser, ViewWishListByUser, AddCompareByUser, ViewProductRating, ViewCategoryRating, AddRating, UsergetAllCategories, UsergetAllProducts, UsergetAllHomeProducts, userOrdersViewController, getAllAttributeUser, getProductIdUser, updateUserController, createOrderController, updateUserAndCreateOrderController, userOrdersController, getHomeData, GetAllCategoriesByParentIdController, GetAllCategoriesBySlugController
   , BuyPlanUser, GetPlanUser, HomeSendEnquire,ConsultationSendEnquire, getAllPlanCategoryController, uploadDataZone, deleteAllZones, SignupUserType, updateDetailsUser, updateDetailsUserHealth, getAllPlanUser, getProductIdUserBySlug
   , getAllVendor, getAllDepartment, profileVendorImage, ApiGetKey, PaymentSuccess, PaymentFail,
-  generateUserAttachPDF, updateVendorProfileUser, paymentVerification, BuyPlanAddUser, BuyPlanByUser, PayuHash, userPlanIdController, ViewAllZonesDepartment, getVendorById, HomeSendvendorEnquire, ApplyEnquireStatus, SenderEnquireStatus, AllPayment, downloadUserInvoice, checkUserPlan, GetWebsiteData, GetWebsiteData_old
+  generateUserAttachPDF, updateVendorProfileUser, paymentVerification, BuyPlanAddUser, BuyPlanByUser, PayuHash, userPlanIdController, ViewAllZonesDepartment, getVendorById, HomeSendvendorEnquire, ApplyEnquireStatus, SenderEnquireStatus, AllPayment, downloadUserInvoice, checkUserPlan, GetWebsiteData, GetWebsiteData_old,getAllOrderUser
 } from "../controller/userController.js"
 import authenticateToken from "../middleware/authMiddleware.js";
 import { uploadImage, handleImageUpload } from "../controller/adminController.js";
@@ -97,6 +97,10 @@ router.get('/admin/all-consultation-enquire', getAllConsultationEnquireAdmin);
 router.get('/admin/all-order', getAllOrderAdmin);
 router.put('/admin/update-order/:id', editOrderAdmin);
 router.put('/admin/update-full-order/:id', editFullOrderAdmin);
+
+router.get('/admin/all-report', getAllOrderAdmin);
+
+
 
 router.get("/user-invoice/:id", generateUserInvoicePDFView);
 
@@ -180,6 +184,8 @@ router.get('/admin/export/allproducts/', exportAllProAdmin);
 router.post('/admin/import/allproducts/', importAllProAdmin);
 
 router.get("/all-employee", AdminGetAllEmployee);
+
+router.get("/all-orders", getAllOrderUser);
 
 
 // --------------------    user routes start  -------------------//
