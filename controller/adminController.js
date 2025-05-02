@@ -570,7 +570,7 @@ export const AddAdminOrderController = async (req, res) => {
   try {
     const {
       order, discount,subtotal,shipping,applyIGST,applyCGST,applySGST,finalTotal,taxTotal, addRental,addReceived,addReturn,addProduct,
-      userId,UserDetails,employeeSaleId,PickupDate,ReturnDate,SecurityAmt,AdvanceAmt,employeeId
+      userId,UserDetails,employeeSaleId,PickupDate,ReturnDate,SecurityAmt,AdvanceAmt,employeeId,OnBoardDate
     } = req.body;
 
     console.log(req.body)
@@ -616,6 +616,7 @@ export const AddAdminOrderController = async (req, res) => {
        taxTotal, 
        orderId:order_id,
        status:1,
+       OnBoardDate
     });
 
     if(addProduct){
@@ -629,10 +630,10 @@ export const AddAdminOrderController = async (req, res) => {
         }
     
         // Add 1 to the stock of each product
-        const updatedStock = productDetails.stock - 1;
+        const updatedStock = productDetails.reStock - 1;
     
         // Update the stock for the product
-        productDetails.stock = updatedStock;
+        productDetails.reStock = updatedStock;
     
         // Save the updated product
         await productDetails.save();
@@ -1024,7 +1025,7 @@ export const AddAdminProduct = async (req, res) => {
       Category,
       tag,
       features,
-      specifications, gst, weight, hsn, sku, canonical
+      specifications, gst, weight, hsn, sku, canonical, reStock ,serialNumber,brandName,modelNo
     } = req.body;
 
     // Validation
@@ -1089,7 +1090,7 @@ export const AddAdminProduct = async (req, res) => {
       Category,
       tag,
       features,
-      specifications: updatespecifications, gst, weight, hsn, sku, canonical
+      specifications: updatespecifications, gst, weight, hsn, sku, canonical, reStock ,serialNumber,brandName,modelNo
     });
 
 
@@ -1179,7 +1180,7 @@ export const updateProductAdmin = async (req, res) => {
       metaKeywords,
       Category,
       tag, features,
-      specifications, weight, gst, hsn, sku, variant_products, type, canonical, testimonials, oneto7, eightto14, fivto30, monthto3month, threemonthto6month
+      specifications, weight, gst, hsn, sku, variant_products, type, canonical, testimonials, oneto7, eightto14, fivto30, monthto3month, threemonthto6month,reStock,serialNumber,brandName,modelNo
     } = req.body;
 
     console.log('typp', type);
@@ -1201,7 +1202,7 @@ export const updateProductAdmin = async (req, res) => {
       Category,
       tag, features,
       specifications, weight, gst, hsn, sku, variant_products, type, canonical, testimonials,
-      oneto7, eightto14, fivto30, monthto3month, threemonthto6month
+      oneto7, eightto14, fivto30, monthto3month, threemonthto6month,reStock,serialNumber,brandName,modelNo
     };
 
     const Product = await productModel.findByIdAndUpdate(id, updateFields, {
@@ -2126,6 +2127,7 @@ export const getAllOrderAdmin = async (req, res) => {
     const notStatus = req.query.notStatus || '';
     const productId = req.query.productId || '';
     const type = req.query.type || '';
+    const overdue = req.query.overdue || ''; 
     const startDate = req.query.startDate ? new Date(req.query.startDate) : null;
     const endDate = req.query.endDate ? new Date(req.query.endDate) : null;
     const skip = (page - 1) * limit;
@@ -2155,6 +2157,7 @@ if (startDate && endDate) {
 
 
 
+
     if (statusFilter.length > 0) {
       query.status = { $in: statusFilter.split(',').map(Number) };
     }
@@ -2163,6 +2166,14 @@ if (startDate && endDate) {
       query.status = { $nin: notStatus.split(',').map(Number) };
     }
 
+    if (overdue === 'true') {
+      const targetDate = new Date(); // This will be 2025-05-01
+      console.log('targetDate',targetDate)
+      query.ReturnDate = { ...query.ReturnDate, $lt: targetDate }; // upcoming
+      query.status = { $nin: 5 }; 
+    }
+ 
+    
     if (type.length > 0) {
       query.type = { $in: type.split(',').map(Number) };
     }
@@ -2202,8 +2213,142 @@ if (startDate && endDate) {
         regex.test(order.mode || '') ||
         regex.test(order.employeeId?.username || '') ||
         regex.test(order.employeeId?.email || '') ||
+        regex.test(order.employeeId?.phone || '') ||
         regex.test(order.employeeSaleId?.username || '') ||
         regex.test(order.employeeSaleId?.email || '') ||
+        regex.test(order.employeeSaleId?.phone || '') ||
+        regex.test(order.userId?.phone || '') ||
+        regex.test(order.userId?.username || '') ||
+        regex.test(order.userId?.email || '')  
+      )
+    });
+
+    const paginatedOrders = filteredOrders.slice(skip, skip + limit);
+
+    if (paginatedOrders.length === 0) {
+      return res.status(404).send({
+        message: "No Order Found",
+        success: false,
+      });
+    }
+
+    return res.status(200).send({
+      message: "All Order list",
+      Count: paginatedOrders.length,
+      currentPage: page,
+      totalPages: Math.ceil(filteredOrders.length / limit),
+      success: true,
+      Order: paginatedOrders,
+    });
+  } catch (error) {
+    return res.status(500).send({
+      message: `Error while fetching Orders: ${error.message}`,
+      success: false,
+      error,
+    });
+  }
+};
+
+export const getAllReportAdmin = async (req, res) => {
+  try {
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const searchTerm = req.query.search || "";
+    const statusFilter = req.query.status || '';
+    const notStatus = req.query.notStatus || '';
+    const productId = req.query.productId || '';
+    const type = req.query.type || '';
+    const overdue = req.query.overdue || ''; 
+    const startDate = req.query.startDate ? new Date(req.query.startDate) : null;
+    const endDate = req.query.endDate ? new Date(req.query.endDate) : null;
+    const skip = (page - 1) * limit;
+
+    const query = {};
+
+     // if (startDate && endDate) {
+    //   query.createdAt = { $gte: startDate, $lte: endDate };
+    // } else if (startDate) {
+    //   query.createdAt = { $gte: startDate };
+    // } else if (endDate) {
+    //   query.createdAt = { $lte: endDate };
+    // }
+
+
+    // Date range filtering based on PickupDate and ReturnDate
+if (startDate && endDate) {
+  query.$and = [
+    { PickupDate: { $lte: endDate } },
+    { ReturnDate: { $gte: startDate } },
+  ];
+} else if (startDate) {
+  query.ReturnDate = { $gte: startDate };
+} else if (endDate) {
+  query.PickupDate = { $lte: endDate };
+}
+
+
+
+
+    if (statusFilter.length > 0) {
+      query.status = { $in: statusFilter.split(',').map(Number) };
+    }
+
+    if (notStatus.length > 0) {
+      query.status = { $nin: notStatus.split(',').map(Number) };
+    }
+
+    if (overdue === 'true') {
+      const targetDate = new Date(); // This will be 2025-05-01
+      console.log('targetDate',targetDate)
+      query.ReturnDate = { ...query.ReturnDate, $lt: targetDate }; // upcoming
+      query.status = { $nin: 5 }; 
+    }
+ 
+    
+    if (type.length > 0) {
+      query.type = { $in: type.split(',').map(Number) };
+    }
+
+    if (productId) {
+      query['addProduct._id'] = productId;
+    }
+
+    // Fetch with populate
+    const allOrders = await orderModel
+      .find(query)
+      .sort({ _id: -1 })
+      .populate({
+        path: "userId",
+        model: userModel,
+        select: "username email phone",
+      })
+      .populate({
+        path: "employeeId",
+        model: userModel,
+        select: "username email phone",
+      })
+      .populate({
+        path: "employeeSaleId",
+        model: userModel,
+        select: "username email phone",
+      })
+      .lean();
+
+    // Filter manually for searchTerm
+    const filteredOrders = allOrders.filter((order) => {
+      if (!searchTerm) return true;
+
+      const regex = new RegExp(searchTerm, 'i');
+      return (
+        regex.test(order.orderId?.toString()) ||
+        regex.test(order.mode || '') ||
+        regex.test(order.employeeId?.username || '') ||
+        regex.test(order.employeeId?.email || '') ||
+        regex.test(order.employeeId?.phone || '') ||
+        regex.test(order.employeeSaleId?.username || '') ||
+        regex.test(order.employeeSaleId?.email || '') ||
+        regex.test(order.employeeSaleId?.phone || '') ||
+        regex.test(order.userId?.phone || '') ||
         regex.test(order.userId?.username || '') ||
         regex.test(order.userId?.email || '')  
       )
@@ -2236,13 +2381,12 @@ if (startDate && endDate) {
 };
 
 
-
 export const editFullOrderAdmin = async (req, res) => {
   try {
     const { id } = req.params;
     const {
       order, discount,subtotal,shipping,applyIGST,applyCGST,applySGST,finalTotal,taxTotal,  addRental,addReceived,addReturn,addProduct,
-      userId,UserDetails,employeeSaleId,PickupDate,ReturnDate,SecurityAmt,AdvanceAmt,employeeId
+      userId,UserDetails,employeeSaleId,PickupDate,ReturnDate,SecurityAmt,AdvanceAmt,employeeId,OnBoardDate,addHistory
     } = req.body;
 
     const orderUpdate = await orderModel.findById(id).populate('userId'); // Fetch order details including user
@@ -2273,6 +2417,8 @@ export const editFullOrderAdmin = async (req, res) => {
        applySGST,
        totalAmount: finalTotal,
        taxTotal,  
+       OnBoardDate,
+       addHistory
     };
 
     const updatedOrder = await orderModel.findByIdAndUpdate(id, updateFields, {
@@ -2329,10 +2475,10 @@ export const editOrderAdmin = async (req, res) => {
     }
 
     // Add 1 to the stock of each product
-    const updatedStock = productDetails.stock + 1;
+    const updatedStock = productDetails.reStock + 1;
 
     // Update the stock for the product
-    productDetails.stock = updatedStock;
+    productDetails.reStock = updatedStock;
 
     // Save the updated product
     await productDetails.save();
