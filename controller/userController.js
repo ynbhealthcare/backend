@@ -8138,13 +8138,14 @@ export const ReminderStatus = async (req, res) => {
            // Send notification
   const notificationData = {
             mobile: `91${user.phone}`,
-            templateid: "1226912058276760",
+            templateid: "1281274550294188",
             overridebot: "yes/no",
             template: {
               components: [
                 {
                   type: "body",
                   parameters: [
+                    { type: "text", text: user.username }, 
                     { type: "text", text: user.username }, 
                   ]
                 }
@@ -8206,7 +8207,7 @@ console.log("Tomorrow's date:", tomorrow.toLocaleDateString());
               if (user?.phone) {
                 const notificationData = {
                   mobile: `91${user.phone}`,
-                  templateid: "1226912058276760",
+                  templateid: "1281274550294188",
                   overridebot: "yes",
                   template: {
                     components: [ 
@@ -8214,6 +8215,7 @@ console.log("Tomorrow's date:", tomorrow.toLocaleDateString());
                         type: "body",
                         parameters: [
                           { type: "text", text: tomorrow.toDateString() || "Date" },
+                          { type: "text", text: order.orderId },
                         ],
                       },
                     ],
