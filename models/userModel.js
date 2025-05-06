@@ -21,6 +21,10 @@ const userSchema = mongoose.Schema({
   type: {
     type: Number,
   },
+  empType: {
+    type: Number,
+    default: 0
+  },
   token: {
     type: String,
   },
@@ -47,6 +51,9 @@ const userSchema = mongoose.Schema({
     type: String,
     default: 1
   },
+  gender: {
+    type: String,
+   },
   verified: {
     type: Number,
     default: 0
@@ -61,10 +68,6 @@ const userSchema = mongoose.Schema({
   },
 
   about: {
-    type: String,
-    default: "",
-  },
-    Doc1: {
     type: String,
     default: "",
   },
