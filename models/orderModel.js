@@ -106,7 +106,6 @@ const orderSchema = mongoose.Schema({
   employeeId: {  // Changed field name to plural and set type as an array of ObjectIds
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
-    required: true,
   },
 },
   { timestamps: true }
