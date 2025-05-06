@@ -581,6 +581,10 @@ export const AddAdminOrderController = async (req, res) => {
         message: "Please Provide All Fields",
       });
     }
+    const Newuser = new userModel({ username:UserDetails.name,phone:UserDetails.phone, email:UserDetails.email, address :UserDetails.address,gender : UserDetails.gender,type :1  });
+    if(UserDetails && UserDetails.id === 'none'){
+     await Newuser.save();
+     }
 
     // Calculate the auto-increment ID
         const lastOrder = await orderModel.findOne().sort({ _id: -1 }).limit(1);
@@ -592,15 +596,26 @@ export const AddAdminOrderController = async (req, res) => {
           order_id = lastOrderId + 1;
         } else {
           order_id = 1;
+        } 
+
+        console.log('userId : Newuser.id',userId , Newuser.id);
+        console.log('userId : final.id',userId ?? Newuser?.id);
+        
+        let finaluser ;
+        if(UserDetails && UserDetails.id === 'none'){
+          finaluser = Newuser._id;
+        }else{
+          finaluser = UserDetails.id;
         }
+        console.log('finaluser',finaluser);
 
     // Create a new category with the specified parent
     const newData = new orderModel({
       type: order,
-      userId,
+      userId: finaluser,
       UserDetails,
       employeeSaleId,
-      employeeId,
+      employeeId: employeeId || null,
       PickupDate,ReturnDate,SecurityAmt,AdvanceAmt,
        addRental,
        addReceived,
@@ -4752,7 +4767,7 @@ export const profileImageHealth = upload.fields([
 export const AdminGetAllEmployee = async (req, res) => { 
   try {
     // Extract the category (which can be an array of ObjectIds), type, and coordinates from query parameters
-    const { type,filter } = req.query;
+    const { type,filter,phone } = req.query;
 
     if (!type) {
       return res.status(200).send({
@@ -4760,10 +4775,19 @@ export const AdminGetAllEmployee = async (req, res) => {
         success: false,
       });
     }
-
+ 
     // Build the filter object
-    const fillter = { type };  // Only fetch employees with the type (assuming "employee")
-  if(filter !== 'none'){
+    const fillter = {};  // Only fetch employees with the type (assuming "employee")
+
+ 
+    if(type && type !== 'none' ){
+      fillter.type = type;
+    }
+    if(phone && phone !== 'none' ){
+      fillter.phone = phone;
+    }
+    // Build the filter object
+   if(filter !== 'none'){
     if(filter === '5' ){
       fillter.empType = 5;
     }
@@ -4777,6 +4801,7 @@ export const AdminGetAllEmployee = async (req, res) => {
       fillter.empType = 5;
     }
   }
+  
    
   console.log('fillter',filter)
 
@@ -4786,7 +4811,7 @@ export const AdminGetAllEmployee = async (req, res) => {
     // }
 
     // Fetch users based on the filter
-    const users = await userModel.find(fillter, '_id username email phone');
+    const users = await userModel.find(fillter, '_id username email phone gender address');
 
     if (!users || users.length === 0) {
       return res.status(200).send({
@@ -4810,6 +4835,44 @@ export const AdminGetAllEmployee = async (req, res) => {
     });
   }
 };
+
+export const AdminGetuserPhone = async (req, res) => {
+  try {
+    const { phone } = req.query;
+
+    // Validate if phone is provided
+    if (!phone) {
+      return res.status(400).send({
+        message: 'Phone number is required',
+        success: false,
+      });
+    }
+
+    // Find users with type: 2 and matching phone
+    const users = await userModel.find({ type: 2, phone }, '_id username email phone gender');
+
+    if (!users || users.length === 0) {
+      return res.status(200).send({
+        message: 'No User Found',
+        success: false,
+      });
+    }
+
+    return res.status(200).send({
+      message: 'User(s) found',
+      success: true,
+      users,
+    });
+
+  } catch (error) {
+    return res.status(500).send({
+      message: `Error while fetching users: ${error.message}`,
+      success: false,
+      error,
+    });
+  }
+};
+
 
 export const generateUserInvoicePDFView = async (req, res) => {
   try {
