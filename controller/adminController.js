@@ -44,6 +44,7 @@ import puppeteer from "puppeteer";
 import util from "util";
 import crypto from "crypto";  // Ensure you require the crypto module if you haven't
 import consultationModel from "../models/ConsultationModel.js";
+import axios from "axios";
 
 const execPromise = util.promisify(exec);
 
@@ -569,8 +570,11 @@ export const AddAdminCategoryController = async (req, res) => {
 export const AddAdminOrderController = async (req, res) => {
   try {
     const {
-      order, discount,subtotal,shipping,applyIGST,applyCGST,applySGST,finalTotal,taxTotal, addRental,addReceived,addReturn,addProduct,
-      userId,UserDetails,employeeSaleId,PickupDate,ReturnDate,SecurityAmt,AdvanceAmt,employeeId,OnBoardDate
+      order, discount,subtotal,shipping,applyIGST,applyCGST,
+      applySGST,finalTotal,taxTotal, addRental,
+      addReceived,addReturn,addProduct,
+      userId,UserDetails,employeeSaleId,PickupDate,ReturnDate,SecurityAmt,
+      AdvanceAmt,employeeId,OnBoardDate
     } = req.body;
 
     console.log(req.body)
@@ -581,12 +585,14 @@ export const AddAdminOrderController = async (req, res) => {
         message: "Please Provide All Fields",
       });
     }
-    const Newuser = new userModel({ username:UserDetails.name,phone:UserDetails.phone, email:UserDetails.email, address :UserDetails.address,gender : UserDetails.gender,type :1  });
+    const Newuser = new userModel({ username:UserDetails.name,phone:UserDetails.phone, email:UserDetails.email, address :UserDetails.address,gender : UserDetails.gender,type :1,
+      company : UserDetails.company,companyName : UserDetails.companyName,companyGST : UserDetails.companyGST,companyAddress : UserDetails.companyAddress,age : UserDetails.age,weight : UserDetails.weight });
     if(UserDetails && UserDetails.id === 'none'){
      await Newuser.save();
      }
 
-    // Calculate the auto-increment ID
+      
+       // Calculate the auto-increment ID
         const lastOrder = await orderModel.findOne().sort({ _id: -1 }).limit(1);
         let order_id;
     
@@ -643,16 +649,36 @@ export const AddAdminOrderController = async (req, res) => {
           console.log(`Product not found: ${product._id}`);
           continue; // Skip if product is not found
         }
-    
+        if ( ( productDetails.reStock || productDetails.stock ) && ( productDetails.reStock > 0 || productDetails.stock > 0 ) ) {
+
+        if(order !== 1){
+
         // Add 1 to the stock of each product
         const updatedStock = productDetails.reStock - 1;
     
         // Update the stock for the product
         productDetails.reStock = updatedStock;
-    
+
         // Save the updated product
         await productDetails.save();
-        console.log(`Added 1 stock for product ${product.title}: ${updatedStock}`);
+
+        }else{
+
+           // Add 1 to the stock of each product
+        const updatedStock = productDetails.stock - 1;
+    
+        // Update the stock for the product
+        productDetails.stock = updatedStock;
+
+        // Save the updated product
+        await productDetails.save();
+
+        }
+       
+        
+        }
+
+        console.log(`Added 1 stock for product ${product.title}`);
       }
   
     }
@@ -2489,7 +2515,9 @@ export const editOrderAdmin = async (req, res) => {
       continue; // Skip if product is not found
     }
 
-    // Add 1 to the stock of each product
+     if(order.type !== 1){
+
+   // Add 1 to the stock of each product
     const updatedStock = productDetails.reStock + 1;
 
     // Update the stock for the product
@@ -2497,6 +2525,9 @@ export const editOrderAdmin = async (req, res) => {
 
     // Save the updated product
     await productDetails.save();
+
+    }
+ 
     console.log(`Added 1 stock for product ${product.title}: ${updatedStock}`);
   }
 }
@@ -2509,7 +2540,99 @@ export const editOrderAdmin = async (req, res) => {
       new: true,
     });
 
+    
+if(updatedOrder.status === 2){
+
+  const UserPhone = updatedOrder.UserDetails[0].phone;
+ const productNames = Array.isArray(updatedOrder.addProduct)
+  ? updatedOrder.addProduct.map(p => p.title || "Unnamed Product").join(", ")
+  : "No products added";
+
+      const notificationData = {
+                    mobile: `91${UserPhone}`,
+                    templateid: "1768237167456216",
+                    overridebot: "yes",
+                    template: {
+                      components: [ 
+                        {
+                          type: "body",
+                          parameters: [
+                            { type: "text", text: updatedOrder.orderId },
+                            { type: "text", text: productNames },
+                            { type: "text", text: updatedOrder.ReturnDate
+    ? new Date(updatedOrder.ReturnDate).toLocaleDateString("en-GB", {
+        day: "2-digit",
+        month: "long",
+        year: "numeric",
+      })
+    : "Date" },
+                          ],
+                        },
+                      ],
+                    },
+                  };
+        
+                  try {
+                    await axios.post(process.env.WHATSAPPAPI, notificationData, {
+                      headers: {
+                        "API-KEY": process.env.WHATSAPPKEY,
+                        "Content-Type": "application/json",
+                      },
+                    });
+                    console.log(`WhatsApp reminder sent to ${UserPhone}`);
+                  } catch (err) {
+                    console.error(`WhatsApp failed for ${UserPhone}:`, err.message);
+                  }
+
+
+}
  
+if(updatedOrder.status === 4){
+
+  const UserPhone = updatedOrder.UserDetails[0].phone;
+ const productNames = Array.isArray(updatedOrder.addProduct)
+  ? updatedOrder.addProduct.map(p => p.title || "Unnamed Product").join(", ")
+  : "No products added";
+
+      const notificationData = {
+                    mobile: `91${UserPhone}`,
+                    templateid: "1917609362388437",
+                    overridebot: "yes",
+                    template: {
+                      components: [ 
+                        {
+                          type: "body",
+                          parameters: [
+                            { type: "text", text: updatedOrder.orderId },
+                             { type: "text", text: updatedOrder.ReturnDate
+    ? new Date(updatedOrder.ReturnDate).toLocaleDateString("en-GB", {
+        day: "2-digit",
+        month: "long",
+        year: "numeric",
+      })
+    : "Date" },
+                            { type: "text", text: productNames },
+                            { type: "text", text: updatedOrder.totalAmount },
+                           
+                          ],
+                        },
+                      ],
+                    },
+                  };
+        
+                  try {
+                    await axios.post(process.env.WHATSAPPAPI, notificationData, {
+                      headers: {
+                        "API-KEY": process.env.WHATSAPPKEY,
+                        "Content-Type": "application/json",
+                      },
+                    });
+                    console.log(`WhatsApp reminder sent to ${UserPhone}`);
+                  } catch (err) {
+                    console.error(`WhatsApp failed for ${UserPhone}:`, err.message);
+                  } 
+}
+
 
     return res.status(200).json({
             message: "Order Updated!",
@@ -4811,7 +4934,7 @@ export const AdminGetAllEmployee = async (req, res) => {
     // }
 
     // Fetch users based on the filter
-    const users = await userModel.find(fillter, '_id username email phone gender address');
+    const users = await userModel.find(fillter, '_id username email phone gender address company companyName companyGST companyAddress age weight');
 
     if (!users || users.length === 0) {
       return res.status(200).send({
@@ -4940,11 +5063,11 @@ export const generateUserInvoicePDFView = async (req, res) => {
           <h2 style="margin-top:0px;">TAX INVOICE</h2>
             <p> <b> Invoice No.:</b> #${invoiceData?.orderId}</p>
             
-          <p> <b>  Pickup Date:</b> ${formatDate(
+          <p> <b>  Delivery Date :</b> ${formatDate(
       invoiceData?.PickupDate
     )}     </p>
 
-  <p> <b>  Return Date:</b> ${formatDate(
+  <p> <b>  Renewal Date :</b> ${formatDate(
       invoiceData?.ReturnDate
     )}     </p>
   
