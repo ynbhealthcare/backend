@@ -4792,6 +4792,12 @@ export const AuthUserByID = async (req, res) => {
           aadharno: existingUser.aadharno,
           pHealthHistory: existingUser.pHealthHistory,
           cHealthStatus: existingUser.cHealthStatus,
+          company : existingUser.cHealthStatus,
+          companyName : existingUser.companyName,
+          companyGST : existingUser.companyGST,
+          companyAddress : existingUser.companyAddress,
+            age: existingUser.age,
+          weight : existingUser.weight,
         },
       });
 
@@ -8183,7 +8189,7 @@ const transporter = nodemailer.createTransport({
         const today = new Date();
         today.setHours(0, 0, 0, 0); // Start of today
 
-        const tomorrow = new Date(today.getTime() + 24 * 60 * 60 * 1000); // Add 24 hours to get tomorrow at midnight
+        const tomorrow = new Date(today.getTime() + 2 * 24 * 60 * 60 * 1000);
 
 console.log("Tomorrow's date:", tomorrow.toLocaleDateString());
  
@@ -8195,19 +8201,23 @@ console.log("Tomorrow's date:", tomorrow.toLocaleDateString());
               $gte: tomorrow, // Orders that have pickup >= tomorrow's midnight
               $lt: new Date(tomorrow.getTime() + 24 * 60 * 60 * 1000), // Orders that have pickup < the start of the day after tomorrow
             },
-          }).populate("userId").populate("employeeId");
+          }).populate("userId").populate("employeeId").populate("employeeSaleId");
 
           console.log('orders',orders);
 
           for (const order of orders) {
-            const users = [order.userId, order.employeeId];
-      
+            const users = [order.userId, order.employeeSaleId];
+ 
+  const productNames = Array.isArray(order.addProduct)
+  ? order.addProduct.map(p => p.title || "Unnamed Product").join(", ")
+  : "No products added";
+
             for (const user of users) {
               // Send WhatsApp message
               if (user?.phone) {
                 const notificationData = {
                   mobile: `91${user.phone}`,
-                  templateid: "1281274550294188",
+                  templateid: "4047860938866959",
                   overridebot: "yes",
                   template: {
                     components: [ 
@@ -8216,6 +8226,8 @@ console.log("Tomorrow's date:", tomorrow.toLocaleDateString());
                         parameters: [
                           { type: "text", text: tomorrow.toDateString() || "Date" },
                           { type: "text", text: order.orderId },
+                          { type: "text", text: productNames },
+                          { type: "text", text: order.totalAmount },
                         ],
                       },
                     ],
