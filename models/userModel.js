@@ -97,6 +97,24 @@ const userSchema = mongoose.Schema({
   DOB: {
     type: Date,
   },
+   age: {
+    type: String,
+  },
+   weight: {
+    type: String,
+  },
+    company: {
+    type: String,
+  }, 
+  companyName: {
+    type: String,
+  },
+    companyGST: {
+    type: String,
+  },
+   companyAddress: {
+    type: String,
+  },
 },
   { timestamps: true }
 );
