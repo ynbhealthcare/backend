@@ -42,6 +42,9 @@ import util from "util";
 import crypto from "crypto";  // Ensure you require the crypto module if you haven't
 import consultationModel from "../models/ConsultationModel.js";
 import cron from "node-cron";
+import nurseDepartmentsModel from "../models/nurseDepartmentsModel.js";
+import skillDepartmentsModel from "../models/skillDepartmentsModel.js";
+import attributeDepartmentsModel from "../models/attributeDepartmentsModel.js";
 
 const execPromise = util.promisify(exec);
 
@@ -393,7 +396,13 @@ export const SignupUserType = async (req, res) => {
       DOB,
       address,
       city,
-      empType
+      empType,
+      AltPhone,
+      AltAddress,
+      Salary,
+      Experience,
+      Shift,
+      DutyShift
     } = req.body;
 
 
@@ -435,6 +444,12 @@ export const SignupUserType = async (req, res) => {
       city,
       empType : empType ? empType : 0 ,
       userId,
+      AltPhone: AltPhone || null,
+      AltAddress: AltAddress || null,
+      Salary: Salary || null,
+      Experience: Experience || null,
+      Shift: Shift || null,
+      DutyShift: DutyShift || null,
     });
 
     await newUser.save();
@@ -5346,6 +5361,75 @@ export const getAllDepartment = async (req, res) => {
   }
 };
 
+export const getAllNurseDepartment = async (req, res) => {
+  try {
+    const Department = await nurseDepartmentsModel.find({}).lean();
+    if (!Department) {
+      return res.status(400).send({
+        message: "NO Nurse Department Found",
+        success: false,
+      });
+    }
+    return res.status(200).send({
+      message: "All Nurse Department List ",
+      success: true,
+      Department,
+    });
+  } catch (error) {
+    return res.status(500).send({
+      message: `error while getting Department ${error}`,
+      success: false,
+      error,
+    });
+  }
+};
+
+
+export const getAllNurseSkillDepartment = async (req, res) => {
+  try {
+    const Department = await skillDepartmentsModel.find({}).lean();
+    if (!Department) {
+      return res.status(400).send({
+        message: "NO Nurse Department Found",
+        success: false,
+      });
+    }
+    return res.status(200).send({
+      message: "All Nurse Department List ",
+      success: true,
+      Department,
+    });
+  } catch (error) {
+    return res.status(500).send({
+      message: `error while getting Department ${error}`,
+      success: false,
+      error,
+    });
+  }
+};
+
+export const getAllNurseAttributeDepartment = async (req, res) => {
+  try {
+    const Department = await attributeDepartmentsModel.find({}).lean();
+    if (!Department) {
+      return res.status(400).send({
+        message: "NO Attribute Department Found",
+        success: false,
+      });
+    }
+    return res.status(200).send({
+      message: "All Attribute Department List ",
+      success: true,
+      Department,
+    });
+  } catch (error) {
+    return res.status(500).send({
+      message: `error while getting Attribute Department ${error}`,
+      success: false,
+      error,
+    });
+  }
+};
 
 export const ViewAllZonesDepartment = async (req, res) => {
   try {
