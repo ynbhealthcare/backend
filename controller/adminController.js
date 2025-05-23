@@ -45,6 +45,9 @@ import util from "util";
 import crypto from "crypto";  // Ensure you require the crypto module if you haven't
 import consultationModel from "../models/ConsultationModel.js";
 import axios from "axios";
+import nurseDepartmentsModel from "../models/nurseDepartmentsModel.js";
+import skillDepartmentsModel from "../models/skillDepartmentsModel.js";
+import attributeDepartmentsModel from "../models/attributeDepartmentsModel.js";
 
 const execPromise = util.promisify(exec);
 
@@ -4521,6 +4524,7 @@ export const UserloginAll = async (req, res) => {
 
 
 // for department model
+
 export const AddAdminDepartmentController = async (req, res) => {
   try {
     const { name, status } = req.body;
@@ -4679,6 +4683,486 @@ export const deleteDepartmentAdmin = async (req, res) => {
   }
 };
 
+// for nurse department model
+
+export const AddAdminNurseDepartmentController = async (req, res) => {
+  try {
+    const { name, status } = req.body;
+
+    // Validation
+    if (!name) {
+      return res.status(400).send({
+        success: false,
+        message: "Please Provide name",
+      });
+    }
+
+    // Create a new category with the specified parent
+    const newDepartment = new nurseDepartmentsModel({
+      name,
+      status,
+    });
+    await newDepartment.save();
+
+    return res.status(201).send({
+      success: true,
+      message: "Department Created!",
+      newDepartment,
+    });
+  } catch (error) {
+    console.error("Error while creating Department:", error);
+    return res.status(400).send({
+      success: false,
+      message: "Error while creating Department",
+      error,
+    });
+  }
+};
+
+export const getAllNurseDepartmentFillAdmin = async (req, res) => {
+  try {
+    const page = parseInt(req.query.page) || 1; // Current page, default is 1
+    const limit = parseInt(req.query.limit) || 10; // Number of documents per page, default is 10
+    const searchTerm = req.query.search || ""; // Get search term from the query parameters
+
+    const skip = (page - 1) * limit;
+
+    const query = {};
+    if (searchTerm) {
+      // If search term is provided, add it to the query
+      query.$or = [
+        { name: { $regex: searchTerm, $options: "i" } }, // Case-insensitive username search
+        { value: { $regex: searchTerm, $options: "i" } }, // Case-insensitive email search
+      ];
+    }
+
+    const totalDepartment = await nurseDepartmentsModel.countDocuments();
+
+    const Department = await nurseDepartmentsModel
+      .find(query)
+      .sort({ _id: -1 }) // Sort by _id in descending order
+      .skip(skip)
+      .limit(limit)
+      .lean();
+
+    if (!Department) {
+      return res.status(200).send({
+        message: "NO Department found",
+        success: false,
+      });
+    }
+    return res.status(200).send({
+      message: "All Department list ",
+      DepartmentCount: Department.length,
+      currentPage: page,
+      totalPages: Math.ceil(totalDepartment / limit),
+      success: true,
+      Department,
+    });
+  } catch (error) {
+    return res.status(500).send({
+      message: `Error while getting Department ${error}`,
+      success: false,
+      error,
+    });
+  }
+};
+
+export const updateNurseDepartmentAdmin = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const { name, status } = req.body;
+
+    let updateFields = {
+      name,
+      status,
+    };
+
+    const Department = await nurseDepartmentsModel.findByIdAndUpdate(
+      id,
+      updateFields,
+      {
+        new: true,
+      }
+    );
+
+    return res.status(200).json({
+      message: "Department Updated!",
+      success: true,
+      Department,
+    });
+  } catch (error) {
+    return res.status(400).json({
+      message: `Error while updating Department: ${error}`,
+      success: false,
+      error,
+    });
+  }
+};
+
+export const getNurseDepartmentIdAdmin = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const Department = await nurseDepartmentsModel.findById(id);
+    if (!Department) {
+      return res.status(200).send({
+        message: "Nurse Department Not Found By Id",
+        success: false,
+      });
+    }
+    return res.status(200).json({
+      message: "fetch Single Nurse Department!",
+      success: true,
+      Department,
+    });
+  } catch (error) {
+    return res.status(400).json({
+      message: `Error while get Nurse Department: ${error}`,
+      success: false,
+      error,
+    });
+  }
+};
+
+export const deleteNurseDepartmentAdmin = async (req, res) => {
+  try {
+    await nurseDepartmentsModel.findByIdAndDelete(req.params.id);
+
+    return res.status(200).send({
+      success: true,
+      message: "Department Deleted!",
+    });
+  } catch (error) {
+    console.log(error);
+    return res.status(400).send({
+      success: false,
+      message: "Erorr WHile Deleteing Department",
+      error,
+    });
+  }
+};
+
+
+// for nurse skill department model
+
+export const AddAdminSkillDepartmentController = async (req, res) => {
+  try {
+    const { name, status } = req.body;
+
+    // Validation
+    if (!name) {
+      return res.status(400).send({
+        success: false,
+        message: "Please Provide name",
+      });
+    }
+
+    // Create a new category with the specified parent
+    const newDepartment = new skillDepartmentsModel({
+      name,
+      status,
+    });
+    await newDepartment.save();
+
+    return res.status(201).send({
+      success: true,
+      message: "Skill Department Created!",
+      newDepartment,
+    });
+  } catch (error) {
+    console.error("Error while creating Skill Department:", error);
+    return res.status(400).send({
+      success: false,
+      message: "Error while creating Skill Department",
+      error,
+    });
+  }
+};
+
+export const getAllSkillDepartmentFillAdmin = async (req, res) => {
+  try {
+    const page = parseInt(req.query.page) || 1; // Current page, default is 1
+    const limit = parseInt(req.query.limit) || 10; // Number of documents per page, default is 10
+    const searchTerm = req.query.search || ""; // Get search term from the query parameters
+
+    const skip = (page - 1) * limit;
+
+    const query = {};
+    if (searchTerm) {
+      // If search term is provided, add it to the query
+      query.$or = [
+        { name: { $regex: searchTerm, $options: "i" } }, // Case-insensitive username search
+        { value: { $regex: searchTerm, $options: "i" } }, // Case-insensitive email search
+      ];
+    }
+
+    const totalDepartment = await skillDepartmentsModel.countDocuments();
+
+    const Department = await skillDepartmentsModel
+      .find(query)
+      .sort({ _id: -1 }) // Sort by _id in descending order
+      .skip(skip)
+      .limit(limit)
+      .lean();
+
+    if (!Department) {
+      return res.status(200).send({
+        message: "NO Skill Department found",
+        success: false,
+      });
+    }
+    return res.status(200).send({
+      message: "All Skill Department list ",
+      DepartmentCount: Department.length,
+      currentPage: page,
+      totalPages: Math.ceil(totalDepartment / limit),
+      success: true,
+      Department,
+    });
+  } catch (error) {
+    return res.status(500).send({
+      message: `Error while getting Skill Department ${error}`,
+      success: false,
+      error,
+    });
+  }
+};
+
+export const updateSkillDepartmentAdmin = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const { name, status } = req.body;
+
+    let updateFields = {
+      name,
+      status,
+    };
+
+    const Department = await skillDepartmentsModel.findByIdAndUpdate(
+      id,
+      updateFields,
+      {
+        new: true,
+      }
+    );
+
+    return res.status(200).json({
+      message: "Skill Department Updated!",
+      success: true,
+      Department,
+    });
+  } catch (error) {
+    return res.status(400).json({
+      message: `Error while updating Skill Department: ${error}`,
+      success: false,
+      error,
+    });
+  }
+};
+
+export const getSkillDepartmentIdAdmin = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const Department = await skillDepartmentsModel.findById(id);
+    if (!Department) {
+      return res.status(200).send({
+        message: "Skill Department Not Found By Id",
+        success: false,
+      });
+    }
+    return res.status(200).json({
+      message: "fetch Single Skill Department!",
+      success: true,
+      Department,
+    });
+  } catch (error) {
+    return res.status(400).json({
+      message: `Error while get Skill Department: ${error}`,
+      success: false,
+      error,
+    });
+  }
+};
+
+export const deleteSkillDepartmentAdmin = async (req, res) => {
+  try {
+    await skillDepartmentsModel.findByIdAndDelete(req.params.id);
+
+    return res.status(200).send({
+      success: true,
+      message: "Department Deleted!",
+    });
+  } catch (error) {
+    console.log(error);
+    return res.status(400).send({
+      success: false,
+      message: "Erorr WHile Deleteing Department",
+      error,
+    });
+  }
+};
+
+// for nurse Attribute department model
+
+export const AddAdminAttributeDepartmentController = async (req, res) => {
+  try {
+    const { name, status } = req.body;
+
+    // Validation
+    if (!name) {
+      return res.status(400).send({
+        success: false,
+        message: "Please Provide name",
+      });
+    }
+
+    // Create a new category with the specified parent
+    const newDepartment = new attributeDepartmentsModel({
+      name,
+      status,
+    });
+    await newDepartment.save();
+
+    return res.status(201).send({
+      success: true,
+      message: "Attribute Department Created!",
+      newDepartment,
+    });
+  } catch (error) {
+    console.error("Error while creating Attribute Department:", error);
+    return res.status(400).send({
+      success: false,
+      message: "Error while creating Attribute Department",
+      error,
+    });
+  }
+};
+
+export const getAllAttributeDepartmentFillAdmin = async (req, res) => {
+  try {
+    const page = parseInt(req.query.page) || 1; // Current page, default is 1
+    const limit = parseInt(req.query.limit) || 10; // Number of documents per page, default is 10
+    const searchTerm = req.query.search || ""; // Get search term from the query parameters
+
+    const skip = (page - 1) * limit;
+
+    const query = {};
+    if (searchTerm) {
+      // If search term is provided, add it to the query
+      query.$or = [
+        { name: { $regex: searchTerm, $options: "i" } }, // Case-insensitive username search
+        { value: { $regex: searchTerm, $options: "i" } }, // Case-insensitive email search
+      ];
+    }
+
+    const totalDepartment = await attributeDepartmentsModel.countDocuments();
+
+    const Department = await attributeDepartmentsModel
+      .find(query)
+      .sort({ _id: -1 }) // Sort by _id in descending order
+      .skip(skip)
+      .limit(limit)
+      .lean();
+
+    if (!Department) {
+      return res.status(200).send({
+        message: "NO Attribute Department found",
+        success: false,
+      });
+    }
+    return res.status(200).send({
+      message: "All Attribute Department list ",
+      DepartmentCount: Department.length,
+      currentPage: page,
+      totalPages: Math.ceil(totalDepartment / limit),
+      success: true,
+      Department,
+    });
+  } catch (error) {
+    return res.status(500).send({
+      message: `Error while getting Attribute Department ${error}`,
+      success: false,
+      error,
+    });
+  }
+};
+
+export const updateAttributeDepartmentAdmin = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const { name, status } = req.body;
+
+    let updateFields = {
+      name,
+      status,
+    };
+
+    const Department = await attributeDepartmentsModel.findByIdAndUpdate(
+      id,
+      updateFields,
+      {
+        new: true,
+      }
+    );
+
+    return res.status(200).json({
+      message: "Skill Department Updated!",
+      success: true,
+      Department,
+    });
+  } catch (error) {
+    return res.status(400).json({
+      message: `Error while updating Skill Department: ${error}`,
+      success: false,
+      error,
+    });
+  }
+};
+
+export const getAttributeDepartmentIdAdmin = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const Department = await attributeDepartmentsModel.findById(id);
+    if (!Department) {
+      return res.status(200).send({
+        message: "Attribute Department Not Found By Id",
+        success: false,
+      });
+    }
+    return res.status(200).json({
+      message: "fetch Single Attribute Department!",
+      success: true,
+      Department,
+    });
+  } catch (error) {
+    return res.status(400).json({
+      message: `Error while get Attribute Department: ${error}`,
+      success: false,
+      error,
+    });
+  }
+};
+
+export const deleteAttributeDepartmentAdmin = async (req, res) => {
+  try {
+    await attributeDepartmentsModel.findByIdAndDelete(req.params.id);
+
+    return res.status(200).send({
+      success: true,
+      message: "Attribute Department Deleted!",
+    });
+  } catch (error) {
+    console.log(error);
+    return res.status(400).send({
+      success: false,
+      message: "Erorr WHile Deleteing Department",
+      error,
+    });
+  }
+};
 
 
 
