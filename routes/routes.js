@@ -8,14 +8,32 @@ import {
   getAllDepartmentFillAdmin,
   getDepartmentIdAdmin,
   updateDepartmentAdmin,
-  deleteDepartmentAdmin,downloadUserAdminInvoice, generateUserInvoicePDFView, editUserVerifyAdmin, AdminGetAllEmployee,AllPaymentAdmin, AdminAllEnquireStatus, profileImageHealth,deletePlanCategoryAdmin
+  deleteDepartmentAdmin,downloadUserAdminInvoice,
+  AddAdminNurseDepartmentController,
+getAllNurseDepartmentFillAdmin,
+updateNurseDepartmentAdmin,
+getNurseDepartmentIdAdmin,
+deleteNurseDepartmentAdmin,
+AddAdminSkillDepartmentController,
+getAllSkillDepartmentFillAdmin,
+updateSkillDepartmentAdmin,
+getSkillDepartmentIdAdmin,
+deleteSkillDepartmentAdmin,
+AddAdminAttributeDepartmentController,
+getAllAttributeDepartmentFillAdmin,
+updateAttributeDepartmentAdmin,
+getAttributeDepartmentIdAdmin,
+deleteAttributeDepartmentAdmin,
+  generateUserInvoicePDFView, editUserVerifyAdmin, AdminGetAllEmployee,AllPaymentAdmin, AdminAllEnquireStatus, profileImageHealth,deletePlanCategoryAdmin
 } from "../controller/adminController.js";
 
 import {
   AddCart, contactEnquire, razorpayCallback, UpdateCart, getCart, userTokenController, userBlogsController, Userlogin, SignupUser, getAllBlogsController, createBlogController,
   LoginAndVerifyOTP, updateBlogController, deleteBlogController, getBlogIdController, CreateChatController, findUserschatController, findchatController
   , EmailVerify, postman, PaymentResponse, PaymentRequest, getProductsByFilterUser, cancelOrderUser, ViewAllZones, getProductsByHSN, AuthUserByID, updateProfileUser, SignupNewUser, LoginUserWithOTP, LoginUserWithPass, SendOTP,SignupLoginNew, SignupLoginUser, getTaxIdUser, ViewAllUserTaxes, ViewCompareByUser, applyPromoCode, getHomeLayoutData, AddWishListByUser, deleteCompareByUser, deleteWishListByUser, ViewWishListByUser, AddCompareByUser, ViewProductRating, ViewCategoryRating, AddRating, UsergetAllCategories, UsergetAllProducts, UsergetAllHomeProducts, userOrdersViewController, getAllAttributeUser, getProductIdUser, updateUserController, createOrderController, updateUserAndCreateOrderController, userOrdersController, getHomeData, GetAllCategoriesByParentIdController, GetAllCategoriesBySlugController
-  , BuyPlanUser, GetPlanUser, HomeSendEnquire,ConsultationSendEnquire, getAllPlanCategoryController, uploadDataZone, deleteAllZones, SignupUserType, updateDetailsUser, updateDetailsUserHealth, getAllPlanUser, getProductIdUserBySlug
+  , BuyPlanUser, GetPlanUser, getAllNurseDepartment,
+getAllNurseSkillDepartment,
+getAllNurseAttributeDepartment, HomeSendEnquire,ConsultationSendEnquire, getAllPlanCategoryController, uploadDataZone, deleteAllZones, SignupUserType, updateDetailsUser, updateDetailsUserHealth, getAllPlanUser, getProductIdUserBySlug
   , getAllVendor, getAllDepartment, profileVendorImage, ApiGetKey, PaymentSuccess, PaymentFail,
   generateUserAttachPDF, updateVendorProfileUser, paymentVerification, BuyPlanAddUser, BuyPlanByUser, PayuHash, userPlanIdController, ViewAllZonesDepartment, getVendorById, HomeSendvendorEnquire, ApplyEnquireStatus, SenderEnquireStatus, AllPayment, downloadUserInvoice, checkUserPlan, GetWebsiteData, GetWebsiteData_old,getAllOrderUser
 } from "../controller/userController.js"
@@ -361,6 +379,32 @@ router.get("/admin/all-department-fillter", getAllDepartmentFillAdmin);
 router.get("/admin/get-department/:id", getDepartmentIdAdmin);
 router.put("/admin/update-department/:id", updateDepartmentAdmin);
 router.delete("/admin/delete-department/:id", deleteDepartmentAdmin);
+
+// for nurse department
+router.get("/get-all-nurse-department", getAllNurseDepartment);
+router.post("/admin/add-nurse-department", AddAdminNurseDepartmentController);
+router.get("/admin/all-nurse-department-fillter", getAllNurseDepartmentFillAdmin);
+router.get("/admin/get-nurse-department/:id", getNurseDepartmentIdAdmin);
+router.put("/admin/update-nurse-department/:id", updateNurseDepartmentAdmin);
+router.delete("/admin/delete-nurse-department/:id", deleteNurseDepartmentAdmin);
+
+
+// for nurse skill
+router.get("/get-all-nurse-skill-department", getAllNurseSkillDepartment);
+router.post("/admin/add-nurse-skill-department", AddAdminSkillDepartmentController);
+router.get("/admin/all-nurse-skill-department-fillter", getAllSkillDepartmentFillAdmin);
+router.get("/admin/get-nurse-skill-department/:id", getSkillDepartmentIdAdmin);
+router.put("/admin/update-nurse-skill-department/:id", updateSkillDepartmentAdmin);
+router.delete("/admin/delete-nurse-skill-department/:id", deleteSkillDepartmentAdmin);
+
+// for nurse Attributes
+router.get("/get-all-nurse-attributes-department", getAllNurseAttributeDepartment);
+router.post("/admin/add-nurse-attributes-department", AddAdminAttributeDepartmentController);
+router.get("/admin/all-nurse-attributes-department-fillter", getAllAttributeDepartmentFillAdmin);
+router.get("/admin/get-nurse-attributes-department/:id", getAttributeDepartmentIdAdmin);
+router.put("/admin/update-nurse-attributes-department/:id", updateAttributeDepartmentAdmin);
+router.delete("/admin/delete-nurse-attributes-department/:id", deleteAttributeDepartmentAdmin)
+
 
 
 
