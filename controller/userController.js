@@ -380,6 +380,206 @@ export const Userlogin = async (req, res) => {
 };
 
 
+export const UserPdfView = async (req, res) => {
+  try {
+    const id = req.params.id;  // Correctly access the ID
+    console.log('id:', id);
+
+    const user = await userModel.findById(id) .populate('skill', 'name')
+      .populate('attribute', 'name')
+      .populate('nurse', 'name');
+
+    console.log(user);
+    
+    if (!user) {
+      return res.status(404).send({
+        success: false,
+        message: "User not found",
+        user: null,
+      });
+    }
+
+ 
+       // Convert to HTML lists
+    const skillHtml = `
+      <div class="skills-list">
+        ${user.skill.map(s => `<div class="skill">${s.name}</div>`).join('\n')}
+      </div>
+    `;
+
+    const attributeHtml = `
+      <div class="skills-list">
+        ${user.attribute.map(a => `<div class="skill">${a.name}</div>`).join('\n')}
+      </div>
+    `;
+
+    const nurseHtml = `
+      <div class="tags">
+        ${user.nurse.map(n => `<div class="tag">${n.name}</div>`).join('\n')}
+      </div>
+    `;
+
+
+    const content = `
+    <!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title> ${user.username || 'NA'}</title>
+  <style>
+    body {
+      font-family: 'Arial', sans-serif;
+      margin: 0;
+      background: #f0f0f0;
+    }
+    .wrapper {
+      max-width: 800px;
+      margin: 20px auto;
+      background: white;
+      border-radius: 12px;
+      padding: 30px;
+      background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="100%" height="100%"><text x="0" y="20" fill="orange" opacity="0.1" font-size="30" font-family="Arial">YNB - YNB - YNB - YNB - YNB - YNB - YNB - YNB - YNB - YNB - YNB - YNB - YNB - YNB - YNB</text></svg>');
+      background-repeat: repeat;
+      border: 12px solid orange;
+    }
+    .header {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+    .profile-pic {
+      border-radius: 50%;
+      border: 5px solid orange;
+      width: 100px;
+      height: 100px;
+      object-fit: cover;
+    }
+    h1 {
+      margin: 10px 0 5px;
+    }
+    .tags {
+      display: flex;
+      justify-content: center;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+    .tag {
+      border: 2px solid green;
+      border-radius: 20px;
+      padding: 5px 10px;
+      font-size: 14px;
+    }
+    .section {
+      margin-top: 20px;
+    }
+    .section h3 {
+      color: #ff6600;
+      border: 2px solid #ff6600;
+      display: inline-block;
+      padding: 5px 10px;
+      border-radius: 6px;
+      font-size: 16px;
+    }
+    .info-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      row-gap: 10px;
+      margin-top: 10px;
+    }
+    .info-grid div {
+      font-size: 14px;
+    }
+    .label {
+      font-weight: bold;
+    }
+    .skills-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 10px;
+    }
+    .skill {
+      border: 2px solid green;
+      border-radius: 16px;
+      padding: 5px 10px;
+      font-size: 13px;
+    }
+    .clock {
+      text-align: center;
+      font-weight: bold;
+      color: #333;
+      margin-top: 10px;
+      font-size: 16px;
+    }
+    .clock span {
+      color: blue;
+    }
+  </style>
+</head>
+<body style="
+    background-image: url(https://ynbhealthcare.com/logo-patch.webp);
+    background-size: 200px;
+" >
+  <div class="wrapper">
+    <div class="header">
+      <img src="https://www.pngitem.com/pimgs/m/524-5244625_font-awesome-user-svg-hd-png-download.png" alt="Ranjita Devi" class="profile-pic" />
+      <h1 > ${user.username || 'NA'}</h1>
+
+        ${nurseHtml}
+ 
+      <div class="clock">⏰ Total hours worked: <span>7200+ hrs</span></div>
+    </div>
+
+    <div class="section">
+      <h3>General Information</h3>
+      <div class="info-grid">
+        <div><span class="label">Age of Worker:</span> 36-45 yrs</div>
+        <div><span class="label">Education:</span> ${user.Education || 'NA'}  </div>
+        <div><span class="label">Hometown:</span> ${user.city || 'NA'}</div>
+        <div><span class="label">Marital Status: </span> ${user.MaritalStatus || 'NA'} </div>
+        <div style="grid-column: span 2;">
+          <span class="label">Permanent Address:</span> ${user.address || ''}
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
+      <h3>Skill & Performance</h3>
+      <div class="label" style="margin-top: 10px;">Attributes</div>
+       ${attributeHtml}
+
+      <div class="label" style="margin-top: 15px;">Skills</div>
+        ${skillHtml}
+    </div>
+
+    <div class="section">
+      <h3>Extra Information</h3>
+      <div class="skills-list">
+        <div class="skill">Aadhar</div>
+        <div class="skill">Aadhar Back</div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
+`;
+
+// Replace with your PDF generation logic if needed
+    return res.status(200).send(content);
+ 
+  } catch (error) {
+    return res.status(500).send({
+      success: false,
+      message: `Error retrieving user: ${error.message}`,
+      error,
+    });
+  }
+};
+
+
+
+
 export const SignupUserType = async (req, res) => {
   try {
     const {
@@ -402,7 +602,12 @@ export const SignupUserType = async (req, res) => {
       Salary,
       Experience,
       Shift,
-      DutyShift
+      DutyShift,
+      skill,
+      attribute,
+      nurse,
+      MaritalStatus,
+      Education
     } = req.body;
 
 
@@ -450,6 +655,11 @@ export const SignupUserType = async (req, res) => {
       Experience: Experience || null,
       Shift: Shift || null,
       DutyShift: DutyShift || null,
+      skill : skill|| null,
+      attribute : attribute|| null,
+      nurse : nurse || null,
+      MaritalStatus : MaritalStatus || null,
+      Education : Education || null,
     });
 
     await newUser.save();
