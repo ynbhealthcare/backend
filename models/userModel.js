@@ -115,6 +115,42 @@ const userSchema = mongoose.Schema({
    companyAddress: {
     type: String,
   },
+  AltPhone: {
+    type: Number,
+   },
+    AltAddress: {
+    type: String,
+   },
+   Salary: {
+    type: Number,
+   },
+   Experience: {
+    type: Number,
+   },
+   Shift: {
+    type: Array,
+  },
+  DutyShift: {
+    type: Array,
+  }, 
+   MaritalStatus: {
+    type: String,
+  }, 
+   Education: {
+    type: String,
+  }, 
+   skill: [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'SkillDepartments', // Reference to the User model for the sender
+  }],
+   attribute: [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'AttributeDepartments', // Reference to the User model for the sender
+  }],
+  nurse: [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'NurseDepartments', // Reference to the User model for the sender
+  }],
 },
   { timestamps: true }
 );
