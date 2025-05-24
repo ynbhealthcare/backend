@@ -2783,8 +2783,10 @@ export const getAllUserAdmin = async (req, res) => {
     const page = parseInt(req.query.page) || 1; // Current page, default is 1
     const limit = parseInt(req.query.limit) || 10; // Number of documents per page, default is 10
     const searchTerm = req.query.search || ""; // Get search term from the query parameters
+    const empType = req.query.empType || null; 
+    const type = req.query.type || null; 
 
-    const skip = (page - 1) * limit;
+     const skip = (page - 1) * limit;
 
     const query = {};
     if (searchTerm) {
@@ -2796,6 +2798,14 @@ export const getAllUserAdmin = async (req, res) => {
         { email: regex },
         { phone: regex } // Add phone number search if needed
       ];
+    }
+
+    if(type){
+      query.type = type;
+    }
+    
+     if(empType){
+      query.empType = empType;
     }
 
     const totalUser = await userModel.countDocuments(query); // Count total documents matching the query
