@@ -35,7 +35,7 @@ import {
 getAllNurseSkillDepartment,
 getAllNurseAttributeDepartment, HomeSendEnquire,ConsultationSendEnquire, getAllPlanCategoryController, uploadDataZone, deleteAllZones, SignupUserType, updateDetailsUser, updateDetailsUserHealth, getAllPlanUser, getProductIdUserBySlug
   , getAllVendor, getAllDepartment, profileVendorImage, ApiGetKey, PaymentSuccess, PaymentFail,
-  generateUserAttachPDF, updateVendorProfileUser, paymentVerification, BuyPlanAddUser, BuyPlanByUser, PayuHash, userPlanIdController, ViewAllZonesDepartment, getVendorById, HomeSendvendorEnquire, ApplyEnquireStatus, SenderEnquireStatus, AllPayment, downloadUserInvoice, checkUserPlan, GetWebsiteData, GetWebsiteData_old,getAllOrderUser
+  generateUserAttachPDF, UserPdfView, updateVendorProfileUser, paymentVerification, BuyPlanAddUser, BuyPlanByUser, PayuHash, userPlanIdController, ViewAllZonesDepartment, getVendorById, HomeSendvendorEnquire, ApplyEnquireStatus, SenderEnquireStatus, AllPayment, downloadUserInvoice, checkUserPlan, GetWebsiteData, GetWebsiteData_old,getAllOrderUser
 } from "../controller/userController.js"
 import authenticateToken from "../middleware/authMiddleware.js";
 import { uploadImage, handleImageUpload } from "../controller/adminController.js";
@@ -453,6 +453,10 @@ router.post("/payment-success", PaymentSuccess);
 router.post("/payment-fail", PaymentFail);
 
 router.post("/admin/download-invoice", downloadUserAdminInvoice);
+
+
+router.get("/user-view/:id", UserPdfView);
+
 
 export default router;
 
