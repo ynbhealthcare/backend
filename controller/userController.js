@@ -419,6 +419,24 @@ export const UserPdfView = async (req, res) => {
       </div>
     `;
 
+        const dutyHtml = ` 
+        ${user.DutyShift.map(n => `${n}, `).join('\n')}
+      `;
+
+    
+
+const calculateAge = (dob) => {
+  const birthDate = new Date(dob);
+  const today = new Date();
+  let age = today.getFullYear() - birthDate.getFullYear();
+  const m = today.getMonth() - birthDate.getMonth();
+  if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
+    age--;
+  }
+  return age;
+};
+
+const age = user.DOB ? calculateAge(user.DOB) : 'NA';
 
     const content = `
     <!DOCTYPE html>
@@ -444,7 +462,7 @@ export const UserPdfView = async (req, res) => {
       border: 12px solid orange;
     }
     .header {
-      text-align: center;
+      text-align: left;
       margin-bottom: 20px;
     }
     .profile-pic {
@@ -459,7 +477,7 @@ export const UserPdfView = async (req, res) => {
     }
     .tags {
       display: flex;
-      justify-content: center;
+      justify-content: left;
       flex-wrap: wrap;
       gap: 8px;
       margin-bottom: 10px;
@@ -506,7 +524,7 @@ export const UserPdfView = async (req, res) => {
       font-size: 13px;
     }
     .clock {
-      text-align: center;
+      text-align: left;
       font-weight: bold;
       color: #333;
       margin-top: 10px;
@@ -515,6 +533,39 @@ export const UserPdfView = async (req, res) => {
     .clock span {
       color: blue;
     }
+      .mybtn{
+      margin-top:50px;
+    background: #0c0546;
+    color: white;
+    display: flex ;
+    gap: 5px;
+    align-items: center;
+    padding: 6px 20px;
+    border-radius: 25px;
+    margin-top: 16px;
+    font-size: 20px;
+    cursor:pointer;
+    }
+
+      @media print {
+     .mybtn{
+        display: none;
+      }
+    }
+
+    .blurbg {
+    position: relative;
+}
+ 
+    .blurbg:before {
+    width: 100%;
+    height: 50%;
+    position: absolute;
+    content: "";
+    z-index: 99;
+    backdrop-filter: blur(10px);
+    bottom: 0px;
+}
   </style>
 </head>
 <body style="
@@ -523,18 +574,18 @@ export const UserPdfView = async (req, res) => {
 " >
   <div class="wrapper">
     <div class="header">
-      <img src="https://www.pngitem.com/pimgs/m/524-5244625_font-awesome-user-svg-hd-png-download.png" alt="Ranjita Devi" class="profile-pic" />
+      <img src="${user.profile && user.profile !== '' ? process.env.SERVER + '/' + user.profile :  'https://www.pngitem.com/pimgs/m/524-5244625_font-awesome-user-svg-hd-png-download.png'} " alt="Ranjita Devi" class="profile-pic" />
       <h1 > ${user.username || 'NA'}</h1>
 
         ${nurseHtml}
  
-      <div class="clock">⏰ Total hours worked: <span>7200+ hrs</span></div>
+      <div class="clock">⏰Working hours: <span>${dutyHtml}</span></div>
     </div>
 
     <div class="section">
       <h3>General Information</h3>
       <div class="info-grid">
-        <div><span class="label">Age of Worker:</span> 36-45 yrs</div>
+        <div><span class="label">Age: </span> ${age} yrs</div>
         <div><span class="label">Education:</span> ${user.Education || 'NA'}  </div>
         <div><span class="label">Hometown:</span> ${user.city || 'NA'}</div>
         <div><span class="label">Marital Status: </span> ${user.MaritalStatus || 'NA'} </div>
@@ -556,10 +607,28 @@ export const UserPdfView = async (req, res) => {
     <div class="section">
       <h3>Extra Information</h3>
       <div class="skills-list">
-        <div class="skill">Aadhar</div>
-        <div class="skill">Aadhar Back</div>
+        <div class="skill">
+        <div class="blurbg">
+         <img src="${process.env.SERVER + '/' + user.Doc2}"/>
+         </div>
+          </div>
+        <div class="skill"> 
+        <div class="blurbg">
+         <img src="${process.env.SERVER + '/' + user.Doc3}"/> 
+         </div>
+         </div>
       </div>
     </div>
+
+    
+    
+    <button onclick="window.print()" class="mybtn" >
+    <svg width="25px" height="25px" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+<path d="M14 2.26953V6.40007C14 6.96012 14 7.24015 14.109 7.45406C14.2049 7.64222 14.3578 7.7952 14.546 7.89108C14.7599 8.00007 15.0399 8.00007 15.6 8.00007H19.7305M9 15L12 18M12 18L15 15M12 18L12 12M14 2H8.8C7.11984 2 6.27976 2 5.63803 2.32698C5.07354 2.6146 4.6146 3.07354 4.32698 3.63803C4 4.27976 4 5.11984 4 6.8V17.2C4 18.8802 4 19.7202 4.32698 20.362C4.6146 20.9265 5.07354 21.3854 5.63803 21.673C6.27976 22 7.11984 22 8.8 22H15.2C16.8802 22 17.7202 22 18.362 21.673C18.9265 21.3854 19.3854 20.9265 19.673 20.362C20 19.7202 20 18.8802 20 17.2V8L14 2Z" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
+Download </button>
+
+
   </div>
 </body>
 </html>
@@ -5001,6 +5070,7 @@ export const AuthUserByID = async (req, res) => {
           phone: existingUser.phone,
           email: existingUser.email,
           type: existingUser.type,
+          empType: existingUser.type,
           state: existingUser.state,
           statename: existingUser.statename,
           city: existingUser.city,
@@ -5023,6 +5093,9 @@ export const AuthUserByID = async (req, res) => {
           companyAddress : existingUser.companyAddress,
             age: existingUser.age,
           weight : existingUser.weight,
+          Education: existingUser.Education,
+          nurse: existingUser.nurse,
+
         },
       });
 
@@ -8075,9 +8148,19 @@ export const updateVendorProfileUser = async (req, res) => {
       state,
       statename,
       city,
+      DOB,
       confirm_password,
       about,
-      department
+      department,
+      Salary,
+      Experience,
+      Shift,
+      DutyShift,
+      Education,
+      MaritalStatus,
+      nurse,
+skill,
+attribute,
     } = req.body;
     console.log("Uploaded files:", req.files);
 
@@ -8098,7 +8181,17 @@ export const updateVendorProfileUser = async (req, res) => {
       statename,
       city,
       about,
-      department,
+      department : department || null,
+      DOB : DOB || null,
+      Salary : Salary || null,
+      Experience : Experience || null,
+      Shift : Shift || null,
+      DutyShift : DutyShift || null,
+      Education : Education || null,
+      MaritalStatus : MaritalStatus || null,
+      nurse : nurse || null,
+      skill : skill || null,
+      attribute : attribute || null,
     };
 
     if (password.length > 0 && confirm_password.length > 0) {
@@ -8106,9 +8199,9 @@ export const updateVendorProfileUser = async (req, res) => {
       updateFields.password = hashedPassword;
     }
     // If the files exist, update the corresponding fields
-      if (Doc1 && Doc1[0]) {
-      updateFields.Doc1 = Doc1[0].path.replace(/\\/g, "/").replace(/^public\//, "");
-    }
+    //   if (Doc1 && Doc1[0]) {
+    //   updateFields.Doc1 = Doc1[0].path.replace(/\\/g, "/").replace(/^public\//, "");
+    // }
     if (Doc2 && Doc2[0]) {
       updateFields.Doc2 = Doc2[0].path.replace(/\\/g, "/").replace(/^public\//, "");
     }
