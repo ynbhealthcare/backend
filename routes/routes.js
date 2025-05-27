@@ -459,4 +459,3 @@ router.get("/user-view/:id", UserPdfView);
 
 
 export default router;
-
