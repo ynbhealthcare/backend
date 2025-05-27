@@ -639,7 +639,7 @@ export const AddAdminOrderController = async (req, res) => {
        totalAmount: finalTotal,
        taxTotal, 
        orderId:order_id,
-       status:1,
+       status:0,
        OnBoardDate
     });
 
@@ -2467,9 +2467,9 @@ export const editFullOrderAdmin = async (req, res) => {
 
     const updatedOrder = await orderModel.findByIdAndUpdate(id, updateFields, {
       new: true,
-    });
+    }).populate('employeeId' , 'phone username').populate('userId' ,  'phone username');
 
- 
+
 
     return res.status(200).json({
             message: "Order Updated!",
@@ -2541,7 +2541,8 @@ export const editOrderAdmin = async (req, res) => {
 
     const updatedOrder = await orderModel.findByIdAndUpdate(id, updateFields, {
       new: true,
-    });
+    }).populate('employeeId', 'phone username')
+.populate('userId', 'phone username');
 
     
 if(updatedOrder.status === 2){
@@ -2635,7 +2636,122 @@ if(updatedOrder.status === 4){
                     console.error(`WhatsApp failed for ${UserPhone}:`, err.message);
                   } 
 }
+ 
 
+if(updatedOrder.type === 4 && updatedOrder.status == 1){
+
+  function getDaysBetween(start, end) {
+  return Math.ceil((new Date(end) - new Date(start)) / (1000 * 60 * 60 * 24))+ 1;
+}
+
+const days = getDaysBetween(updatedOrder.PickupDate, updatedOrder.ReturnDate);
+
+console.log('updatedOrder.employeeId?.phone',updatedOrder.employeeId?.phone);
+
+if (!updatedOrder.employeeId?.phone || !updatedOrder.employeeId?.username || !updatedOrder.UserDetails[0]?.name) {
+  console.log('updatedOrder',updatedOrder)
+  console.error('Missing required fields for WhatsApp message');
+  return;
+}
+
+const notificationData = {
+                  mobile: `91${updatedOrder.UserDetails[0]?.phone
+
+                  }`,
+                  templateid: "677048628440397",
+                  overridebot: "yes/no",
+                  template: {
+                    components: [ 
+                      {
+                        type: "body",
+                        parameters: [
+                          { type: "text", text: updatedOrder.UserDetails[0]?.name || 'NA' },
+                          { type: "text", text: updatedOrder.orderId || 'NA'  },
+                          { type: "text", text:  updatedOrder.employeeId.username || 'NA'},
+                           { type: "text", text: updatedOrder.PickupDate
+    ? new Date(updatedOrder.PickupDate).toLocaleDateString("en-GB", {
+        day: "2-digit",
+        month: "long",
+        year: "numeric",
+      })
+    : "Date"},
+                          { type: "text", text: days || 'NA' },
+                         ],
+                      },
+                    ],
+                  },
+                };
+      
+                try {
+                  await axios.post(process.env.WHATSAPPAPI, notificationData, {
+                    headers: {
+                      "API-KEY": process.env.WHATSAPPKEY,
+                      "Content-Type": "application/json",
+                    },
+                  });
+                  console.log(`WhatsApp sent to ${updatedOrder.employeeId.phone}`);
+                } catch (err) {
+                  console.error(`WhatsApp failed for ${updatedOrder.employeeId.phone}:`, err.message);
+                }
+}
+
+
+if(updatedOrder.type === 4 && updatedOrder.status == 1){
+
+  function getDaysBetween(start, end) {
+  return Math.ceil((new Date(end) - new Date(start)) / (1000 * 60 * 60 * 24))+ 1;
+}
+
+const days = getDaysBetween(updatedOrder.PickupDate, updatedOrder.ReturnDate);
+
+console.log('updatedOrder.employeeId?.phone',updatedOrder.employeeId?.phone);
+
+if (!updatedOrder.employeeId?.phone || !updatedOrder.employeeId?.username || !updatedOrder.UserDetails[0]?.name) {
+  console.log('updatedOrder',updatedOrder)
+  console.error('Missing required fields for WhatsApp message');
+  return;
+}
+
+const notificationData = {
+                  mobile: `91${updatedOrder.employeeId?.phone}`,
+                  templateid: "715611274694613",
+                  overridebot: "yes/no",
+                  template: {
+                    components: [ 
+                      {
+                        type: "body",
+                        parameters: [
+                          { type: "text", text: updatedOrder.employeeId.username || 'NA' },
+                          { type: "text", text: updatedOrder.orderId || 'NA'  },
+                          { type: "text", text: updatedOrder.UserDetails[0]?.name || 'NA'},
+                          { type: "text", text: updatedOrder.UserDetails[0]?.address || 'NA' },
+                          { type: "text", text: updatedOrder.PickupDate
+    ? new Date(updatedOrder.PickupDate).toLocaleDateString("en-GB", {
+        day: "2-digit",
+        month: "long",
+        year: "numeric",
+      })
+    : "Date"},
+                          { type: "text", text: days || 'NA' },
+                          { type: "text", text: updatedOrder.UserDetails[0]?.phone || 'NA' },
+                        ],
+                      },
+                    ],
+                  },
+                };
+      
+                try {
+                  await axios.post(process.env.WHATSAPPAPI, notificationData, {
+                    headers: {
+                      "API-KEY": process.env.WHATSAPPKEY,
+                      "Content-Type": "application/json",
+                    },
+                  });
+                  console.log(`WhatsApp sent to ${updatedOrder.employeeId.phone}`);
+                } catch (err) {
+                  console.error(`WhatsApp failed for ${updatedOrder.employeeId.phone}:`, err.message);
+                }
+      }
 
     return res.status(200).json({
             message: "Order Updated!",
@@ -5636,6 +5752,7 @@ ${invoiceData.addProduct && invoiceData.addProduct.length > 0 ? `
     </table>
   </div>
 ` : ''}
+${invoiceData.type === 2 ?  `
 
 <div class="col-md-12 my-4">
   <div class="d-flex justify-content-between">
@@ -5805,6 +5922,7 @@ ${invoiceData.addProduct && invoiceData.addProduct.length > 0 ? `
   ` : ''}
 </div>
 
+  ` : ''}
 
 <br>
      <p style="text-align:center" >This is a Computer Generated Invoice </p>
