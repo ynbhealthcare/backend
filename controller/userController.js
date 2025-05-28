@@ -5114,6 +5114,78 @@ export const AuthUserByID = async (req, res) => {
   }
 };
 
+
+export const AuthUserByIDHistory = async (req, res) => {
+  try {
+    const { id } = req.body;
+
+    const existingUser = await userModel.findById(id);
+ 
+
+    // Find all orders where addHistory.assignId matches the user ID
+    const orders = await orderModel.find({ 'addHistory.assignId': id });
+
+    // Extract relevant history entries from matching orders
+    const matchedHistories = orders.flatMap(order =>
+      order.addHistory.filter(entry => entry.assignId === id)
+    );
+
+    if (existingUser) {
+
+      return res.status(200).json({
+        success: true,
+        message: "login sucesssfully with password",
+        existingUser: {
+          _id: existingUser._id,
+          username: existingUser.username,
+          phone: existingUser.phone,
+          email: existingUser.email,
+          type: existingUser.type,
+          empType: existingUser.type,
+          state: existingUser.state,
+          statename: existingUser.statename,
+          city: existingUser.city,
+          address: existingUser.address,
+          verified: existingUser.verified,
+          pincode: existingUser.pincode,
+          DOB: existingUser.DOB,
+          about: existingUser.about,
+          department: existingUser.department,
+          Doc1: existingUser.Doc1,
+          Doc2: existingUser.Doc2,
+          Doc3: existingUser.Doc3,
+          profile: existingUser.profile,
+          aadharno: existingUser.aadharno,
+          pHealthHistory: existingUser.pHealthHistory,
+          cHealthStatus: existingUser.cHealthStatus,
+          company : existingUser.cHealthStatus,
+          companyName : existingUser.companyName,
+          companyGST : existingUser.companyGST,
+          companyAddress : existingUser.companyAddress,
+            age: existingUser.age,
+          weight : existingUser.weight,
+          Education: existingUser.Education,
+          nurse: existingUser.nurse,
+          history: orders.reverse() || [], 
+        },
+      });
+
+    } else {
+      return res.status(401).send({
+        success: false,
+        message: "user Not found",
+      });
+    }
+  } catch (error) {
+    return res.status(500).send({
+      message: `error on Auth ${error}`,
+      sucesss: false,
+      error,
+    });
+  }
+};
+
+
 export const updateProfileUser = async (req, res) => {
   try {
     const { id } = req.params;
