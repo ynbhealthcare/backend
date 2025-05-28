@@ -1,4 +1,4 @@
- import mongoose from "mongoose";
+import mongoose from "mongoose";
 
 const orderSchema = mongoose.Schema({
   items: {
@@ -96,6 +96,9 @@ const orderSchema = mongoose.Schema({
   },
   OnBoardDate: {
     type: Date,
+  },
+  dutyHr: {
+    type: Number,
   },
   
   employeeSaleId: {  // Changed field name to plural and set type as an array of ObjectIds
