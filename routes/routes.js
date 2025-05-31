@@ -128,6 +128,7 @@ router.get("/user-invoice/:id", generateUserInvoicePDFView);
 router.get('/admin/all-user', getAllUserAdmin);
 router.put('/admin/update-user/:id', editUserAdmin);
 router.get('/admin/get-user/:id', getUserIdAdmin);
+router.get('/admin/get-user-history/:id', getUserIdAdmin);
 
 // Folder Admin 
 
@@ -363,7 +364,7 @@ router.get('/products-variations-fillter/', checkOrigin, getProductsByFilterUser
 
 router.post('/login-verify-otp/', checkOrigin, LoginAndVerifyOTP);
 
-router.post("/signup-user-type", SignupUserType);
+router.post("/signup-user-type", profileVendorImage, SignupUserType);
 router.get("/my-plan/:id", getAllPlanUser);
 
 router.post("/buy-plan", BuyPlanUser);
