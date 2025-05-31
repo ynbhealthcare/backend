@@ -3162,6 +3162,43 @@ export const getUserIdAdmin = async (req, res) => {
   }
 };
 
+export const getUserIdHistoryAdmin = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const User = await userModel.findById(id);
+ 
+        // Find all orders where addHistory.assignId matches the user ID
+        const orders = await orderModel.find({ 'addHistory.assignId': id });
+    
+        // Extract relevant history entries from matching orders
+        const matchedHistories = orders.flatMap(order =>
+          order.addHistory.filter(entry => entry.assignId === id)
+        );
+    
+
+
+    if (!User) {
+      return res.status(200).send({
+        message: "User Not Found By Id",
+        success: false,
+      });
+    }
+    return res.status(200).json({
+      message: "fetch Single User!",
+      success: true,
+      User,
+      history: matchedHistories, 
+
+    });
+  } catch (error) {
+    return res.status(400).json({
+      message: `Error while get User : ${error}`,
+      success: false,
+      error,
+    });
+  }
+};
+
 
 // for folder logic 
 
@@ -5828,6 +5865,8 @@ export const generateUserInvoicePDFView = async (req, res) => {
       invoiceData?.ReturnDate
     )}     </p>
   
+        <p> <b>  GSTIN:</b> 07AAACY9494K1ZJ    </p>
+
         </div>
       </div>
 
@@ -6332,6 +6371,8 @@ const generateUserInvoicePDF = async (invoiceData) => {
   <p> <b>  Return Date:</b> ${formatDate(
       invoiceData?.ReturnDate
     )}     </p>
+
+      <p> <b>  GSTIN:</b> 07AAACY9494K1ZJ    </p>
   
         </div>
       </div>
