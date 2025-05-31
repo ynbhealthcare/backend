@@ -71,6 +71,10 @@ const userSchema = mongoose.Schema({
     type: String,
     default: "",
   },
+    Doc1: {
+    type: String,
+    default: "",
+  },
   Doc2: {
     type: String,
     default: "",
@@ -125,6 +129,9 @@ const userSchema = mongoose.Schema({
     type: Number,
    },
    Experience: {
+    type: Number,
+   },
+    userId: {
     type: Number,
    },
    Shift: {
