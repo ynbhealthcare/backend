@@ -403,24 +403,24 @@ export const UserPdfView = async (req, res) => {
        // Convert to HTML lists
     const skillHtml = `
       <div class="skills-list">
-        ${user.skill.map(s => `<div class="skill">${s.name}</div>`).join('\n')}
+    ${(Array.isArray(user.skill) ? user.skill : []).map(s => `<div class="skill">${s.name}</div>`).join('\n')}
       </div>
     `;
 
     const attributeHtml = `
       <div class="skills-list">
-        ${user.attribute.map(a => `<div class="skill">${a.name}</div>`).join('\n')}
+    ${(Array.isArray(user.attribute) ? user.attribute : []).map(a => `<div class="skill">${a.name}</div>`).join('\n')}
       </div>
     `;
 
     const nurseHtml = `
       <div class="tags">
-        ${user.nurse.map(n => `<div class="tag">${n.name}</div>`).join('\n')}
+    ${(Array.isArray(user.nurse) ? user.nurse : []).map(n => `<div class="tag">${n.name}</div>`).join('\n')}
       </div>
     `;
 
         const dutyHtml = ` 
-        ${user.DutyShift.map(n => `${n}, `).join('\n')}
+  ${(Array.isArray(user.DutyShift) ? user.DutyShift : []).map(n => `${n}, `).join('\n')}
       `;
 
     
@@ -589,6 +589,9 @@ const age = user.DOB ? calculateAge(user.DOB) : 'NA';
         <div><span class="label">Education:</span> ${user.Education || 'NA'}  </div>
         <div><span class="label">Hometown:</span> ${user.city || 'NA'}</div>
         <div><span class="label">Marital Status: </span> ${user.MaritalStatus || 'NA'} </div>
+        <div><span class="label">Staff code: </span> YNB-00${user.userId || ''} </div>
+
+        
         <div style="grid-column: span 2;">
           <span class="label">Permanent Address:</span> ${user.address || ''}
         </div>
@@ -607,14 +610,14 @@ const age = user.DOB ? calculateAge(user.DOB) : 'NA';
     <div class="section">
       <h3>Extra Information</h3>
       <div class="skills-list">
-        <div class="skill">
+        <div class="skill" style="width:40%;">
         <div class="blurbg">
-         <img src="${process.env.SERVER + '/' + user.Doc2}"/>
+         <img src="${process.env.SERVER + '/' + user.Doc2}" width="100%" /> 
          </div>
           </div>
-        <div class="skill"> 
-        <div class="blurbg">
-         <img src="${process.env.SERVER + '/' + user.Doc3}"/> 
+        <div class="skill" style="width:40%;">
+        <div class="blurbg" >
+         <img src="${process.env.SERVER + '/' + user.Doc3}" width="100%" /> 
          </div>
          </div>
       </div>
@@ -679,6 +682,11 @@ export const SignupUserType = async (req, res) => {
       Education
     } = req.body;
 
+      // Extract document paths safely
+    const Doc1Path = req.files?.Doc1?.[0]?.path || null;
+     const Doc2Path = req.files?.Doc2?.[0]?.path || null;
+    const Doc3Path = req.files?.Doc3?.[0]?.path || null;
+    const profileImg = req.files.ProfileFile?.[0]?.path || undefined;
 
     // const {
     //   profile,
@@ -701,7 +709,7 @@ export const SignupUserType = async (req, res) => {
       userId = 1;
     }
 
-    
+
     const newUser = new userModel({
       type,
       username,
@@ -729,7 +737,14 @@ export const SignupUserType = async (req, res) => {
       nurse : nurse || null,
       MaritalStatus : MaritalStatus || null,
       Education : Education || null,
+      profile : profileImg || null,
+      Doc1 : Doc1Path  || null,
+      Doc2 : Doc2Path  || null,
+      Doc3 : Doc3Path  || null,
     });
+
+        
+  
 
     await newUser.save();
     res.status(201).json({
