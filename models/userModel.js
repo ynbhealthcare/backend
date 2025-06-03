@@ -62,10 +62,7 @@ const userSchema = mongoose.Schema({
     type: String,
     default: "",
   },
-  profile: {
-    type: String,
-    default: "",
-  },
+  
 
   about: {
     type: String,
@@ -146,6 +143,9 @@ const userSchema = mongoose.Schema({
    Education: {
     type: String,
   }, 
+  location: {
+    type: String,
+  },  
    skill: [{
     type: mongoose.Schema.Types.ObjectId,
     ref: 'SkillDepartments', // Reference to the User model for the sender
