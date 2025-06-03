@@ -8258,12 +8258,11 @@ attribute,
     const Doc3 = req.files ? req.files.Doc3 : undefined;
     const profileImg = req.files ? req.files.profile : undefined;
 
-    console.log("req.body", req.body, profileImg);
+    console.log("req.body",profileImg);
 
     let updateFields = {
       username,
       address,
-      email,
       pincode,
       gender,
       state,
@@ -8281,6 +8280,7 @@ attribute,
       nurse : nurse || null,
       skill : skill || null,
       attribute : attribute || null,
+      
     };
 
     if (password.length > 0 && confirm_password.length > 0) {
@@ -8297,9 +8297,14 @@ attribute,
     if (Doc3 && Doc3[0]) {
       updateFields.Doc3 = Doc3[0].path.replace(/\\/g, "/").replace(/^public\//, "");
     }
-    if (profileImg && profileImg[0]) {
-      updateFields.profile = profileImg[0].path.replace(/\\/g, "/").replace(/^public\//, "");
-    }
+    
+if (profileImg && profileImg.length > 0) {
+    updateFields.profile = profileImg[0].path.replace(/\\/g, "/").replace(/^public\//, "");
+    console.log("Updated profile path:", updateFields.profile);
+} else {
+    console.log("No profile image uploaded.");
+}
+
 
     const user = await userModel.findByIdAndUpdate(id, updateFields, {
       new: true,
