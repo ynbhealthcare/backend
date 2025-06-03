@@ -43,7 +43,21 @@ const productSchema = new mongoose.Schema(
         salePrice: {
             type: Number,
         },
-
+        oneto7: {
+            type: Number,
+        },
+        eightto14: {
+            type: Number,
+        },
+        fivto30: {
+            type: Number,
+        },
+        monthto3month: {
+            type: Number,
+        },
+        threemonthto6month: {
+            type: Number,
+        },
         status: {
             type: String,
             default: 'true',
@@ -51,6 +65,19 @@ const productSchema = new mongoose.Schema(
         stock: {
             type: Number,
         },
+        reStock: {
+            type: Number,
+        },
+        serialNumber: {
+            type: Number,
+        },
+        brandName: {
+            type: String,
+        },
+        modelNo: {
+            type: String,
+        },
+        
         variations: {
             type: Object,
         },
