@@ -2335,7 +2335,7 @@ if (userId) {
 
     return res.status(200).send({
       message: "All Order list",
-      Count: enrichedOrders.length,
+      Count: filteredOrders.length,
       currentPage: page,
       totalPages: Math.ceil(filteredOrders.length / limit),
       success: true,
