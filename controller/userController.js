@@ -679,7 +679,8 @@ export const SignupUserType = async (req, res) => {
       attribute,
       nurse,
       MaritalStatus,
-      Education
+      Education,
+      location
     } = req.body;
 
       // Extract document paths safely
@@ -741,6 +742,7 @@ export const SignupUserType = async (req, res) => {
       Doc1 : Doc1Path  || null,
       Doc2 : Doc2Path  || null,
       Doc3 : Doc3Path  || null,
+      location : location || null,
     });
 
         
