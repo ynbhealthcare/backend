@@ -48,6 +48,7 @@ import axios from "axios";
 import nurseDepartmentsModel from "../models/nurseDepartmentsModel.js";
 import skillDepartmentsModel from "../models/skillDepartmentsModel.js";
 import attributeDepartmentsModel from "../models/attributeDepartmentsModel.js";
+import mongoose from "mongoose";
 
 const execPromise = util.promisify(exec);
 
@@ -625,7 +626,7 @@ export const AddAdminOrderController = async (req, res) => {
       UserDetails,
       employeeSaleId,
       employeeId: employeeId || null,
-      PickupDate,ReturnDate,SecurityAmt,AdvanceAmt,
+      PickupDate,ReturnDate: ReturnDate || PickupDate,SecurityAmt,AdvanceAmt,
        addRental,
        addReceived,
        addReturn,
@@ -645,6 +646,7 @@ export const AddAdminOrderController = async (req, res) => {
     });
 
     if(addProduct){
+       
       for (let product of addProduct ) {
         // Retrieve the product details
         const productDetails = await productModel.findById(product._id);
@@ -653,9 +655,9 @@ export const AddAdminOrderController = async (req, res) => {
           console.log(`Product not found: ${product._id}`);
           continue; // Skip if product is not found
         }
-        if ( ( productDetails.reStock || productDetails.stock ) && ( productDetails.reStock > 0 || productDetails.stock > 0 ) ) {
+        if ( ( productDetails?.reStock || productDetails?.stock ) && ( productDetails?.reStock > 0 || productDetails?.stock > 0 ) ) {
 
-        if(order !== 1){
+        if(newData.type !== 1){
 
         // Add 1 to the stock of each product
         const updatedStock = productDetails.reStock - 1;
@@ -2163,6 +2165,11 @@ export const getAllOrderAdmin_old = async (req, res) => {
 
 };
 
+function extractUsernameFromChanges(changeStr) {
+  const match = changeStr.match(/username\s*:\s*([^\|]+)/);
+  return match ? match[1].trim() : '';
+}
+
 export const getAllOrderAdmin = async (req, res) => {
   try {
     const page = parseInt(req.query.page) || 1;
@@ -2175,6 +2182,8 @@ export const getAllOrderAdmin = async (req, res) => {
     const overdue = req.query.overdue || ''; 
     const startDate = req.query.startDate ? new Date(req.query.startDate) : null;
     const endDate = req.query.endDate ? new Date(req.query.endDate) : null;
+     const userId = req.query.userId || null;
+
     const skip = (page - 1) * limit;
 
     const query = {};
@@ -2200,7 +2209,13 @@ if (startDate && endDate) {
   query.PickupDate = { $lte: endDate };
 }
 
-
+if (userId) {
+  query.$or = [
+    { userId: userId },
+    { employeeId: userId },
+    { employeeSaleId: userId }
+  ];
+}
 
 
     if (statusFilter.length > 0) {
@@ -2227,6 +2242,8 @@ if (startDate && endDate) {
       query['addProduct._id'] = productId;
     }
 
+
+    
     // Fetch with populate
     const allOrders = await orderModel
       .find(query)
@@ -2277,14 +2294,64 @@ if (startDate && endDate) {
       });
     }
 
+    const enrichedOrders = paginatedOrders.map((order) => {
+      const history = order.addHistory || [];
+      const nurseMap = {};
+
+      history.forEach((entry) => {
+        const isNurseChange =
+          entry.changes &&
+          entry.changes.includes("Update Employee ( Doctor / Nurse / Runner )") &&
+          entry.assignId;
+
+        if (isNurseChange) {
+          const key = entry.assignId;
+          if (!nurseMap[key]) {
+            nurseMap[key] = {
+              assignId: entry.assignId,
+              username: extractUsernameFromChanges(entry.changes), // helper function
+              workDates: new Set(),
+              email: '', // will fill below
+            };
+          }
+
+          nurseMap[key].workDates.add(entry.date);
+        }
+      });
+
+      const nurseStats = Object.values(nurseMap).map((nurse) => ({
+        assignId: nurse.assignId,
+        username: nurse.username,
+        email: '', // Optional: populate if available in users
+        totalDays: nurse.workDates.size,
+        workDates: Array.from(nurse.workDates),
+      }));
+
+      return {
+        ...order,
+        NurseStats: nurseStats.length > 0 ? nurseStats : [],
+      };
+    });
+
     return res.status(200).send({
       message: "All Order list",
-      Count: paginatedOrders.length,
+      Count: enrichedOrders.length,
       currentPage: page,
       totalPages: Math.ceil(filteredOrders.length / limit),
       success: true,
-      Order: paginatedOrders,
+      Order: enrichedOrders,
     });
+
+
+    // return res.status(200).send({
+    //   message: "All Order list",
+    //   Count: paginatedOrders.length,
+    //   currentPage: page,
+    //   totalPages: Math.ceil(filteredOrders.length / limit),
+    //   success: true,
+    //   Order: paginatedOrders,
+    // });
+
   } catch (error) {
     return res.status(500).send({
       message: `Error while fetching Orders: ${error.message}`,
@@ -3028,14 +3095,14 @@ export const editOrderAdmin_old = async (req, res) => {
 };
 
 
-export const getAllUserAdmin = async (req, res) => {
+export const getAllUserAdmin_old = async (req, res) => {
   try {
     const page = parseInt(req.query.page) || 1; // Current page, default is 1
     const limit = parseInt(req.query.limit) || 10; // Number of documents per page, default is 10
     const searchTerm = req.query.search || ""; // Get search term from the query parameters
     const empType = req.query.empType || null; 
     const type = req.query.type || null; 
-
+    const active = req.query.active || null; 
      const skip = (page - 1) * limit;
 
     const query = {};
@@ -3046,7 +3113,9 @@ export const getAllUserAdmin = async (req, res) => {
       query.$or = [
         { username: regex },
         { email: regex },
-        { phone: regex } // Add phone number search if needed
+        { phone: regex },  
+        { pincode: regex },
+        { address: regex }  
       ];
     }
 
@@ -3074,13 +3143,30 @@ export const getAllUserAdmin = async (req, res) => {
       });
     }
 
+     // Check availability for each user
+    const usersWithAvailability = await Promise.all(
+      users.map(async (user) => {
+        const isBusy = await orderModel.exists({
+          type: 4,
+          employeeId: user._id,
+          status: { $nin: [4, 5] }, // Not 4 or 5
+        });
+
+        return {
+          ...user,
+          available: isBusy ? 0 : 1, // 0 = busy, 1 = available
+        };
+      })
+    );
+
+
     return res.status(200).send({ // Send successful response
       message: "All user list",
       userCount: users.length,
       currentPage: page,
       totalPages: Math.ceil(totalUser / limit),
       success: true,
-      users, // Return users array
+      users: usersWithAvailability,
     });
   } catch (error) {
     return res.status(500).send({ // Send 500 Internal Server Error response
@@ -3090,6 +3176,123 @@ export const getAllUserAdmin = async (req, res) => {
     });
   }
 };
+
+export const getAllUserAdmin = async (req, res) => {
+  try {
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const searchTerm = req.query.search || "";
+    const empType = req.query.empType || null;
+    const type = req.query.type || null;
+    const active = req.query.active || null;
+    const username = req.query.name || null;
+    const phone = req.query.phone || null;
+    const state = req.query.state || null;
+    const city = req.query.city || null;
+    const pincode = req.query.pincode || null;
+    const location = req.query.location || null;
+    const nurseParam = req.query.nurse || null;
+
+ 
+
+    const query = {};
+    if (searchTerm) {
+      const regex = new RegExp(searchTerm, "i");
+      query.$or = [
+        { username: regex },
+        { email: regex },
+        { phone: regex },
+        { pincode: regex },
+        { address: regex },
+      ];
+    }
+
+    if(username) query.username = username;
+     if(phone) query.phone = phone;
+     if(state) query.state = state;
+     if(city) query.city = city;
+     if(pincode) query.pincode = pincode;
+     if(location) query.state = location;
+
+    if (type) query.type = type;
+    if (empType) query.empType = empType;
+
+ if (nurseParam) {
+  let nurseIds = [];
+
+  if (typeof nurseParam === "string") {
+    nurseIds = nurseParam.split(",");
+  } else if (Array.isArray(nurseParam)) {
+    nurseIds = nurseParam;
+  }
+ 
+    const objectIds = nurseIds
+      .filter(id => mongoose.Types.ObjectId.isValid(id)) // ✅ only valid ones
+      .map(id => new mongoose.Types.ObjectId(id));
+
+    if (objectIds.length > 0) {
+      query.nurse = { $in: objectIds }; // ✅ match at least one
+    }
+ 
+}
+
+    // Get all matching users (no pagination yet)
+    let allUsers = await userModel.find(query).sort({ _id: -1 }).lean();
+
+    // if (!allUsers || allUsers.length === 0) {
+    //   return res.status(404).send({
+    //     message: "No users found",
+    //     success: false,
+    //   });
+    // }
+
+    // Compute availability
+    let usersWithAvailability = await Promise.all(
+      allUsers.map(async (user) => {
+        const isBusy = await orderModel.exists({
+          type: 4,
+          employeeId: user._id,
+          status: { $nin: [4, 5] },
+        });
+
+        return {
+          ...user,
+          available: isBusy ? 0 : 1,
+        };
+      })
+    );
+
+    // Filter by availability if 'active' param is provided
+    if (active === "1") {
+      usersWithAvailability = usersWithAvailability.filter(u => u.available === 1);
+    } else if (active === "0") {
+      usersWithAvailability = usersWithAvailability.filter(u => u.available === 0);
+    }
+
+    const totalUser = usersWithAvailability.length;
+
+    // Paginate after availability filtering
+    const start = (page - 1) * limit;
+    const paginatedUsers = usersWithAvailability.slice(start, start + limit);
+
+    return res.status(200).send({
+      message: "All user list",
+      userCount: paginatedUsers.length,
+      totalUsers: totalUser,
+      currentPage: page,
+      totalPages: Math.ceil(totalUser / limit),
+      success: true,
+      users: paginatedUsers,
+    });
+  } catch (error) {
+    return res.status(500).send({
+      message: `Error while getting users: ${error.message}`,
+      success: false,
+      error,
+    });
+  }
+};
+
 
 export const editUserAdmin = async (req, res) => {
   try {
@@ -3170,11 +3373,15 @@ export const getUserIdHistoryAdmin = async (req, res) => {
         // Find all orders where addHistory.assignId matches the user ID
         const orders = await orderModel.find({ 'addHistory.assignId': id });
     
-        // Extract relevant history entries from matching orders
-        const matchedHistories = orders.flatMap(order =>
-          order.addHistory.filter(entry => entry.assignId === id)
-        );
-    
+     const matchedHistories = orders.flatMap(order =>
+  order.addHistory
+    .filter(entry => entry.assignId === id)
+    .map(entry => ({
+      ...entry,
+      status: order.status,
+      orderId: order.orderId,
+    }))
+);
 
 
     if (!User) {
