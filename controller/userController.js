@@ -1,4 +1,4 @@
- import mongoose from "mongoose";
+import mongoose from "mongoose";
 import blogModel from "../models/blogModel.js";
 import userModel from "../models/userModel.js";
 import chatModel from "../models/chatModel.js";
@@ -687,6 +687,12 @@ export const SignupUserType = async (req, res) => {
     const Doc1Path = req.files?.Doc1?.[0]?.path.replace(/\\/g, "/").replace(/^public\//, "") || null;
      const Doc2Path = req.files?.Doc2?.[0]?.path.replace(/\\/g, "/").replace(/^public\//, "") || null;
     const Doc3Path = req.files?.Doc3?.[0]?.path.replace(/\\/g, "/").replace(/^public\//, "") || null;
+        const Doc4Path = req.files?.Doc4?.[0]?.path.replace(/\\/g, "/").replace(/^public\//, "") || null;
+        const Doc5Path = req.files?.Doc5?.[0]?.path.replace(/\\/g, "/").replace(/^public\//, "") || null;
+        const Doc6Path = req.files?.Doc6?.[0]?.path.replace(/\\/g, "/").replace(/^public\//, "") || null;
+        const Doc7Path = req.files?.Doc7?.[0]?.path.replace(/\\/g, "/").replace(/^public\//, "") || null;
+        const Doc8Path = req.files?.Doc8?.[0]?.path.replace(/\\/g, "/").replace(/^public\//, "") || null;
+ 
     const profileImg = req.files.profile?.[0]?.path.replace(/\\/g, "/").replace(/^public\//, "") || null;
 
     // const {
@@ -742,6 +748,11 @@ export const SignupUserType = async (req, res) => {
       Doc1 : Doc1Path  || null,
       Doc2 : Doc2Path  || null,
       Doc3 : Doc3Path  || null,
+      Doc4 : Doc4Path  || null,
+      Doc5 : Doc5Path  || null,
+      Doc6 : Doc6Path  || null,
+      Doc7 : Doc7Path  || null,
+      Doc8 : Doc8Path  || null,
       location : location || null,
     });
 
@@ -8256,6 +8267,13 @@ attribute,
     const Doc1 = req.files ? req.files.Doc1 : undefined;
     const Doc2 = req.files ? req.files.Doc2 : undefined;
     const Doc3 = req.files ? req.files.Doc3 : undefined;
+    const Doc4 = req.files ? req.files.Doc4 : undefined;
+    const Doc5 = req.files ? req.files.Doc5 : undefined;
+    const Doc6 = req.files ? req.files.Doc6 : undefined;
+    const Doc7 = req.files ? req.files.Doc7 : undefined;
+    const Doc8 = req.files ? req.files.Doc8 : undefined;
+ 
+
     const profileImg = req.files ? req.files.profile : undefined;
 
     console.log("req.body",profileImg);
@@ -8296,6 +8314,21 @@ attribute,
     }
     if (Doc3 && Doc3[0]) {
       updateFields.Doc3 = Doc3[0].path.replace(/\\/g, "/").replace(/^public\//, "");
+    }
+     if (Doc4 && Doc4[0]) {
+      updateFields.Doc4 = Doc4[0].path.replace(/\\/g, "/").replace(/^public\//, "");
+    }
+     if (Doc5 && Doc5[0]) {
+      updateFields.Doc5 = Doc5[0].path.replace(/\\/g, "/").replace(/^public\//, "");
+    }
+     if (Doc6 && Doc6[0]) {
+      updateFields.Doc3 = Doc6[0].path.replace(/\\/g, "/").replace(/^public\//, "");
+    }
+     if (Doc7 && Doc7[0]) {
+      updateFields.Doc7 = Doc7[0].path.replace(/\\/g, "/").replace(/^public\//, "");
+    }
+     if (Doc8 && Doc8[0]) {
+      updateFields.Doc8 = Doc8[0].path.replace(/\\/g, "/").replace(/^public\//, "");
     }
     
 if (profileImg && profileImg.length > 0) {
