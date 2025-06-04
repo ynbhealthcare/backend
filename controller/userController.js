@@ -684,10 +684,10 @@ export const SignupUserType = async (req, res) => {
     } = req.body;
 
       // Extract document paths safely
-    const Doc1Path = req.files?.Doc1?.[0]?.path || null;
-     const Doc2Path = req.files?.Doc2?.[0]?.path || null;
-    const Doc3Path = req.files?.Doc3?.[0]?.path || null;
-    const profileImg = req.files.ProfileFile?.[0]?.path || undefined;
+    const Doc1Path = req.files?.Doc1?.[0]?.path.replace(/\\/g, "/").replace(/^public\//, "") || null;
+     const Doc2Path = req.files?.Doc2?.[0]?.path.replace(/\\/g, "/").replace(/^public\//, "") || null;
+    const Doc3Path = req.files?.Doc3?.[0]?.path.replace(/\\/g, "/").replace(/^public\//, "") || null;
+    const profileImg = req.files.profile?.[0]?.path.replace(/\\/g, "/").replace(/^public\//, "") || null;
 
     // const {
     //   profile,
@@ -8288,9 +8288,9 @@ attribute,
       updateFields.password = hashedPassword;
     }
     // If the files exist, update the corresponding fields
-    //   if (Doc1 && Doc1[0]) {
-    //   updateFields.Doc1 = Doc1[0].path.replace(/\\/g, "/").replace(/^public\//, "");
-    // }
+      if (Doc1 && Doc1[0]) {
+      updateFields.Doc1 = Doc1[0].path.replace(/\\/g, "/").replace(/^public\//, "");
+    }
     if (Doc2 && Doc2[0]) {
       updateFields.Doc2 = Doc2[0].path.replace(/\\/g, "/").replace(/^public\//, "");
     }
