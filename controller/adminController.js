@@ -1,4 +1,4 @@
-import adminModel from "../models/adminModel.js";
+ import adminModel from "../models/adminModel.js";
 import bcrypt from "bcrypt";
 import galleryModel from "../models/galleryModel.js";
 import blogModel from "../models/blogModel.js";
@@ -578,7 +578,7 @@ export const AddAdminOrderController = async (req, res) => {
       applySGST,finalTotal,taxTotal, addRental,
       addReceived,addReturn,addProduct,
       userId,UserDetails,employeeSaleId,PickupDate,ReturnDate,SecurityAmt,
-      AdvanceAmt,employeeId,OnBoardDate,dutyHr
+      AdvanceAmt,employeeId,OnBoardDate,dutyHr,addHistory
     } = req.body;
 
     console.log(req.body)
@@ -643,6 +643,7 @@ export const AddAdminOrderController = async (req, res) => {
        status:0,
        OnBoardDate,
        dutyHr,
+       addHistory : addHistory || [],
     });
 
     if(addProduct){
@@ -6056,7 +6057,12 @@ export const generateUserInvoicePDFView = async (req, res) => {
            <p> <b> Name: </b> ${invoiceData?.UserDetails[0]?.name}</p>
             <p> <b> Email Id: </b> ${invoiceData?.UserDetails[0]?.email}</p>
             <p> <b>  Phone No.: </b> ${invoiceData?.UserDetails[0]?.phone}</p>
-                      
+            <p> <b>  Address: </b> ${invoiceData?.UserDetails[0]?.address}</p>
+            <p> <b>  GST: </b> 
+            ${invoiceData?.UserDetails[0]?.company === 'yes' ? invoiceData?.UserDetails[0]?.companyGST : 'NA'}
+            </p>
+
+
           
          
         </div>
@@ -6563,7 +6569,10 @@ const generateUserInvoicePDF = async (invoiceData) => {
            <p> <b> Name: </b> ${invoiceData?.UserDetails[0]?.name}</p>
             <p> <b> Email Id: </b> ${invoiceData?.UserDetails[0]?.email}</p>
             <p> <b>  Phone No.: </b> ${invoiceData?.UserDetails[0]?.phone}</p>
-                      
+                      <p> <b>  Address: </b> ${invoiceData?.UserDetails[0]?.address}</p>
+            <p> <b>  GST: </b> 
+            ${invoiceData?.UserDetails[0]?.company === 'yes' ? invoiceData?.UserDetails[0]?.companyGST : 'NA'}
+            </p>
           
          
         </div>
