@@ -5735,7 +5735,7 @@ export const profileDocImage = upload.fields([
       { name: "Doc6", maxCount: 1 },
         { name: "Doc7", maxCount: 1 },
           { name: "Doc8", maxCount: 1 },
-  { name: "ProfileFile", maxCount: 1 },
+  { name: "profile", maxCount: 1 },
 ]);
 
 
