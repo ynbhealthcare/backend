@@ -24,7 +24,7 @@ getAllAttributeDepartmentFillAdmin,
 updateAttributeDepartmentAdmin,
 getAttributeDepartmentIdAdmin,
 deleteAttributeDepartmentAdmin,
-  generateUserInvoicePDFView, editUserVerifyAdmin, AdminGetAllEmployee,AllPaymentAdmin, AdminAllEnquireStatus, profileImageHealth,deletePlanCategoryAdmin
+  generateUserInvoicePDFView, editUserVerifyAdmin, AdminGetAllEmployee, profileDocImage,AllPaymentAdmin, AdminAllEnquireStatus, profileImageHealth,deletePlanCategoryAdmin
 } from "../controller/adminController.js";
 
 import {
@@ -34,7 +34,7 @@ import {
   , BuyPlanUser, GetPlanUser, getAllNurseDepartment,
 getAllNurseSkillDepartment,
 getAllNurseAttributeDepartment, HomeSendEnquire,ConsultationSendEnquire, getAllPlanCategoryController, uploadDataZone, deleteAllZones, SignupUserType, updateDetailsUser, updateDetailsUserHealth, getAllPlanUser, getProductIdUserBySlug
-  , getAllVendor, getAllDepartment, profileVendorImage, ApiGetKey, PaymentSuccess, PaymentFail,
+  , getAllVendor, getAllDepartment, profileVendorImage,ApiGetKey, PaymentSuccess, PaymentFail,
   generateUserAttachPDF, UserPdfView, updateVendorProfileUser, paymentVerification, BuyPlanAddUser, BuyPlanByUser, PayuHash, userPlanIdController, ViewAllZonesDepartment, getVendorById, HomeSendvendorEnquire, ApplyEnquireStatus, SenderEnquireStatus, AllPayment, downloadUserInvoice, checkUserPlan, GetWebsiteData, GetWebsiteData_old,getAllOrderUser
 } from "../controller/userController.js"
 import authenticateToken from "../middleware/authMiddleware.js";
@@ -364,7 +364,7 @@ router.get('/products-variations-fillter/', checkOrigin, getProductsByFilterUser
 
 router.post('/login-verify-otp/', checkOrigin, LoginAndVerifyOTP);
 
-router.post("/signup-user-type", profileVendorImage, SignupUserType);
+router.post("/signup-user-type", profileDocImage, SignupUserType);
 router.get("/my-plan/:id", getAllPlanUser);
 
 router.post("/buy-plan", BuyPlanUser);
@@ -442,7 +442,7 @@ router.post("/buy-plan-by-user", profileImageHealth, BuyPlanByUser);
 
 router.put(
   "/update-user-vendor/:id",
-  profileVendorImage,
+  profileDocImage,
   updateVendorProfileUser
 );
 
