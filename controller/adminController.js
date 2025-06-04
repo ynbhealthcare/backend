@@ -1,4 +1,4 @@
- import adminModel from "../models/adminModel.js";
+import adminModel from "../models/adminModel.js";
 import bcrypt from "bcrypt";
 import galleryModel from "../models/galleryModel.js";
 import blogModel from "../models/blogModel.js";
@@ -5724,6 +5724,20 @@ export const profileVendorImage = upload.fields([
   { name: "Doc3", maxCount: 1 },
   { name: "ProfileFile", maxCount: 1 },
 ]);
+
+
+export const profileDocImage = upload.fields([
+  { name: "Doc1", maxCount: 1 },
+  { name: "Doc2", maxCount: 1 },
+  { name: "Doc3", maxCount: 1 },
+  { name: "Doc4", maxCount: 1 },
+    { name: "Doc5", maxCount: 1 },
+      { name: "Doc6", maxCount: 1 },
+        { name: "Doc7", maxCount: 1 },
+          { name: "Doc8", maxCount: 1 },
+  { name: "ProfileFile", maxCount: 1 },
+]);
+
 
 export const updateVendorProfileUser = async (req, res) => {
   try {
