@@ -62,8 +62,6 @@ const userSchema = mongoose.Schema({
     type: String,
     default: "",
   },
-  
-
   about: {
     type: String,
     default: "",
@@ -77,6 +75,26 @@ const userSchema = mongoose.Schema({
     default: "",
   },
   Doc3: {
+    type: String,
+    default: "",
+  },
+  Doc4: {
+    type: String,
+    default: "",
+  },
+  Doc5: {
+    type: String,
+    default: "",
+  },
+  Doc6: {
+    type: String,
+    default: "",
+  },
+  Doc7: {
+    type: String,
+    default: "",
+  },
+  Doc8: {
     type: String,
     default: "",
   },
