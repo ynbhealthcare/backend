@@ -551,6 +551,27 @@ const age = user.DOB ? calculateAge(user.DOB) : 'NA';
      .mybtn{
         display: none;
       }
+    .blurbg:before {
+    width: 100%;
+    height: 50%;
+    position: absolute;
+    content: "";
+    z-index: 99;
+ 
+    bottom: 0px;
+}
+
+    .blurbg {
+    position: relative;
+}
+ 
+ .image-wrapper {
+
+      height: 180px !important;
+
+    }
+
+
     }
 
     .blurbg {
@@ -565,7 +586,39 @@ const age = user.DOB ? calculateAge(user.DOB) : 'NA';
     z-index: 99;
     backdrop-filter: blur(10px);
     bottom: 0px;
+  
 }
+
+ .image-wrapper {
+      position: relative;
+     width:100%;
+      height: 250px;
+      overflow: hidden;
+      border-radius: 10px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+    }
+
+    .image-clear,
+    .image-blur {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .image-blur {
+      filter: blur(8px);
+      -webkit-filter: blur(8px);
+      clip-path: inset(50% 0 0 0); /* bottom half blurred */
+      z-index: 2;
+    }
+
+    .image-clear {
+      z-index: 1;
+    }
+
   </style>
 </head>
 <body style="
@@ -574,6 +627,8 @@ const age = user.DOB ? calculateAge(user.DOB) : 'NA';
 " >
   <div class="wrapper">
     <div class="header">
+      <img src="https://backend-2o7f.onrender.com/uploads/new/image-1726306777273.webp" width="60%" /> <br/><br/>
+
       <img src="${user.profile && user.profile !== '' ? process.env.SERVER + '/' + user.profile :  'https://www.pngitem.com/pimgs/m/524-5244625_font-awesome-user-svg-hd-png-download.png'} " alt="Ranjita Devi" class="profile-pic" />
       <h1 > ${user.username || 'NA'}</h1>
 
@@ -610,15 +665,18 @@ const age = user.DOB ? calculateAge(user.DOB) : 'NA';
     <div class="section">
       <h3>Extra Information</h3>
       <div class="skills-list">
-        <div class="skill" style="width:40%;">
-        <div class="blurbg">
-         <img src="${process.env.SERVER + '/' + user.Doc2}" width="100%" /> 
+        <div class="skill" style="width:40%;height:100%;">
+          <div class="image-wrapper">
+ <img src="${process.env.SERVER + '/' + user.Doc2}" width="100%"  class="image-clear" />
+    <img src="${process.env.SERVER + '/' + user.Doc2}" width="100%"  class="image-blur" />
+  </div>
          </div>
-          </div>
-        <div class="skill" style="width:40%;">
-        <div class="blurbg" >
-         <img src="${process.env.SERVER + '/' + user.Doc3}" width="100%" /> 
-         </div>
+        <div class="skill" style="width:40%;height:100%;">
+        <div class="image-wrapper">
+ <img src="${process.env.SERVER + '/' + user.Doc3}" width="100%"  class="image-clear" />
+    <img src="${process.env.SERVER + '/' + user.Doc3}" width="100%"  class="image-blur" />
+  </div>
+         
          </div>
       </div>
     </div>
