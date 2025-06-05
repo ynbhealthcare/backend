@@ -2643,6 +2643,7 @@ export const editFullOrderAdmin = async (req, res) => {
       });
     } 
  
+   
     let updateFields = {
       type: order,
       userId,
@@ -2662,10 +2663,20 @@ export const editFullOrderAdmin = async (req, res) => {
        applySGST,
        totalAmount: finalTotal,
        taxTotal,  
-       OnBoardDate,
-       addHistory,
+        addHistory,
        dutyHr
     };
+
+    // Only include OnBoardDate if it's a valid date
+if (OnBoardDate && !isNaN(Date.parse(OnBoardDate))) {
+  updateFields.OnBoardDate = new Date(OnBoardDate);
+}
+
+    // Only include OnBoardDate if it's a valid date
+if (OnBoardDate && !isNaN(Date.parse(OnBoardDate))) {
+  updateFields.OnBoardDate = new Date(OnBoardDate);
+}
+
 
     const updatedOrder = await orderModel.findByIdAndUpdate(id, updateFields, {
       new: true,
@@ -3213,7 +3224,7 @@ export const getAllUserAdmin = async (req, res) => {
      if(state) query.state = state;
      if(city) query.city = city;
      if(pincode) query.pincode = pincode;
-     if(location) query.state = location;
+     if(location) query.location = location;
 
     if (type) query.type = type;
     if (empType) query.empType = empType;
