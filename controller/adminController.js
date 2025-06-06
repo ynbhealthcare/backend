@@ -38,6 +38,19 @@ import enquireModel from "../models/enquireModel.js";
 import planCategoryModel from "../models/planCategoryModel.js";
 import planModel from "../models/planModel.js";
 import departmentsModel from "../models/departmentsModel.js";
+import buyPlanModel from "../models/buyPlanModel.js";
+import puppeteer from "puppeteer";
+ import { exec } from "child_process";
+import util from "util";
+import crypto from "crypto";  // Ensure you require the crypto module if you haven't
+import consultationModel from "../models/ConsultationModel.js";
+import axios from "axios";
+import nurseDepartmentsModel from "../models/nurseDepartmentsModel.js";
+import skillDepartmentsModel from "../models/skillDepartmentsModel.js";
+import attributeDepartmentsModel from "../models/attributeDepartmentsModel.js";
+import mongoose from "mongoose";
+
+const execPromise = util.promisify(exec);
 
 
 const storage = multer.diskStorage({
@@ -514,7 +527,7 @@ export const AddAdminCategoryController = async (req, res) => {
       status,
       slide_head,
       slide_para,
-      specifications
+      specifications, canonical
     } = req.body;
 
     // Validation
@@ -538,7 +551,7 @@ export const AddAdminCategoryController = async (req, res) => {
       metaKeywords,
       parent,
       status,
-      specifications
+      specifications, canonical
     });
     await newCategory.save();
 
@@ -552,6 +565,172 @@ export const AddAdminCategoryController = async (req, res) => {
     return res.status(400).send({
       success: false,
       message: "Error While Creating Category",
+      error,
+    });
+  }
+};
+
+
+export const AddAdminOrderController = async (req, res) => {
+  try {
+    const {
+      order, discount,subtotal,shipping,applyIGST,applyCGST,
+      applySGST,finalTotal,taxTotal, addRental,
+      addReceived,addReturn,addProduct,
+      userId,UserDetails,employeeSaleId,PickupDate,ReturnDate,SecurityAmt,
+      AdvanceAmt,employeeId,OnBoardDate,dutyHr,addHistory
+    } = req.body;
+
+    console.log(req.body)
+    // Validation
+    if (!order || !finalTotal) {
+      return res.status(400).send({
+        success: false,
+        message: "Please Provide All Fields",
+      });
+    }
+    const Newuser = new userModel({ username:UserDetails.name,phone:UserDetails.phone, email:UserDetails.email, address :UserDetails.address,gender : UserDetails.gender,type :1,
+      company : UserDetails.company,companyName : UserDetails.companyName,companyGST : UserDetails.companyGST,companyAddress : UserDetails.companyAddress,age : UserDetails.age,weight : UserDetails.weight });
+    if(UserDetails && UserDetails.id === 'none'){
+     await Newuser.save();
+     }
+
+      
+       // Calculate the auto-increment ID
+        const lastOrder = await orderModel.findOne().sort({ _id: -1 }).limit(1);
+        let order_id;
+    
+        if (lastOrder) {
+          // Convert lastOrder.orderId to a number before adding 1
+          const lastOrderId = parseInt(lastOrder.orderId);
+          order_id = lastOrderId + 1;
+        } else {
+          order_id = 1;
+        } 
+
+        console.log('userId : Newuser.id',userId , Newuser.id);
+        console.log('userId : final.id',userId ?? Newuser?.id);
+        
+        let finaluser ;
+        if(UserDetails && UserDetails.id === 'none'){
+          finaluser = Newuser._id;
+        }else{
+          finaluser = UserDetails.id;
+        }
+        console.log('finaluser',finaluser);
+
+    // Create a new category with the specified parent
+    const newData = new orderModel({
+      type: order,
+      userId: finaluser,
+      UserDetails,
+      employeeSaleId,
+      employeeId: employeeId || null,
+      PickupDate,ReturnDate: ReturnDate || PickupDate,SecurityAmt,AdvanceAmt,
+       addRental,
+       addReceived,
+       addReturn,
+       addProduct,
+       discount,
+       subtotal,
+       shipping,
+       applyIGST,
+       applyCGST,
+       applySGST,
+       totalAmount: finalTotal,
+       taxTotal, 
+       orderId:order_id,
+       status:0,
+       OnBoardDate,
+       dutyHr,
+       addHistory : addHistory || [],
+    });
+
+    if(addProduct){
+       
+      for (let product of addProduct ) {
+        // Retrieve the product details
+        const productDetails = await productModel.findById(product._id);
+    
+        if (!productDetails) {
+          console.log(`Product not found: ${product._id}`);
+          continue; // Skip if product is not found
+        }
+        if ( ( productDetails?.reStock || productDetails?.stock ) && ( productDetails?.reStock > 0 || productDetails?.stock > 0 ) ) {
+
+        if(newData.type !== 1){
+
+        // Add 1 to the stock of each product
+        const updatedStock = productDetails.reStock - 1;
+    
+        // Update the stock for the product
+        productDetails.reStock = updatedStock;
+
+        // Save the updated product
+        await productDetails.save();
+
+        }else{
+
+           // Add 1 to the stock of each product
+        const updatedStock = productDetails.stock - 1;
+    
+        // Update the stock for the product
+        productDetails.stock = updatedStock;
+
+        // Save the updated product
+        await productDetails.save();
+
+        }
+       
+        
+        }
+
+        console.log(`Added 1 stock for product ${product.title}`);
+      }
+  
+    }
+   
+
+    await newData.save();
+
+    return res.status(201).send({
+      success: true,
+      message: "Order Created!",
+      newData,
+    });
+  } catch (error) {
+    console.error("Error while creating category:", error);
+    return res.status(400).send({
+      success: false,
+      message: "Error While Creating Category",
+      error,
+    });
+  }
+};
+
+export const getOrderIdAdminController = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const Order = await orderModel.findById(id).populate({
+      path: 'userId', 
+      select: 'username email phone'
+    });
+
+    if (!Order) {
+      return res.status(200).send({
+        message: "Order Not Found By Id",
+        success: false,
+      });
+    }
+    return res.status(200).json({
+      message: "fetch Single Order!",
+      success: true,
+      Order,
+    });
+  } catch (error) {
+    return res.status(400).json({
+      message: `Error while get Order: ${error}`,
+      success: false,
       error,
     });
   }
@@ -797,8 +976,9 @@ export const updateCategoryAdmin = async (req, res) => {
       metaDescription,
       metaKeywords,
       parent,
-      status, specifications
+      status, specifications, canonical, filter
     } = req.body;
+    console.log('filter',filter)
 
     let updateFields = {
       title,
@@ -811,7 +991,7 @@ export const updateCategoryAdmin = async (req, res) => {
       metaDescription,
       metaKeywords,
       parent,
-      status, specifications
+      status, specifications, canonical,filter
     };
 
     const Category = await categoryModel.findByIdAndUpdate(id, updateFields, {
@@ -874,7 +1054,26 @@ export const deleteCategoryAdmin = async (req, res) => {
   }
 };
 
-export const AddAdminProduct = async (req, res) => {
+
+export const deleteUserAdmin = async (req, res) => {
+  try {
+    await userModel.findByIdAndDelete(req.params.id);
+
+    return res.status(200).send({
+      success: true,
+      message: "userModel Deleted!",
+    });
+  } catch (error) {
+    console.log(error);
+    return res.status(400).send({
+      success: false,
+      message: "Erorr WHile Deleteing Employee",
+      error,
+    });
+  }
+};
+
+export const AddAdminProduct_old = async (req, res) => {
   try {
     const {
       title,
@@ -893,16 +1092,23 @@ export const AddAdminProduct = async (req, res) => {
       Category,
       tag,
       features,
-      specifications, gst, weight, hsn, sku
+      specifications, gst, weight, hsn, sku, canonical, reStock ,serialNumber,brandName,modelNo,protype
     } = req.body;
 
+    if(!protype){
+       return res.status(400).send({
+        success: false,
+        message: "Select product to show",
+      });
+    }
     // Validation
-    if (!title || !slug || !salePrice) {
+    if (!title  || !salePrice) {
       return res.status(400).send({
         success: false,
         message: "Please Provide All Fields",
       });
     }
+
 
     let updatespecifications;
 
@@ -940,7 +1146,8 @@ export const AddAdminProduct = async (req, res) => {
 
     console.log('p_idp_idp_id', p_id)
     // Create a new category with the specified parent
-    const newProduct = new productModel({
+
+    const updateproduct = {
       p_id,
       title,
       description,
@@ -958,8 +1165,11 @@ export const AddAdminProduct = async (req, res) => {
       Category,
       tag,
       features,
-      specifications: updatespecifications, gst, weight, hsn, sku
-    });
+      specifications: updatespecifications, gst, weight, hsn, sku, canonical, reStock ,serialNumber,brandName,modelNo,
+      protype: protype || 0
+    }
+
+    const newProduct = new productModel(updateproduct);
 
 
     await newProduct.save();
@@ -978,6 +1188,142 @@ export const AddAdminProduct = async (req, res) => {
     });
   }
 };
+ 
+
+export const AddAdminProduct = async (req, res) => {
+  try {
+    const {
+      title,
+      description,
+      pImage,
+      images,
+      slug,
+      metaDescription,
+      metaTitle,
+      regularPrice,
+      salePrice,
+      status,
+      stock,
+      variations,
+      metaKeywords,
+      Category,
+      tag,
+      features,
+      specifications,
+      gst,
+      weight,
+      hsn,
+      sku,
+      canonical,
+      reStock,
+      serialNumber,
+      brandName,
+      modelNo,
+      protype
+    } = req.body;
+
+    if (!protype) {
+      return res.status(400).send({
+        success: false,
+        message: "Select product to show",
+      });
+    }
+
+    if (!title || !salePrice) {
+      return res.status(400).send({
+        success: false,
+        message: "Please Provide All Fields",
+      });
+    }
+
+    // Validate and clean up specifications
+    let updatespecifications;
+    if (
+      !specifications ||
+      !specifications.specifications ||
+      !specifications.specifications[0] ||
+      !specifications.specifications[0].heading
+    ) {
+      updatespecifications = {
+        specifications: [
+          {
+            heading: " ",
+            labels: [
+              {
+                label: " ",
+                value: " "
+              }
+            ]
+          }
+        ]
+      };
+    } else {
+      updatespecifications = specifications;
+    }
+
+    // Sanitize Category field
+    let validCategory = [];
+    if (Array.isArray(Category)) {
+      validCategory = Category.filter(
+        (cat) => cat && mongoose.Types.ObjectId.isValid(cat)
+      );
+    } else if (typeof Category === 'string' && mongoose.Types.ObjectId.isValid(Category)) {
+      validCategory = [Category];
+    }
+
+    // Generate new p_id
+    const lastProduct = await productModel.findOne().sort({ _id: -1 }).limit(1);
+    let p_id = lastProduct ? Number(lastProduct.p_id || 0) + 1 : 0;
+
+    const updateproduct = {
+      p_id,
+      title,
+      description,
+      pImage,
+      images,
+      slug : slug || 'product_'+p_id,
+      metaDescription,
+      metaTitle,
+      regularPrice,
+      salePrice,
+      status,
+      stock,
+      variations,
+      metaKeywords,
+      Category: validCategory,
+      tag,
+      features,
+      specifications: updatespecifications,
+      gst,
+      weight,
+      hsn,
+      sku,
+      canonical,
+      reStock,
+      serialNumber,
+      brandName,
+      modelNo,
+      protype: protype || 0
+    };
+
+    const newProduct = new productModel(updateproduct);
+    await newProduct.save();
+
+    return res.status(201).send({
+      success: true,
+      message: "Product Added Success!",
+      newProduct,
+    });
+  } catch (error) {
+    console.error("Error while creating category:", error);
+    return res.status(400).send({
+      success: false,
+      message: "Error While Adding Product",
+      error,
+    });
+  }
+};
+
 
 export const getAllProductFillAdmin = async (req, res) => {
   try {
@@ -1047,8 +1393,8 @@ export const updateProductAdmin = async (req, res) => {
       variations,
       metaKeywords,
       Category,
-      tag, features,
-      specifications, weight, gst, hsn, sku, variant_products, type
+      tag, features,protype,
+      specifications, weight, gst, hsn, sku, variant_products, type, canonical, testimonials, oneto7, eightto14, fivto30, monthto3month, threemonthto6month,reStock,serialNumber,brandName,modelNo
     } = req.body;
 
     console.log('typp', type);
@@ -1069,7 +1415,8 @@ export const updateProductAdmin = async (req, res) => {
       metaKeywords,
       Category,
       tag, features,
-      specifications, weight, gst, hsn, sku, variant_products, type
+      specifications, weight, gst, hsn, sku, variant_products, type, canonical, testimonials,
+      oneto7, eightto14, fivto30, monthto3month, threemonthto6month,reStock,serialNumber,brandName,modelNo,protype
     };
 
     const Product = await productModel.findByIdAndUpdate(id, updateFields, {
@@ -1767,6 +2114,54 @@ export const getAllEnquireAdmin = async (req, res) => {
   }
 };
 
+export const getAllConsultationEnquireAdmin = async (req, res) => {
+  try {
+    const page = parseInt(req.query.page) || 1; // Current page, default is 1
+    const limit = parseInt(req.query.limit) || 10; // Number of documents per page, default is 10
+    const searchTerm = req.query.search || ""; // Get search term from the query parameters
+
+    const skip = (page - 1) * limit;
+
+    const query = {};
+    if (searchTerm) {
+      // If search term is provided, add it to the query
+      query.$or = [
+        { fullname: { $regex: searchTerm, $options: "i" } }, // Case-insensitive username search
+        { email: { $regex: searchTerm, $options: "i" } }, // Case-insensitive email search
+      ];
+    }
+
+    const totalpage = await consultationModel.countDocuments(query); // Count documents matching the query
+
+    const Enquire = await consultationModel
+      .find(query)
+      .sort({ _id: -1 }) // Sort by _id in descending order
+      .skip(skip)
+      .limit(limit)
+      .lean();
+
+    if (!Enquire || Enquire.length === 0) {
+      return res.status(200).send({
+        message: "No Enquire found",
+        success: false,
+      });
+    }
+    return res.status(200).send({
+      message: "All Enquire list",
+      ratingCount: Enquire.length,
+      currentPage: page,
+      totalPages: Math.ceil(totalpage / limit),
+      success: true,
+      Enquire,
+    });
+  } catch (error) {
+    return res.status(500).send({
+      message: `Error while getting Enquire: ${error}`,
+      success: false,
+      error,
+    });
+  }
+};
 
 export const deleteRatingAdmin = async (req, res) => {
   try {
@@ -1821,13 +2216,23 @@ export const editReviewAdmin = async (req, res) => {
 
 
 
-export const getAllOrderAdmin = async (req, res) => {
+export const getAllOrderAdmin_old = async (req, res) => {
 
   try {
     const page = parseInt(req.query.page) || 1; // Current page, default is 1
     const limit = parseInt(req.query.limit) || 10; // Number of documents per page, default is 10
     const searchTerm = req.query.search || ""; // Get search term from the query parameters
-    const statusFilter = req.query.status ? req.query.status.split(',') : []; // Get status filter from the query parameters and split into an array
+    const statusFilter = req.query.status || ''; // Get status filter from the query parameters and split into an array
+    const productId = req.query.productId || '';
+    const type = req.query.type || '';
+    
+    const notStatus = req.query.notStatus || ''; // Get status filter from the query parameters and split into an array
+
+
+    const startDate = req.query.startDate
+    ? new Date(req.query.startDate)
+    : null;
+  const endDate = req.query.endDate ? new Date(req.query.endDate) : null;
 
     const skip = (page - 1) * limit;
 
@@ -1846,6 +2251,35 @@ export const getAllOrderAdmin = async (req, res) => {
       query.status = { $in: statusFilter }; // Use $in operator to match any of the values in the array
     }
 
+    
+    if (notStatus) {
+      const notStatusArray = notStatus.split(',').map(Number);
+      query.status = { $nin: notStatusArray };
+    }
+
+    
+
+    
+
+ // Add status filter to the query if statusFilter is provided
+ if (type.length > 0) {
+  query.type = { $in: type }; // Use $in operator to match any of the values in the array
+ }
+
+    
+
+      // Add date range filtering to the query
+      if (startDate && endDate) {
+        query.createdAt = { $gte: startDate, $lte: endDate };
+      } else if (startDate) {
+        query.createdAt = { $gte: startDate };
+      } else if (endDate) {
+        query.createdAt = { $lte: endDate };
+      }
+      
+      if (productId) {
+        query['addProduct._id'] = productId; // Simple string match
+      }
 
     const total = await orderModel.countDocuments(query); // Count total documents matching the query
 
@@ -1857,8 +2291,19 @@ export const getAllOrderAdmin = async (req, res) => {
       .populate({
         path: "userId",
         model: userModel,
-        select: "username",
-      }).lean();
+        select: "username email phone",
+      })
+      .populate({
+        path: "employeeId",
+        model: userModel,
+        select: "username email phone",
+      })
+      .populate({
+        path: "employeeSaleId",
+        model: userModel,
+        select: "username email phone",
+      })
+      .lean();
 
 
     if (!Order || Order.length === 0) { // Check if no users found
@@ -1887,6 +2332,539 @@ export const getAllOrderAdmin = async (req, res) => {
 
 };
 
+function extractUsernameFromChanges(changeStr) {
+  const match = changeStr.match(/username\s*:\s*([^\|]+)/);
+  return match ? match[1].trim() : '';
+}
+
+export const getAllOrderAdmin = async (req, res) => {
+  try {
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const searchTerm = req.query.search || "";
+    const statusFilter = req.query.status || '';
+    const notStatus = req.query.notStatus || '';
+    const productId = req.query.productId || '';
+    const type = req.query.type || '';
+    const overdue = req.query.overdue || ''; 
+    const startDate = req.query.startDate ? new Date(req.query.startDate) : null;
+    const endDate = req.query.endDate ? new Date(req.query.endDate) : null;
+     const userId = req.query.userId || null;
+
+    const skip = (page - 1) * limit;
+
+    const query = {};
+
+     // if (startDate && endDate) {
+    //   query.createdAt = { $gte: startDate, $lte: endDate };
+    // } else if (startDate) {
+    //   query.createdAt = { $gte: startDate };
+    // } else if (endDate) {
+    //   query.createdAt = { $lte: endDate };
+    // }
+
+
+    // Date range filtering based on PickupDate and ReturnDate
+if (startDate && endDate) {
+  query.$and = [
+    { PickupDate: { $lte: endDate } },
+    { ReturnDate: { $gte: startDate } },
+  ];
+} else if (startDate) {
+  query.ReturnDate = { $gte: startDate };
+} else if (endDate) {
+  query.PickupDate = { $lte: endDate };
+}
+
+if (userId) {
+  query.$or = [
+    { userId: userId },
+    { employeeId: userId },
+    { employeeSaleId: userId }
+  ];
+}
+
+
+    if (statusFilter.length > 0) {
+      query.status = { $in: statusFilter.split(',').map(Number) };
+    }
+
+    if (notStatus.length > 0) {
+      query.status = { $nin: notStatus.split(',').map(Number) };
+    }
+
+    if (overdue === 'true') {
+      const targetDate = new Date(); // This will be 2025-05-01
+      console.log('targetDate',targetDate)
+      query.ReturnDate = { ...query.ReturnDate, $lt: targetDate }; // upcoming
+      query.status = { $nin: 5 }; 
+    }
+ 
+    
+    if (type.length > 0) {
+      query.type = { $in: type.split(',').map(Number) };
+    }
+
+    if (productId) {
+      query['addProduct._id'] = productId;
+    }
+
+
+    
+    // Fetch with populate
+    const allOrders = await orderModel
+      .find(query)
+      .sort({ _id: -1 })
+      .populate({
+        path: "userId",
+        model: userModel,
+        select: "username email phone",
+      })
+      .populate({
+        path: "employeeId",
+        model: userModel,
+        select: "username email phone",
+      })
+      .populate({
+        path: "employeeSaleId",
+        model: userModel,
+        select: "username email phone",
+      })
+      .lean();
+
+    // Filter manually for searchTerm
+    const filteredOrders = allOrders.filter((order) => {
+      if (!searchTerm) return true;
+
+      const regex = new RegExp(searchTerm, 'i');
+      return (
+        regex.test(order.orderId?.toString()) ||
+        regex.test(order.mode || '') ||
+        regex.test(order.employeeId?.username || '') ||
+        regex.test(order.employeeId?.email || '') ||
+        regex.test(order.employeeId?.phone || '') ||
+        regex.test(order.employeeSaleId?.username || '') ||
+        regex.test(order.employeeSaleId?.email || '') ||
+        regex.test(order.employeeSaleId?.phone || '') ||
+        regex.test(order.userId?.phone || '') ||
+        regex.test(order.userId?.username || '') ||
+        regex.test(order.userId?.email || '')  
+      )
+    });
+
+    const paginatedOrders = filteredOrders.slice(skip, skip + limit);
+
+    if (paginatedOrders.length === 0) {
+      return res.status(404).send({
+        message: "No Order Found",
+        success: false,
+      });
+    }
+
+    const enrichedOrders = paginatedOrders.map((order) => {
+      const history = order.addHistory || [];
+      const nurseMap = {};
+
+      history.forEach((entry) => {
+        const isNurseChange =
+          entry.changes &&
+          entry.changes.includes("Update Employee ( Doctor / Nurse / Runner )") &&
+          entry.assignId;
+
+        if (isNurseChange) {
+          const key = entry.assignId;
+          if (!nurseMap[key]) {
+            nurseMap[key] = {
+              assignId: entry.assignId,
+              username: extractUsernameFromChanges(entry.changes), // helper function
+              workDates: new Set(),
+              email: '', // will fill below
+            };
+          }
+
+          nurseMap[key].workDates.add(entry.date);
+        }
+      });
+
+      const nurseStats = Object.values(nurseMap).map((nurse) => ({
+        assignId: nurse.assignId,
+        username: nurse.username,
+        email: '', // Optional: populate if available in users
+        totalDays: nurse.workDates.size,
+        workDates: Array.from(nurse.workDates),
+      }));
+
+      return {
+        ...order,
+        NurseStats: nurseStats.length > 0 ? nurseStats : [],
+      };
+    });
+
+    return res.status(200).send({
+      message: "All Order list",
+      Count: filteredOrders.length,
+      currentPage: page,
+      totalPages: Math.ceil(filteredOrders.length / limit),
+      success: true,
+      Order: enrichedOrders,
+    });
+
+
+    // return res.status(200).send({
+    //   message: "All Order list",
+    //   Count: paginatedOrders.length,
+    //   currentPage: page,
+    //   totalPages: Math.ceil(filteredOrders.length / limit),
+    //   success: true,
+    //   Order: paginatedOrders,
+    // });
+
+  } catch (error) {
+    return res.status(500).send({
+      message: `Error while fetching Orders: ${error.message}`,
+      success: false,
+      error,
+    });
+  }
+};
+
+export const getAllUserHistory = async (req, res) => {
+  try {
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const searchTerm = req.query.search || "";
+    const statusFilter = req.query.status || '';
+    const notStatus = req.query.notStatus || '';
+    const productId = req.query.productId || '';
+    const type = req.query.type || '';
+    const overdue = req.query.overdue || ''; 
+    const startDate = req.query.startDate ? new Date(req.query.startDate) : null;
+    const endDate = req.query.endDate ? new Date(req.query.endDate) : null;
+    const skip = (page - 1) * limit;
+
+    const query = {};
+
+     // if (startDate && endDate) {
+    //   query.createdAt = { $gte: startDate, $lte: endDate };
+    // } else if (startDate) {
+    //   query.createdAt = { $gte: startDate };
+    // } else if (endDate) {
+    //   query.createdAt = { $lte: endDate };
+    // }
+
+
+    // Date range filtering based on PickupDate and ReturnDate
+if (startDate && endDate) {
+  query.$and = [
+    { PickupDate: { $lte: endDate } },
+    { ReturnDate: { $gte: startDate } },
+  ];
+} else if (startDate) {
+  query.ReturnDate = { $gte: startDate };
+} else if (endDate) {
+  query.PickupDate = { $lte: endDate };
+}
+
+
+
+
+    if (statusFilter.length > 0) {
+      query.status = { $in: statusFilter.split(',').map(Number) };
+    }
+
+    if (notStatus.length > 0) {
+      query.status = { $nin: notStatus.split(',').map(Number) };
+    }
+
+    if (overdue === 'true') {
+      const targetDate = new Date(); // This will be 2025-05-01
+      console.log('targetDate',targetDate)
+      query.ReturnDate = { ...query.ReturnDate, $lt: targetDate }; // upcoming
+      query.status = { $nin: 5 }; 
+    }
+ 
+    
+    if (type.length > 0) {
+      query.type = { $in: type.split(',').map(Number) };
+    }
+
+    if (productId) {
+      query['addProduct._id'] = productId;
+    }
+
+    // Fetch with populate
+    const allOrders = await orderModel
+      .find(query)
+      .sort({ _id: -1 })
+      .populate({
+        path: "userId",
+        model: userModel,
+        select: "username email phone",
+      })
+      .populate({
+        path: "employeeId",
+        model: userModel,
+        select: "username email phone",
+      })
+      .populate({
+        path: "employeeSaleId",
+        model: userModel,
+        select: "username email phone",
+      })
+      .lean();
+
+    // Filter manually for searchTerm
+    const filteredOrders = allOrders.filter((order) => {
+      if (!searchTerm) return true;
+
+      const regex = new RegExp(searchTerm, 'i');
+      return (
+        regex.test(order.orderId?.toString()) ||
+        regex.test(order.mode || '') ||
+        regex.test(order.employeeId?.username || '') ||
+        regex.test(order.employeeId?.email || '') ||
+        regex.test(order.employeeId?.phone || '') ||
+        regex.test(order.employeeSaleId?.username || '') ||
+        regex.test(order.employeeSaleId?.email || '') ||
+        regex.test(order.employeeSaleId?.phone || '') ||
+        regex.test(order.userId?.phone || '') ||
+        regex.test(order.userId?.username || '') ||
+        regex.test(order.userId?.email || '')  
+      )
+    });
+
+    const paginatedOrders = filteredOrders.slice(skip, skip + limit);
+
+    if (paginatedOrders.length === 0) {
+      return res.status(404).send({
+        message: "No Order Found",
+        success: false,
+      });
+    }
+
+    return res.status(200).send({
+      message: "All Order list",
+      Count: paginatedOrders.length,
+      currentPage: page,
+      totalPages: Math.ceil(filteredOrders.length / limit),
+      success: true,
+      Order: paginatedOrders,
+    });
+  } catch (error) {
+    return res.status(500).send({
+      message: `Error while fetching Orders: ${error.message}`,
+      success: false,
+      error,
+    });
+  }
+};
+
+
+export const getAllReportAdmin = async (req, res) => {
+  try {
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const searchTerm = req.query.search || "";
+    const statusFilter = req.query.status || '';
+    const notStatus = req.query.notStatus || '';
+    const productId = req.query.productId || '';
+    const type = req.query.type || '';
+    const overdue = req.query.overdue || ''; 
+    const startDate = req.query.startDate ? new Date(req.query.startDate) : null;
+    const endDate = req.query.endDate ? new Date(req.query.endDate) : null;
+    const skip = (page - 1) * limit;
+
+    const query = {};
+
+     // if (startDate && endDate) {
+    //   query.createdAt = { $gte: startDate, $lte: endDate };
+    // } else if (startDate) {
+    //   query.createdAt = { $gte: startDate };
+    // } else if (endDate) {
+    //   query.createdAt = { $lte: endDate };
+    // }
+
+
+    // Date range filtering based on PickupDate and ReturnDate
+if (startDate && endDate) {
+  query.$and = [
+    { PickupDate: { $lte: endDate } },
+    { ReturnDate: { $gte: startDate } },
+  ];
+} else if (startDate) {
+  query.ReturnDate = { $gte: startDate };
+} else if (endDate) {
+  query.PickupDate = { $lte: endDate };
+}
+
+
+
+
+    if (statusFilter.length > 0) {
+      query.status = { $in: statusFilter.split(',').map(Number) };
+    }
+
+    if (notStatus.length > 0) {
+      query.status = { $nin: notStatus.split(',').map(Number) };
+    }
+
+    if (overdue === 'true') {
+      const targetDate = new Date(); // This will be 2025-05-01
+      console.log('targetDate',targetDate)
+      query.ReturnDate = { ...query.ReturnDate, $lt: targetDate }; // upcoming
+      query.status = { $nin: 5 }; 
+    }
+ 
+    
+    if (type.length > 0) {
+      query.type = { $in: type.split(',').map(Number) };
+    }
+
+    if (productId) {
+      query['addProduct._id'] = productId;
+    }
+
+    // Fetch with populate
+    const allOrders = await orderModel
+      .find(query)
+      .sort({ _id: -1 })
+      .populate({
+        path: "userId",
+        model: userModel,
+        select: "username email phone",
+      })
+      .populate({
+        path: "employeeId",
+        model: userModel,
+        select: "username email phone",
+      })
+      .populate({
+        path: "employeeSaleId",
+        model: userModel,
+        select: "username email phone",
+      })
+      .lean();
+
+    // Filter manually for searchTerm
+    const filteredOrders = allOrders.filter((order) => {
+      if (!searchTerm) return true;
+
+      const regex = new RegExp(searchTerm, 'i');
+      return (
+        regex.test(order.orderId?.toString()) ||
+        regex.test(order.mode || '') ||
+        regex.test(order.employeeId?.username || '') ||
+        regex.test(order.employeeId?.email || '') ||
+        regex.test(order.employeeId?.phone || '') ||
+        regex.test(order.employeeSaleId?.username || '') ||
+        regex.test(order.employeeSaleId?.email || '') ||
+        regex.test(order.employeeSaleId?.phone || '') ||
+        regex.test(order.userId?.phone || '') ||
+        regex.test(order.userId?.username || '') ||
+        regex.test(order.userId?.email || '')  
+      )
+    });
+
+    const paginatedOrders = filteredOrders.slice(skip, skip + limit);
+
+    if (paginatedOrders.length === 0) {
+      return res.status(404).send({
+        message: "No Order Found",
+        success: false,
+      });
+    }
+
+    return res.status(200).send({
+      message: "All Order list",
+      Count: paginatedOrders.length,
+      currentPage: page,
+      totalPages: Math.ceil(filteredOrders.length / limit),
+      success: true,
+      Order: paginatedOrders,
+    });
+  } catch (error) {
+    return res.status(500).send({
+      message: `Error while fetching Orders: ${error.message}`,
+      success: false,
+      error,
+    });
+  }
+};
+
+
+export const editFullOrderAdmin = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const {
+      order, discount,subtotal,shipping,applyIGST,applyCGST,applySGST,finalTotal,taxTotal,  addRental,addReceived,addReturn,addProduct,
+      userId,UserDetails,employeeSaleId,PickupDate,ReturnDate,SecurityAmt,AdvanceAmt,employeeId,OnBoardDate,addHistory,dutyHr
+    } = req.body;
+
+    const orderUpdate = await orderModel.findById(id).populate('userId'); // Fetch order details including user
+
+    if (!orderUpdate) {
+      return res.status(404).json({
+        message: "Order not found",
+        success: false,
+      });
+    } 
+ 
+   
+    let updateFields = {
+      type: order,
+      userId,
+      UserDetails,
+      employeeSaleId,
+      employeeId,
+      PickupDate,ReturnDate,SecurityAmt,AdvanceAmt,
+       addRental,
+       addReceived,
+       addReturn,
+       addProduct,
+       discount,
+       subtotal,
+       shipping,
+       applyIGST,
+       applyCGST,
+       applySGST,
+       totalAmount: finalTotal,
+       taxTotal,  
+        addHistory,
+       dutyHr
+    };
+
+    // Only include OnBoardDate if it's a valid date
+if (OnBoardDate && !isNaN(Date.parse(OnBoardDate))) {
+  updateFields.OnBoardDate = new Date(OnBoardDate);
+}
+
+    // Only include OnBoardDate if it's a valid date
+if (OnBoardDate && !isNaN(Date.parse(OnBoardDate))) {
+  updateFields.OnBoardDate = new Date(OnBoardDate);
+}
+
+
+    const updatedOrder = await orderModel.findByIdAndUpdate(id, updateFields, {
+      new: true,
+    }).populate('employeeId' , 'phone username').populate('userId' ,  'phone username');
+
+
+
+    return res.status(200).json({
+            message: "Order Updated!",
+            success: true,
+          });
+
+  } catch (error) {
+    console.log('error',error)
+    return res.status(500).json({
+      message: `Error while updating Rating: ${error}`,
+      success: false,
+      error,
+    });
+  }
+};
+
 
 export const editOrderAdmin = async (req, res) => {
   try {
@@ -1902,9 +2880,39 @@ export const editOrderAdmin = async (req, res) => {
       });
     }
 
-    const user = order.userId[0]; // Assuming there's only one user associated with the order
+    console.log('status',status)
+    
+    // const user = order.userId[0]; // Assuming there's only one user associated with the order
 
-    const { email, username, _id } = user; // Extract user email
+    // const { email, username, _id } = user; // Extract user email
+  // Loop through the products in the order and add 1 to their stock
+  if (status === "4") {
+
+  for (let product of order.addProduct ) {
+    // Retrieve the product details
+    const productDetails = await productModel.findById(product._id);
+
+    if (!productDetails) {
+      console.log(`Product not found: ${product._id}`);
+      continue; // Skip if product is not found
+    }
+
+     if(order.type !== 1){
+
+   // Add 1 to the stock of each product
+    const updatedStock = productDetails.reStock + 1;
+
+    // Update the stock for the product
+    productDetails.reStock = updatedStock;
+
+    // Save the updated product
+    await productDetails.save();
+    console.log(`Added 1 stock for product ${product.title}: ${updatedStock}`);
+
+    }
+ 
+  }
+}
 
     let updateFields = {
       status,
@@ -1912,107 +2920,226 @@ export const editOrderAdmin = async (req, res) => {
 
     const updatedOrder = await orderModel.findByIdAndUpdate(id, updateFields, {
       new: true,
-    });
+    }).populate('employeeId', 'phone username')
+.populate('userId', 'phone username');
 
-    // Configure nodemailer transporter
-    const transporter = nodemailer.createTransport({
-      // SMTP configuration
-      host: process.env.MAIL_HOST, // Update with your SMTP host
-      port: process.env.MAIL_PORT, // Update with your SMTP port
-      secure: process.env.MAIL_ENCRYPTION, // Set to true if using SSL/TLS
-      auth: {
-        user: process.env.MAIL_USERNAME, // Update with your email address
-        pass: process.env.MAIL_PASSWORD, // Update with your email password
-      }
-    });
+    
+if(updatedOrder.status === 2){
 
-    // Email message
-    const mailOptions = {
-      from: process.env.MAIL_FROM_ADDRESS, // Update with your email address
-      to: email, // Use the extracted email here
-      subject: `cayroshop.com Order ${status === '0' ? 'cancel' :
-        status === '1' ? 'Placed' :
-          status === '2' ? 'Accepted' :
-            status === '3' ? 'Packed' :
-              status === '4' ? 'Shipped' :
-                status === '5' ? 'Delivered' :
-                  'Unknown'
-        }`,
-      html: `
-          <div class="bg-light w-100 h-100" style="background-color:#f8f9fa!important;width: 90%;font-family:sans-serif;padding:20px;border-radius:10px;padding: 100px 0px;margin: auto;">
-     <div class="modal d-block" style="
-        width: 500px;
-        background: white;
-        padding: 20px;
-        margin: auto;
-        border: 2px solid #8080802e;
-        border-radius: 10px;
-    ">
-      <div class="modal-dialog">
-        <div class="modal-content" style="
-        text-align: center;
-    ">
-          <div class="modal-header">
-    <h1 style="color:black;"> Cayro Shop <h1>
-          </div>
-          <div class="modal-body text-center">
-            <h5 style="
-        margin: 0px;
-        margin-top: 14px;
-        font-size: 20px;color:black;
-    "> Order Id : #${order.orderId} </h5>
-           <p style="color:black;" >Hey ${username},</p>
-          <svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 24 24" fill="none" stroke="#47ca00" stroke-width="2" stroke-linecap="square" stroke-linejoin="arcs"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
-           <h2 style="color:black;"> Your Order Is ${status === '1' ? 'Placed' :
-          status === '2' ? 'Accepted' :
-            status === '3' ? 'Packed' :
-              status === '4' ? 'Shipped' :
-                status === '5' ? 'Delivered' :
-                  'Unknown'
-        }! </h2>
-         
-           <p style="color:black;" > We'll send you a shipping confirmation email
-    as soon as your order ${status === '1' ? 'Placed' :
-          status === '2' ? 'Accepted' :
-            status === '3' ? 'Packed' :
-              status === '4' ? 'Shipped' :
-                status === '5' ? 'Delivered' :
-                  'Unknown'
-        }. </p>
-          </div>
-          <div class="modal-footer">
+  const UserPhone = updatedOrder.UserDetails[0].phone;
+ const productNames = Array.isArray(updatedOrder.addProduct)
+  ? updatedOrder.addProduct.map(p => p.title || "Unnamed Product").join(", ")
+  : "No products added";
+
+      const notificationData = {
+                    mobile: `91${UserPhone}`,
+                    templateid: "1768237167456216",
+                    overridebot: "yes",
+                    template: {
+                      components: [ 
+                        {
+                          type: "body",
+                          parameters: [
+                            { type: "text", text: updatedOrder.orderId },
+                            { type: "text", text: productNames },
+                            { type: "text", text: updatedOrder.ReturnDate
+    ? new Date(updatedOrder.ReturnDate).toLocaleDateString("en-GB", {
+        day: "2-digit",
+        month: "long",
+        year: "numeric",
+      })
+    : "Date" },
+                          ],
+                        },
+                      ],
+                    },
+                  };
+        
+                  try {
+                    await axios.post(process.env.WHATSAPPAPI, notificationData, {
+                      headers: {
+                        "API-KEY": process.env.WHATSAPPKEY,
+                        "Content-Type": "application/json",
+                      },
+                    });
+                    console.log(`WhatsApp reminder sent to ${UserPhone}`);
+                  } catch (err) {
+                    console.error(`WhatsApp failed for ${UserPhone}:`, err.message);
+                  }
+
+
+}
+ 
+if(updatedOrder.status === 4){
+
+  const UserPhone = updatedOrder.UserDetails[0].phone;
+ const productNames = Array.isArray(updatedOrder.addProduct)
+  ? updatedOrder.addProduct.map(p => p.title || "Unnamed Product").join(", ")
+  : "No products added";
+
+      const notificationData = {
+                    mobile: `91${UserPhone}`,
+                    templateid: "1917609362388437",
+                    overridebot: "yes",
+                    template: {
+                      components: [ 
+                        {
+                          type: "body",
+                          parameters: [
+                            { type: "text", text: updatedOrder.orderId },
+                             { type: "text", text: updatedOrder.ReturnDate
+    ? new Date(updatedOrder.ReturnDate).toLocaleDateString("en-GB", {
+        day: "2-digit",
+        month: "long",
+        year: "numeric",
+      })
+    : "Date" },
+                            { type: "text", text: productNames },
+                            { type: "text", text: updatedOrder.totalAmount },
+                           
+                          ],
+                        },
+                      ],
+                    },
+                  };
+        
+                  try {
+                    await axios.post(process.env.WHATSAPPAPI, notificationData, {
+                      headers: {
+                        "API-KEY": process.env.WHATSAPPKEY,
+                        "Content-Type": "application/json",
+                      },
+                    });
+                    console.log(`WhatsApp reminder sent to ${UserPhone}`);
+                  } catch (err) {
+                    console.error(`WhatsApp failed for ${UserPhone}:`, err.message);
+                  } 
+}
+ 
+
+if(updatedOrder.type === 4 && updatedOrder.status == 1){
+
+  function getDaysBetween(start, end) {
+  return Math.ceil((new Date(end) - new Date(start)) / (1000 * 60 * 60 * 24))+ 1;
+}
+
+const days = getDaysBetween(updatedOrder.PickupDate, updatedOrder.ReturnDate);
+
+console.log('updatedOrder.employeeId?.phone',updatedOrder.employeeId?.phone);
+
+if (!updatedOrder.employeeId?.phone || !updatedOrder.employeeId?.username || !updatedOrder.UserDetails[0]?.name) {
+  console.log('updatedOrder',updatedOrder)
+  console.error('Missing required fields for WhatsApp message');
+  return;
+}
+
+const notificationData = {
+                  mobile: `91${updatedOrder.UserDetails[0]?.phone
+
+                  }`,
+                  templateid: "677048628440397",
+                  overridebot: "yes/no",
+                  template: {
+                    components: [ 
+                      {
+                        type: "body",
+                        parameters: [
+                          { type: "text", text: updatedOrder.UserDetails[0]?.name || 'NA' },
+                          { type: "text", text: updatedOrder.orderId || 'NA'  },
+                          { type: "text", text:  updatedOrder.employeeId.username || 'NA'},
+                           { type: "text", text: updatedOrder.PickupDate
+    ? new Date(updatedOrder.PickupDate).toLocaleDateString("en-GB", {
+        day: "2-digit",
+        month: "long",
+        year: "numeric",
+      })
+    : "Date"},
+                          { type: "text", text: days || 'NA' },
+                         ],
+                      },
+                    ],
+                  },
+                };
       
-            <a href="https://cayroshop.com/account/order/${_id}/${updatedOrder._id}" style="
-        background: green;
-        color: white;
-        padding: 10px;
-        display: block;
-        margin: auto;
-        border-radius: 6px;
-        text-decoration: none;
-    "> Track Order</a>
-          </div>
-        </div>
-      </div>
-    </div> </div>
-          `
-    };
+                try {
+                  await axios.post(process.env.WHATSAPPAPI, notificationData, {
+                    headers: {
+                      "API-KEY": process.env.WHATSAPPKEY,
+                      "Content-Type": "application/json",
+                    },
+                  });
+                  console.log(`WhatsApp sent to ${updatedOrder.employeeId.phone}`);
+                } catch (err) {
+                  console.error(`WhatsApp failed for ${updatedOrder.employeeId.phone}:`, err.message);
+                }
+}
 
-    // Send email
-    transporter.sendMail(mailOptions, (error, info) => {
-      if (error) {
-        console.error(error);
-        res.status(500).send('Failed to send email');
-      } else {
-        return res.status(200).json({
-          message: "Order Updated!",
-          success: true,
-        });
+
+if(updatedOrder.type === 4 && updatedOrder.status == 1){
+
+  function getDaysBetween(start, end) {
+  return Math.ceil((new Date(end) - new Date(start)) / (1000 * 60 * 60 * 24))+ 1;
+}
+
+const days = getDaysBetween(updatedOrder.PickupDate, updatedOrder.ReturnDate);
+
+console.log('updatedOrder.employeeId?.phone',updatedOrder.employeeId?.phone);
+
+if (!updatedOrder.employeeId?.phone || !updatedOrder.employeeId?.username || !updatedOrder.UserDetails[0]?.name) {
+  console.log('updatedOrder',updatedOrder)
+  console.error('Missing required fields for WhatsApp message');
+  return;
+}
+
+const notificationData = {
+                  mobile: `91${updatedOrder.employeeId?.phone}`,
+                  templateid: "715611274694613",
+                  overridebot: "yes/no",
+                  template: {
+                    components: [ 
+                      {
+                        type: "body",
+                        parameters: [
+                          { type: "text", text: updatedOrder.employeeId.username || 'NA' },
+                          { type: "text", text: updatedOrder.orderId || 'NA'  },
+                          { type: "text", text: updatedOrder.UserDetails[0]?.name || 'NA'},
+                          { type: "text", text: updatedOrder.UserDetails[0]?.address || 'NA' },
+                          { type: "text", text: updatedOrder.PickupDate
+    ? new Date(updatedOrder.PickupDate).toLocaleDateString("en-GB", {
+        day: "2-digit",
+        month: "long",
+        year: "numeric",
+      })
+    : "Date"},
+                          { type: "text", text: days || 'NA' },
+                          { type: "text", text: updatedOrder.UserDetails[0]?.phone || 'NA' },
+                        ],
+                      },
+                    ],
+                  },
+                };
+      
+                try {
+                  await axios.post(process.env.WHATSAPPAPI, notificationData, {
+                    headers: {
+                      "API-KEY": process.env.WHATSAPPKEY,
+                      "Content-Type": "application/json",
+                    },
+                  });
+                  console.log(`WhatsApp sent to ${updatedOrder.employeeId.phone}`);
+                } catch (err) {
+                  console.error(`WhatsApp failed for ${updatedOrder.employeeId.phone}:`, err.message);
+                }
       }
-    });
+
+    return res.status(200).json({
+            message: "Order Updated!",
+            success: true,
+          });
 
   } catch (error) {
-    return res.status(400).json({
+    console.log('error',error)
+    return res.status(500).json({
       message: `Error while updating Rating: ${error}`,
       success: false,
       error,
@@ -2146,13 +3273,15 @@ export const editOrderAdmin_old = async (req, res) => {
 };
 
 
-export const getAllUserAdmin = async (req, res) => {
+export const getAllUserAdmin_old = async (req, res) => {
   try {
     const page = parseInt(req.query.page) || 1; // Current page, default is 1
     const limit = parseInt(req.query.limit) || 10; // Number of documents per page, default is 10
     const searchTerm = req.query.search || ""; // Get search term from the query parameters
-
-    const skip = (page - 1) * limit;
+    const empType = req.query.empType || null; 
+    const type = req.query.type || null; 
+    const active = req.query.active || null; 
+     const skip = (page - 1) * limit;
 
     const query = {};
     if (searchTerm) {
@@ -2162,8 +3291,18 @@ export const getAllUserAdmin = async (req, res) => {
       query.$or = [
         { username: regex },
         { email: regex },
-        { phone: regex } // Add phone number search if needed
+        { phone: regex },  
+        { pincode: regex },
+        { address: regex }  
       ];
+    }
+
+    if(type){
+      query.type = type;
+    }
+    
+     if(empType){
+      query.empType = empType;
     }
 
     const totalUser = await userModel.countDocuments(query); // Count total documents matching the query
@@ -2182,13 +3321,30 @@ export const getAllUserAdmin = async (req, res) => {
       });
     }
 
+     // Check availability for each user
+    const usersWithAvailability = await Promise.all(
+      users.map(async (user) => {
+        const isBusy = await orderModel.exists({
+          type: 4,
+          employeeId: user._id,
+          status: { $nin: [4, 5] }, // Not 4 or 5
+        });
+
+        return {
+          ...user,
+          available: isBusy ? 0 : 1, // 0 = busy, 1 = available
+        };
+      })
+    );
+
+
     return res.status(200).send({ // Send successful response
       message: "All user list",
       userCount: users.length,
       currentPage: page,
       totalPages: Math.ceil(totalUser / limit),
       success: true,
-      users, // Return users array
+      users: usersWithAvailability,
     });
   } catch (error) {
     return res.status(500).send({ // Send 500 Internal Server Error response
@@ -2198,6 +3354,123 @@ export const getAllUserAdmin = async (req, res) => {
     });
   }
 };
+
+export const getAllUserAdmin = async (req, res) => {
+  try {
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const searchTerm = req.query.search || "";
+    const empType = req.query.empType || null;
+    const type = req.query.type || null;
+    const active = req.query.active || null;
+    const username = req.query.name || null;
+    const phone = req.query.phone || null;
+    const state = req.query.state || null;
+    const city = req.query.city || null;
+    const pincode = req.query.pincode || null;
+    const location = req.query.location || null;
+    const nurseParam = req.query.nurse || null;
+
+ 
+
+    const query = {};
+    if (searchTerm) {
+      const regex = new RegExp(searchTerm, "i");
+      query.$or = [
+        { username: regex },
+        { email: regex },
+        { phone: regex },
+        { pincode: regex },
+        { address: regex },
+      ];
+    }
+
+    if(username) query.username = username;
+     if(phone) query.phone = phone;
+     if(state) query.state = state;
+     if(city) query.city = city;
+     if(pincode) query.pincode = pincode;
+     if(location) query.location = location;
+
+    if (type) query.type = type;
+    if (empType) query.empType = empType;
+
+ if (nurseParam) {
+  let nurseIds = [];
+
+  if (typeof nurseParam === "string") {
+    nurseIds = nurseParam.split(",");
+  } else if (Array.isArray(nurseParam)) {
+    nurseIds = nurseParam;
+  }
+ 
+    const objectIds = nurseIds
+      .filter(id => mongoose.Types.ObjectId.isValid(id)) // ✅ only valid ones
+      .map(id => new mongoose.Types.ObjectId(id));
+
+    if (objectIds.length > 0) {
+      query.nurse = { $in: objectIds }; // ✅ match at least one
+    }
+ 
+}
+
+    // Get all matching users (no pagination yet)
+    let allUsers = await userModel.find(query).sort({ _id: -1 }).lean();
+
+    // if (!allUsers || allUsers.length === 0) {
+    //   return res.status(404).send({
+    //     message: "No users found",
+    //     success: false,
+    //   });
+    // }
+
+    // Compute availability
+    let usersWithAvailability = await Promise.all(
+      allUsers.map(async (user) => {
+        const isBusy = await orderModel.exists({
+          type: 4,
+          employeeId: user._id,
+          status: { $nin: [4, 5] },
+        });
+
+        return {
+          ...user,
+          available: isBusy ? 0 : 1,
+        };
+      })
+    );
+
+    // Filter by availability if 'active' param is provided
+    if (active === "1") {
+      usersWithAvailability = usersWithAvailability.filter(u => u.available === 1);
+    } else if (active === "0") {
+      usersWithAvailability = usersWithAvailability.filter(u => u.available === 0);
+    }
+
+    const totalUser = usersWithAvailability.length;
+
+    // Paginate after availability filtering
+    const start = (page - 1) * limit;
+    const paginatedUsers = usersWithAvailability.slice(start, start + limit);
+
+    return res.status(200).send({
+      message: "All user list",
+      userCount: paginatedUsers.length,
+      totalUsers: totalUser,
+      currentPage: page,
+      totalPages: Math.ceil(totalUser / limit),
+      success: true,
+      users: paginatedUsers,
+    });
+  } catch (error) {
+    return res.status(500).send({
+      message: `Error while getting users: ${error.message}`,
+      success: false,
+      error,
+    });
+  }
+};
+
 
 export const editUserAdmin = async (req, res) => {
   try {
@@ -2237,6 +3510,17 @@ export const getUserIdAdmin = async (req, res) => {
   try {
     const { id } = req.params;
     const User = await userModel.findById(id);
+ 
+        // Find all orders where addHistory.assignId matches the user ID
+        const orders = await orderModel.find({ 'addHistory.assignId': id });
+    
+        // Extract relevant history entries from matching orders
+        const matchedHistories = orders.flatMap(order =>
+          order.addHistory.filter(entry => entry.assignId === id)
+        );
+    
+
+
     if (!User) {
       return res.status(200).send({
         message: "User Not Found By Id",
@@ -2247,6 +3531,49 @@ export const getUserIdAdmin = async (req, res) => {
       message: "fetch Single User!",
       success: true,
       User,
+      history: matchedHistories, 
+
+    });
+  } catch (error) {
+    return res.status(400).json({
+      message: `Error while get User : ${error}`,
+      success: false,
+      error,
+    });
+  }
+};
+
+export const getUserIdHistoryAdmin = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const User = await userModel.findById(id);
+ 
+        // Find all orders where addHistory.assignId matches the user ID
+        const orders = await orderModel.find({ 'addHistory.assignId': id });
+    
+     const matchedHistories = orders.flatMap(order =>
+  order.addHistory
+    .filter(entry => entry.assignId === id)
+    .map(entry => ({
+      ...entry,
+      status: order.status,
+      orderId: order.orderId,
+    }))
+);
+
+
+    if (!User) {
+      return res.status(200).send({
+        message: "User Not Found By Id",
+        success: false,
+      });
+    }
+    return res.status(200).json({
+      message: "fetch Single User!",
+      success: true,
+      User,
+      history: matchedHistories, 
+
     });
   } catch (error) {
     return res.status(400).json({
@@ -3669,6 +4996,24 @@ export const getAllPlanCategoryAdmin = async (req, res) => {
 };
 
 
+export const deletePlanCategoryAdmin = async (req, res) => {
+  try {
+    await planCategoryModel.findByIdAndDelete(req.params.id);
+
+    return res.status(200).send({
+      success: true,
+      message: "Plan Catgeory Deleted!",
+    });
+  } catch (error) {
+    console.log(error);
+    return res.status(400).send({
+      success: false,
+      message: "Erorr while deleteing",
+      error,
+    });
+  }
+};
+
 // Add Plan
 
 export const AddPlanController = async (req, res) => {
@@ -3874,6 +5219,7 @@ export const UserloginAll = async (req, res) => {
 
 
 // for department model
+
 export const AddAdminDepartmentController = async (req, res) => {
   try {
     const { name, status } = req.body;
@@ -4032,6 +5378,486 @@ export const deleteDepartmentAdmin = async (req, res) => {
   }
 };
 
+// for nurse department model
+
+export const AddAdminNurseDepartmentController = async (req, res) => {
+  try {
+    const { name, status } = req.body;
+
+    // Validation
+    if (!name) {
+      return res.status(400).send({
+        success: false,
+        message: "Please Provide name",
+      });
+    }
+
+    // Create a new category with the specified parent
+    const newDepartment = new nurseDepartmentsModel({
+      name,
+      status,
+    });
+    await newDepartment.save();
+
+    return res.status(201).send({
+      success: true,
+      message: "Department Created!",
+      newDepartment,
+    });
+  } catch (error) {
+    console.error("Error while creating Department:", error);
+    return res.status(400).send({
+      success: false,
+      message: "Error while creating Department",
+      error,
+    });
+  }
+};
+
+export const getAllNurseDepartmentFillAdmin = async (req, res) => {
+  try {
+    const page = parseInt(req.query.page) || 1; // Current page, default is 1
+    const limit = parseInt(req.query.limit) || 10; // Number of documents per page, default is 10
+    const searchTerm = req.query.search || ""; // Get search term from the query parameters
+
+    const skip = (page - 1) * limit;
+
+    const query = {};
+    if (searchTerm) {
+      // If search term is provided, add it to the query
+      query.$or = [
+        { name: { $regex: searchTerm, $options: "i" } }, // Case-insensitive username search
+        { value: { $regex: searchTerm, $options: "i" } }, // Case-insensitive email search
+      ];
+    }
+
+    const totalDepartment = await nurseDepartmentsModel.countDocuments();
+
+    const Department = await nurseDepartmentsModel
+      .find(query)
+      .sort({ _id: -1 }) // Sort by _id in descending order
+      .skip(skip)
+      .limit(limit)
+      .lean();
+
+    if (!Department) {
+      return res.status(200).send({
+        message: "NO Department found",
+        success: false,
+      });
+    }
+    return res.status(200).send({
+      message: "All Department list ",
+      DepartmentCount: Department.length,
+      currentPage: page,
+      totalPages: Math.ceil(totalDepartment / limit),
+      success: true,
+      Department,
+    });
+  } catch (error) {
+    return res.status(500).send({
+      message: `Error while getting Department ${error}`,
+      success: false,
+      error,
+    });
+  }
+};
+
+export const updateNurseDepartmentAdmin = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const { name, status } = req.body;
+
+    let updateFields = {
+      name,
+      status,
+    };
+
+    const Department = await nurseDepartmentsModel.findByIdAndUpdate(
+      id,
+      updateFields,
+      {
+        new: true,
+      }
+    );
+
+    return res.status(200).json({
+      message: "Department Updated!",
+      success: true,
+      Department,
+    });
+  } catch (error) {
+    return res.status(400).json({
+      message: `Error while updating Department: ${error}`,
+      success: false,
+      error,
+    });
+  }
+};
+
+export const getNurseDepartmentIdAdmin = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const Department = await nurseDepartmentsModel.findById(id);
+    if (!Department) {
+      return res.status(200).send({
+        message: "Nurse Department Not Found By Id",
+        success: false,
+      });
+    }
+    return res.status(200).json({
+      message: "fetch Single Nurse Department!",
+      success: true,
+      Department,
+    });
+  } catch (error) {
+    return res.status(400).json({
+      message: `Error while get Nurse Department: ${error}`,
+      success: false,
+      error,
+    });
+  }
+};
+
+export const deleteNurseDepartmentAdmin = async (req, res) => {
+  try {
+    await nurseDepartmentsModel.findByIdAndDelete(req.params.id);
+
+    return res.status(200).send({
+      success: true,
+      message: "Department Deleted!",
+    });
+  } catch (error) {
+    console.log(error);
+    return res.status(400).send({
+      success: false,
+      message: "Erorr WHile Deleteing Department",
+      error,
+    });
+  }
+};
+
+
+// for nurse skill department model
+
+export const AddAdminSkillDepartmentController = async (req, res) => {
+  try {
+    const { name, status } = req.body;
+
+    // Validation
+    if (!name) {
+      return res.status(400).send({
+        success: false,
+        message: "Please Provide name",
+      });
+    }
+
+    // Create a new category with the specified parent
+    const newDepartment = new skillDepartmentsModel({
+      name,
+      status,
+    });
+    await newDepartment.save();
+
+    return res.status(201).send({
+      success: true,
+      message: "Skill Department Created!",
+      newDepartment,
+    });
+  } catch (error) {
+    console.error("Error while creating Skill Department:", error);
+    return res.status(400).send({
+      success: false,
+      message: "Error while creating Skill Department",
+      error,
+    });
+  }
+};
+
+export const getAllSkillDepartmentFillAdmin = async (req, res) => {
+  try {
+    const page = parseInt(req.query.page) || 1; // Current page, default is 1
+    const limit = parseInt(req.query.limit) || 10; // Number of documents per page, default is 10
+    const searchTerm = req.query.search || ""; // Get search term from the query parameters
+
+    const skip = (page - 1) * limit;
+
+    const query = {};
+    if (searchTerm) {
+      // If search term is provided, add it to the query
+      query.$or = [
+        { name: { $regex: searchTerm, $options: "i" } }, // Case-insensitive username search
+        { value: { $regex: searchTerm, $options: "i" } }, // Case-insensitive email search
+      ];
+    }
+
+    const totalDepartment = await skillDepartmentsModel.countDocuments();
+
+    const Department = await skillDepartmentsModel
+      .find(query)
+      .sort({ _id: -1 }) // Sort by _id in descending order
+      .skip(skip)
+      .limit(limit)
+      .lean();
+
+    if (!Department) {
+      return res.status(200).send({
+        message: "NO Skill Department found",
+        success: false,
+      });
+    }
+    return res.status(200).send({
+      message: "All Skill Department list ",
+      DepartmentCount: Department.length,
+      currentPage: page,
+      totalPages: Math.ceil(totalDepartment / limit),
+      success: true,
+      Department,
+    });
+  } catch (error) {
+    return res.status(500).send({
+      message: `Error while getting Skill Department ${error}`,
+      success: false,
+      error,
+    });
+  }
+};
+
+export const updateSkillDepartmentAdmin = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const { name, status } = req.body;
+
+    let updateFields = {
+      name,
+      status,
+    };
+
+    const Department = await skillDepartmentsModel.findByIdAndUpdate(
+      id,
+      updateFields,
+      {
+        new: true,
+      }
+    );
+
+    return res.status(200).json({
+      message: "Skill Department Updated!",
+      success: true,
+      Department,
+    });
+  } catch (error) {
+    return res.status(400).json({
+      message: `Error while updating Skill Department: ${error}`,
+      success: false,
+      error,
+    });
+  }
+};
+
+export const getSkillDepartmentIdAdmin = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const Department = await skillDepartmentsModel.findById(id);
+    if (!Department) {
+      return res.status(200).send({
+        message: "Skill Department Not Found By Id",
+        success: false,
+      });
+    }
+    return res.status(200).json({
+      message: "fetch Single Skill Department!",
+      success: true,
+      Department,
+    });
+  } catch (error) {
+    return res.status(400).json({
+      message: `Error while get Skill Department: ${error}`,
+      success: false,
+      error,
+    });
+  }
+};
+
+export const deleteSkillDepartmentAdmin = async (req, res) => {
+  try {
+    await skillDepartmentsModel.findByIdAndDelete(req.params.id);
+
+    return res.status(200).send({
+      success: true,
+      message: "Department Deleted!",
+    });
+  } catch (error) {
+    console.log(error);
+    return res.status(400).send({
+      success: false,
+      message: "Erorr WHile Deleteing Department",
+      error,
+    });
+  }
+};
+
+// for nurse Attribute department model
+
+export const AddAdminAttributeDepartmentController = async (req, res) => {
+  try {
+    const { name, status } = req.body;
+
+    // Validation
+    if (!name) {
+      return res.status(400).send({
+        success: false,
+        message: "Please Provide name",
+      });
+    }
+
+    // Create a new category with the specified parent
+    const newDepartment = new attributeDepartmentsModel({
+      name,
+      status,
+    });
+    await newDepartment.save();
+
+    return res.status(201).send({
+      success: true,
+      message: "Attribute Department Created!",
+      newDepartment,
+    });
+  } catch (error) {
+    console.error("Error while creating Attribute Department:", error);
+    return res.status(400).send({
+      success: false,
+      message: "Error while creating Attribute Department",
+      error,
+    });
+  }
+};
+
+export const getAllAttributeDepartmentFillAdmin = async (req, res) => {
+  try {
+    const page = parseInt(req.query.page) || 1; // Current page, default is 1
+    const limit = parseInt(req.query.limit) || 10; // Number of documents per page, default is 10
+    const searchTerm = req.query.search || ""; // Get search term from the query parameters
+
+    const skip = (page - 1) * limit;
+
+    const query = {};
+    if (searchTerm) {
+      // If search term is provided, add it to the query
+      query.$or = [
+        { name: { $regex: searchTerm, $options: "i" } }, // Case-insensitive username search
+        { value: { $regex: searchTerm, $options: "i" } }, // Case-insensitive email search
+      ];
+    }
+
+    const totalDepartment = await attributeDepartmentsModel.countDocuments();
+
+    const Department = await attributeDepartmentsModel
+      .find(query)
+      .sort({ _id: -1 }) // Sort by _id in descending order
+      .skip(skip)
+      .limit(limit)
+      .lean();
+
+    if (!Department) {
+      return res.status(200).send({
+        message: "NO Attribute Department found",
+        success: false,
+      });
+    }
+    return res.status(200).send({
+      message: "All Attribute Department list ",
+      DepartmentCount: Department.length,
+      currentPage: page,
+      totalPages: Math.ceil(totalDepartment / limit),
+      success: true,
+      Department,
+    });
+  } catch (error) {
+    return res.status(500).send({
+      message: `Error while getting Attribute Department ${error}`,
+      success: false,
+      error,
+    });
+  }
+};
+
+export const updateAttributeDepartmentAdmin = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const { name, status } = req.body;
+
+    let updateFields = {
+      name,
+      status,
+    };
+
+    const Department = await attributeDepartmentsModel.findByIdAndUpdate(
+      id,
+      updateFields,
+      {
+        new: true,
+      }
+    );
+
+    return res.status(200).json({
+      message: "Skill Department Updated!",
+      success: true,
+      Department,
+    });
+  } catch (error) {
+    return res.status(400).json({
+      message: `Error while updating Skill Department: ${error}`,
+      success: false,
+      error,
+    });
+  }
+};
+
+export const getAttributeDepartmentIdAdmin = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const Department = await attributeDepartmentsModel.findById(id);
+    if (!Department) {
+      return res.status(200).send({
+        message: "Attribute Department Not Found By Id",
+        success: false,
+      });
+    }
+    return res.status(200).json({
+      message: "fetch Single Attribute Department!",
+      success: true,
+      Department,
+    });
+  } catch (error) {
+    return res.status(400).json({
+      message: `Error while get Attribute Department: ${error}`,
+      success: false,
+      error,
+    });
+  }
+};
+
+export const deleteAttributeDepartmentAdmin = async (req, res) => {
+  try {
+    await attributeDepartmentsModel.findByIdAndDelete(req.params.id);
+
+    return res.status(200).send({
+      success: true,
+      message: "Attribute Department Deleted!",
+    });
+  } catch (error) {
+    console.log(error);
+    return res.status(400).send({
+      success: false,
+      message: "Erorr WHile Deleteing Department",
+      error,
+    });
+  }
+};
 
 
 
@@ -4075,6 +5901,20 @@ export const profileVendorImage = upload.fields([
   { name: "Doc3", maxCount: 1 },
   { name: "ProfileFile", maxCount: 1 },
 ]);
+
+
+export const profileDocImage = upload.fields([
+  { name: "Doc1", maxCount: 1 },
+  { name: "Doc2", maxCount: 1 },
+  { name: "Doc3", maxCount: 1 },
+  { name: "Doc4", maxCount: 1 },
+    { name: "Doc5", maxCount: 1 },
+      { name: "Doc6", maxCount: 1 },
+        { name: "Doc7", maxCount: 1 },
+          { name: "Doc8", maxCount: 1 },
+  { name: "profile", maxCount: 1 },
+]);
+
 
 export const updateVendorProfileUser = async (req, res) => {
   try {
@@ -4146,4 +5986,1105 @@ export const updateVendorProfileUser = async (req, res) => {
       error,
     });
   }
+};
+
+
+export const AllPaymentAdmin = async (req, res) => {
+  try {
+    const transactions = await buyPlanModel.find({ payment: 1 }).populate('userId', 'phone email username').sort({ createdAt: -1 }).lean();
+
+    return res.status(200).send({
+      success: true,
+      message: "payments fetched successfully",
+      transactions,
+    });
+  } catch (error) {
+    return res.status(500).send({
+      message: `Error payments fetched: ${error}`,
+      success: false,
+      error,
+    });
+  }
+};
+
+
+export const AdminAllEnquireStatus = async (req, res) => {
+  try {
+    const page = parseInt(req.query.page) || 1; // Current page, default is 1
+    const limit = parseInt(req.query.limit) || 10; // Number of documents per page, default is 10
+    const searchTerm = req.query.search || ""; // Get search term from the query parameters
+    const userId = req.query.userId; // Directly access userId from query parameters
+
+    const skip = (page - 1) * limit;
+
+    // Initialize the query object
+    let query = {};
+
+    // If userId is provided, filter by userId
+    if (userId) {
+      query.userId = userId; // Filter by userId
+    }
+
+    query.type = 1; // Filter by userId
+
+
+    // If there's a search term, apply it to a specific field (assuming a text index exists on the model)
+    if (searchTerm) {
+      query.$text = { $search: searchTerm }; // Assuming your model has text indexes for search
+    }
+
+    // Count the total documents matching the query
+    const total = await enquireModel.countDocuments(query);
+
+    // Retrieve the data
+    const Enquire = await enquireModel
+      .find(query)
+      .sort({ _id: -1 }) // Sort by _id in descending order
+      .skip(skip)
+      .limit(limit)
+      .populate('userId', 'username email phone address') // Populate userId with username, email, phone, and address
+      .populate('senderId', 'username email phone address') // Populate senderId with username, email, phone, and address
+      .lean();
+
+    const allvendor = await userModel.find({ type: 1 }).lean();
+
+    if (!Enquire || Enquire.length === 0) {
+      return res.status(200).send({
+        message: "No Enquiries found for the given criteria.",
+        success: false,
+      });
+    }
+
+    return res.status(200).send({
+      message: "Enquiry list retrieved successfully",
+      EnquireCount: Enquire.length,
+      currentPage: page,
+      totalPages: Math.ceil(total / limit),
+      success: true,
+      total,
+      Enquire,
+      allvendor
+    });
+
+  } catch (error) {
+    return res.status(500).send({
+      message: `Error while getting Enquire data: ${error.message || error}`,
+      success: false,
+      error,
+    });
+  }
+};
+
+export const profileImageHealth = upload.fields([
+  { name: "profile", maxCount: 1 },
+]);
+
+
+export const AdminGetAllEmployee = async (req, res) => { 
+  try {
+    // Extract the category (which can be an array of ObjectIds), type, and coordinates from query parameters
+    const { type,filter,phone } = req.query;
+
+    if (!type) {
+      return res.status(200).send({
+        message: 'Missing required parameters.',
+        success: false,
+      });
+    }
+ 
+    // Build the filter object
+    const fillter = {};  // Only fetch employees with the type (assuming "employee")
+
+ 
+    if(type && type !== 'none' ){
+      fillter.type = type;
+    }
+    if(phone && phone !== 'none' ){
+      fillter.phone = phone;
+    }
+    // Build the filter object
+   if(filter !== 'none'){
+    if(filter === '5' ){
+      fillter.empType = 5;
+    }
+    else if(filter === '4' ){
+      fillter.empType = 4;
+    }else if(filter === '3'){
+      fillter.empType = 3;
+    }else if(filter === '2'){
+      fillter.empType = 2;
+    }else{
+      fillter.empType = 5;
+    }
+  }
+  
+   
+  console.log('fillter',filter)
+
+    //  if (category) {
+    //    const categories = Array.isArray(category) ? category : [category];
+    //   filter.department = { $in: categories.map(id => new mongoose.Types.ObjectId(id)) };  // Use 'new' to create ObjectIds
+    // }
+
+    // Fetch users based on the filter
+    const users = await userModel.find(fillter, '_id username email phone gender address company companyName companyGST companyAddress age weight');
+
+    if (!users || users.length === 0) {
+      return res.status(200).send({
+        message: 'No User Found',
+        success: false,
+      });
+    }
+ 
+
+    return res.status(200).send({
+      message: 'All User List',
+      success: true,
+      Users: users,
+    });
+
+  } catch (error) {
+    return res.status(500).send({
+      message: `Error while fetching employees: ${error.message}`,
+      success: false,
+      error,
+    });
+  }
+};
+
+export const AdminGetuserPhone = async (req, res) => {
+  try {
+    const { phone } = req.query;
+
+    // Validate if phone is provided
+    if (!phone) {
+      return res.status(400).send({
+        message: 'Phone number is required',
+        success: false,
+      });
+    }
+
+    // Find users with type: 2 and matching phone
+    const users = await userModel.find({ type: 2, phone }, '_id username email phone gender');
+
+    if (!users || users.length === 0) {
+      return res.status(200).send({
+        message: 'No User Found',
+        success: false,
+      });
+    }
+
+    return res.status(200).send({
+      message: 'User(s) found',
+      success: true,
+      users,
+    });
+
+  } catch (error) {
+    return res.status(500).send({
+      message: `Error while fetching users: ${error.message}`,
+      success: false,
+      error,
+    });
+  }
+};
+
+
+export const generateUserInvoicePDFView = async (req, res) => {
+  try {
+
+  const { id } = req.params;
+
+  const lastTransaction = await orderModel
+    .findById(id)
+    .limit(1) // Only get the most recent transaction
+    .populate({
+      path: "userId", // The field to populate
+      select: "phone username email c_name gstin statename ", // Only select the phone and username fields from the User model
+    })
+    .lean(); // Convert documents to plain JavaScript objects
+
+  // If lastTransaction is an array, you can access the first element like this
+  const invoiceData = lastTransaction;
+  
+  // console.log(invoiceData);
+  console.log('invoiceData.UserDetails',invoiceData);
+ 
+
+  const formatDate = (dateString) => {
+    const options = { year: "numeric", month: "long", day: "numeric" };
+    return new Date(dateString).toLocaleDateString(undefined, options);
+  };
+
+  const formatTime = (dateString) => {
+    const options = { hour: "2-digit", minute: "2-digit" };
+    return new Date(dateString).toLocaleTimeString(undefined, options);
+  };
+
+  // Define the HTML content
+  const htmlContent = `     <div class="invoice">
+      <div class="invoice-header">
+        <div class="invoice-header-left" style="flex:none;">
+          <img src="https://backend-2o7f.onrender.com/uploads/new/image-1726306777273.webp" alt="Company Logo" width="240">
+        
+        </div>
+        <div class="invoice-header-right">
+          <h2 style="margin-top:0px;">YNB Healthcare Pvt. Ltd.
+ </h2>
+ <p>WZ 10C, A-2 Block, Asalatpur Near Mata Chanan Devi Hospital, Janakpuri, New Delhi, 110058 </p>
+<p> Contact - +91-8062182339 </p>
+  <p> Email : support@ynbhealthcare.com </p>
+         
+                         
+        </div>
+      </div>
+
+<div style="margin-bottom: 15px;margin-top: 15px;border-top-style: solid;border-top-width: 3pt;border-top-color: #4F81BC;"> </div>
+
+          <div class="invoice-header">
+        <div class="invoice-header-left">
+                     <h2 style="margin-top:0px;">BILLED TO</h2>
+ 
+           <p> <b> Name: </b> ${invoiceData?.UserDetails[0]?.name}</p>
+            <p> <b> Email Id: </b> ${invoiceData?.UserDetails[0]?.email}</p>
+            <p> <b>  Phone No.: </b> ${invoiceData?.UserDetails[0]?.phone}</p>
+            <p> <b>  Address: </b> ${invoiceData?.UserDetails[0]?.address}</p>
+            <p> <b>  GST: </b> 
+            ${invoiceData?.UserDetails[0]?.company === 'yes' ? invoiceData?.UserDetails[0]?.companyGST : 'NA'}
+            </p>
+
+
+          
+         
+        </div>
+        <div class="invoice-header-right">
+          <h2 style="margin-top:0px;">TAX INVOICE</h2>
+            <p> <b> Invoice No.:</b> #${invoiceData?.orderId}</p>
+            
+          <p> <b>  Delivery Date :</b> ${formatDate(
+      invoiceData?.PickupDate
+    )}     </p>
+
+  <p> <b>  Renewal Date :</b> ${formatDate(
+      invoiceData?.ReturnDate
+    )}     </p>
+  
+        <p> <b>  GSTIN:</b> 07AAACY9494K1ZJ    </p>
+
+        </div>
+      </div>
+
+
+ <table class="invoice-table" style="margin-bottom:0px;">
+  <thead>
+    <tr>
+      <th>#</th>
+      <th>Name</th>
+      <th>Price</th>
+      <th>Quantity</th>
+      <th>Tax (%)</th>
+      <th>Total Amount</th>
+    </tr>
+  </thead>
+  <tbody>
+    ${invoiceData.addProduct && invoiceData.addProduct.length > 0
+      ? invoiceData.addProduct.map((product, index) => `
+        <tr>
+          <td>${index + 1}</td>
+          <td>${product.title}</td>
+          <td>₹ ${product.amount.toFixed(2)}</td>
+          <td>${product.quantity}</td>
+          <td>${product.tax || 0}</td>
+          <td>₹ ${product.total.toFixed(2)}</td>
+        </tr>
+      `).join('')
+      : `<tr><td colspan="6" class="text-center">No products added</td></tr>`
+    }
+  </tbody>
+</table>
+
+${invoiceData.addProduct && invoiceData.addProduct.length > 0 ? `
+  <div class="col-md-4 ms-auto" style="width:33%;margin-left:auto;margin-top:10px;">
+    <table class="invoice-table" >
+      <tbody  >
+        <tr >
+          <th>Subtotal:</th>
+          <td>₹ ${invoiceData.subtotal.toFixed(2)}</td>
+        </tr>
+
+        <tr>
+          <th>Discount:</th>
+          <td>
+           ${invoiceData.discount}
+          </td>
+        </tr>
+
+        <tr>
+          <th>Shipping:</th>
+          <td>
+           ${invoiceData.shipping}
+          </td>
+        </tr>
+
+        <tr>
+          <th>
+            Tax ${invoiceData.applyIGST ? '(IGST)' : '(CGST + SGST)'}:
+            
+          </th>
+          <td>₹ ${(invoiceData.applyIGST || invoiceData.applyCGST || invoiceData.applySGST) ? invoiceData.taxTotal.toFixed(2) : '0.00'}</td>
+        </tr>
+
+        <tr>
+          <th>Final Total:</th>
+          <td><strong>₹ ${invoiceData.totalAmount.toFixed(2)}</strong></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+` : ''}
+${invoiceData.type === 2 ?  `
+
+<div class="col-md-12 my-4">
+  <div class="d-flex justify-content-between">
+    <h4>Rental Amount</h4>
+    
+  </div>
+  <hr />
+
+  <div class="overflow-auto">
+    <table class="invoice-table" id="rental-table" style="margin-bottom:0px;">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Date</th>
+          <th>Time</th>
+          <th>Amount INR</th>
+          <th>Gateway</th>
+          <th>Payment Method</th>
+          <th>Transaction Id</th>
+         </tr>
+      </thead>
+      <tbody id="rental-table-body">
+        ${invoiceData.addRental && invoiceData.addRental.length > 0 ? invoiceData.addRental.map((rental, index) => `
+          <tr>
+            <td>${index + 1}</td>
+            <td>${rental.date}</td>
+            <td>${rental.time}</td>
+            <td>${rental.amount}</td>
+            <td>${rental.gateway}</td>
+            <td>${rental.method}</td>
+            <td>${rental.transaction}</td>
+            
+          </tr>
+        `).join('') : `
+          <tr>
+            <td colspan="8" class="text-center">No Rental Added</td>
+          </tr>
+        `}
+      </tbody>
+    </table>
+  </div>
+
+  ${invoiceData.addRental && invoiceData.addRental.length > 0 ? `
+    <div class="col-md-4 ms-auto" style="max-width:33%;margin-left:auto;">
+      <table  class="invoice-table" id="rental-table" style="margin-bottom:0px;margin-top:10px;">
+        <tbody>
+          <tr>
+            <th>Final Total:</th>
+            <td><strong>₹ ${invoiceData.addRental.reduce((acc, rental) => acc + parseFloat(rental.amount || 0), 0).toFixed(2)}</strong></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  ` : ''}
+</div>
+
+
+<div class="col-md-12 my-4">
+  <div class="d-flex justify-content-between">
+    <h4>Security Amount Received</h4>
+    
+  </div>
+  <hr />
+
+  <div class="overflow-auto">
+    <table class="invoice-table" id="rental-table" style="margin-bottom:0px;">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Date</th>
+          <th>Time</th>
+          <th>Amount INR</th>
+          <th>Gateway</th>
+          <th>Payment Method</th>
+          <th>Transaction Id</th>
+         </tr>
+      </thead>
+      <tbody id="rental-table-body">
+        ${invoiceData.addReceived && invoiceData.addReceived.length > 0 ? invoiceData.addReceived.map((rental, index) => `
+          <tr>
+            <td>${index + 1}</td>
+            <td>${rental.date}</td>
+            <td>${rental.time}</td>
+            <td>${rental.amount}</td>
+            <td>${rental.gateway}</td>
+            <td>${rental.method}</td>
+            <td>${rental.transaction}</td>
+            
+          </tr>
+        `).join('') : `
+          <tr>
+            <td colspan="8" class="text-center">No Rental Added</td>
+          </tr>
+        `}
+      </tbody>
+    </table>
+  </div>
+
+  ${invoiceData.addReceived && invoiceData.addReceived.length > 0 ? `
+    <div class="col-md-4 ms-auto" style="max-width:33%;margin-left:auto;">
+      <table  class="invoice-table" id="rental-table" style="margin-bottom:0px;margin-top:10px;">
+        <tbody>
+          <tr>
+            <th>Final Total:</th>
+            <td><strong>₹ ${invoiceData.addReceived.reduce((acc, rental) => acc + parseFloat(rental.amount || 0), 0).toFixed(2)}</strong></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  ` : ''}
+</div>
+
+     
+<div class="col-md-12 my-4">
+  <div class="d-flex justify-content-between">
+    <h4> Security Amount Return
+ </h4>
+    
+  </div>
+  <hr />
+
+  <div class="overflow-auto">
+    <table class="invoice-table" id="rental-table" style="margin-bottom:0px;">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Date</th>
+          <th>Time</th>
+          <th>Amount INR</th>
+          <th>Gateway</th>
+          <th>Payment Method</th>
+          <th>Transaction Id</th>
+         </tr>
+      </thead>
+      <tbody id="rental-table-body">
+        ${invoiceData.addReturn && invoiceData.addReturn.length > 0 ? invoiceData.addReturn.map((rental, index) => `
+          <tr>
+            <td>${index + 1}</td>
+            <td>${rental.date}</td>
+            <td>${rental.time}</td>
+            <td>${rental.amount}</td>
+            <td>${rental.gateway}</td>
+            <td>${rental.method}</td>
+            <td>${rental.transaction}</td>
+            
+          </tr>
+        `).join('') : `
+          <tr>
+            <td colspan="8" class="text-center">No Rental Added</td>
+          </tr>
+        `}
+      </tbody>
+    </table>
+  </div>
+
+  ${invoiceData.addReturn && invoiceData.addReturn.length > 0 ? `
+    <div class="col-md-4 ms-auto" style="max-width:33%;margin-left:auto;">
+      <table  class="invoice-table" id="rental-table" style="margin-bottom:0px;margin-top:10px;">
+        <tbody>
+          <tr>
+            <th>Final Total:</th>
+            <td><strong>₹ ${invoiceData.addReturn.reduce((acc, rental) => acc + parseFloat(rental.amount || 0), 0).toFixed(2)}</strong></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  ` : ''}
+</div>
+
+  ` : ''}
+
+<br>
+     <p style="text-align:center" >This is a Computer Generated Invoice </p>
+ <br>
+ <div style="text-align:center;">
+ 
+ </div>
+
+      <button class="btn" onclick="window.print()">Print Page</button>
+ <br>
+
+
+    </div>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+      }
+      h2 {
+        font-weight: 700;
+      }
+        h1,h2{
+        font-size: 14pt;
+}
+        p,td,th{font-size: 10pt;}
+      .invoice {
+        width: 95%;
+        margin: 10px auto;
+        padding: 20px;
+      }
+      .invoice-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: start;
+        margin-bottom: 20px;
+      }
+      .invoice-header-left {
+        flex: 1;
+      }
+      .invoice-header-right {
+        flex: 1;
+        text-align: right;
+      }
+      .invoice-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-bottom: 10%;
+      }
+      .invoice-table th,
+      .invoice-table td {
+        border: 1px solid #000;
+        padding: 10px;
+        text-align: center;
+      }
+      .invoice-table th {
+      
+        color:green;
+    
+      }
+      .invoice-total {
+        float: right;
+      }
+
+      
+    .btn {
+      display: inline-block;
+      text-decoration: none;
+      background-color: #007bff;
+      color: #fff;
+      padding: 12px 24px;
+      border-radius: 5px;
+      transition: background-color 0.3s ease;
+      cursor: pointer;
+    }
+
+    .btn:hover {
+      background-color: #0056b3;
+    }
+
+    @media print {
+      .btn {
+        display: none;
+      }
+    }
+
+    </style>
+  `;
+
+  res.send(htmlContent);
+
+} catch (error) {
+  console.error("Error generating invoice PDF view:", error.message);
+  // Redirect to YNB.com on error
+  const htmlContent =`
+  <!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>404 Not Found</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: #f8f8f8;
+      font-family: Arial, sans-serif;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      text-align: center;
+      color: #333;
+    }
+
+    .container {
+      max-width: 600px;
+    }
+
+    h1 {
+      font-size: 120px;
+      margin-bottom: 20px;
+      color: #ff6b6b;
+    }
+
+    h2 {
+      font-size: 32px;
+      margin-bottom: 10px;
+    }
+
+    p {
+      font-size: 18px;
+      margin-bottom: 30px;
+    }
+
+    a {
+      display: inline-block;
+      text-decoration: none;
+      background-color: #007bff;
+      color: #fff;
+      padding: 12px 24px;
+      border-radius: 5px;
+      transition: background-color 0.3s ease;
+    }
+
+    a:hover {
+      background-color: #0056b3;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <h1>404</h1>
+    <h2>Page Not Found</h2>
+    <p>Sorry, the page you’re looking for doesn’t exist.</p>
+   </div>
+
+</body>
+</html>
+
+    `;
+
+  res.send(htmlContent);
+}
+
+};
+
+export const downloadUserAdminInvoice = async (req, res) => {
+  try {
+    const { invoiceId } = req.body; // Assuming invoiceData is sent in the request body
+    if (!invoiceId) {
+      return res.status(400).send("Invoice ID is required");
+    }
+    // Fetch invoice data from the database
+    const invoiceData = await orderModel
+      .findById(invoiceId)
+      .populate("userId");
+
+      console.log('invoiceData',invoiceData)
+    const pdfBuffer = await generateUserInvoicePDF(invoiceData);
+
+    res.setHeader("Content-Disposition", "attachment; filename=invoice.pdf");
+    res.setHeader("Content-Type", "application/pdf");
+    res.send(pdfBuffer);
+  } catch (error) {
+      await execPromise("npx puppeteer browsers install chrome");
+    await execPromise("npm install puppeteer");
+ 
+
+    console.error("Error generating invoice PDF:", error);
+    res.status(500).send("Internal Server Error");
+  }
+};
+
+
+const generateUserInvoicePDF = async (invoiceData) => {
+    console.log('invoiceData',invoiceData);
+
+  const browser = await puppeteer.launch({
+    headless: 'new',
+    args: ['--no-sandbox', '--disable-setuid-sandbox']
+  });
+
+  const page = await browser.newPage();
+ 
+  const formatDate = (dateString) => {
+    const options = { year: "numeric", month: "long", day: "numeric" };
+    return new Date(dateString).toLocaleDateString(undefined, options);
+  };
+
+  const formatTime = (dateString) => {
+    const options = { hour: "2-digit", minute: "2-digit" };
+    return new Date(dateString).toLocaleTimeString(undefined, options);
+  };
+
+
+  
+  // Define the HTML content
+  const htmlContent = `     <div class="invoice">
+      <div class="invoice-header">
+        <div class="invoice-header-left" style="flex:none;">
+          <img src="https://backend-2o7f.onrender.com/uploads/new/image-1726306777273.webp" alt="Company Logo" width="240">
+        
+        </div>
+        <div class="invoice-header-right">
+          <h2 style="margin-top:0px;">Ynb Healthcare Pvt. Ltd.
+ </h2>
+ <p>45, Kisan Agro Mall, Mandi Road, Jhansi, Uttar Pradesh - 284001 </p>
+<p> Contact - +91-8062182339 </p>
+  <p> Email : support@ynbhealthcare.com </p>
+         
+                         
+        </div>
+      </div>
+
+<div style="margin-bottom: 15px;margin-top: 15px;border-top-style: solid;border-top-width: 3pt;border-top-color: #4F81BC;"> </div>
+
+          <div class="invoice-header">
+        <div class="invoice-header-left">
+                     <h2 style="margin-top:0px;">BILLED TO</h2>
+ 
+           <p> <b> Name: </b> ${invoiceData?.UserDetails[0]?.name}</p>
+            <p> <b> Email Id: </b> ${invoiceData?.UserDetails[0]?.email}</p>
+            <p> <b>  Phone No.: </b> ${invoiceData?.UserDetails[0]?.phone}</p>
+                      <p> <b>  Address: </b> ${invoiceData?.UserDetails[0]?.address}</p>
+            <p> <b>  GST: </b> 
+            ${invoiceData?.UserDetails[0]?.company === 'yes' ? invoiceData?.UserDetails[0]?.companyGST : 'NA'}
+            </p>
+          
+         
+        </div>
+        <div class="invoice-header-right">
+          <h2 style="margin-top:0px;">TAX INVOICE</h2>
+            <p> <b> Invoice No.:</b> #${invoiceData?.orderId}</p>
+            
+          <p> <b>  Pickup Date:</b> ${formatDate(
+      invoiceData?.PickupDate
+    )}     </p>
+
+  <p> <b>  Return Date:</b> ${formatDate(
+      invoiceData?.ReturnDate
+    )}     </p>
+
+      <p> <b>  GSTIN:</b> 07AAACY9494K1ZJ    </p>
+  
+        </div>
+      </div>
+
+
+ <table class="invoice-table" style="margin-bottom:0px;">
+  <thead>
+    <tr>
+      <th>#</th>
+      <th>Name</th>
+      <th>Price</th>
+      <th>Quantity</th>
+      <th>Tax (%)</th>
+      <th>Total Amount</th>
+    </tr>
+  </thead>
+  <tbody>
+    ${invoiceData.addProduct && invoiceData.addProduct.length > 0
+      ? invoiceData.addProduct.map((product, index) => `
+        <tr>
+          <td>${index + 1}</td>
+          <td>${product.title}</td>
+          <td>₹ ${product.amount.toFixed(2)}</td>
+          <td>${product.quantity}</td>
+          <td>${product.tax || 0}</td>
+          <td>₹ ${product.total.toFixed(2)}</td>
+        </tr>
+      `).join('')
+      : `<tr><td colspan="6" class="text-center">No products added</td></tr>`
+    }
+  </tbody>
+</table>
+
+${invoiceData.addProduct && invoiceData.addProduct.length > 0 ? `
+  <div class="col-md-4 ms-auto" style="width:33%;margin-left:auto;margin-top:10px;">
+    <table class="invoice-table" >
+      <tbody  >
+        <tr >
+          <th>Subtotal:</th>
+          <td>₹ ${invoiceData.subtotal.toFixed(2)}</td>
+        </tr>
+
+        <tr>
+          <th>Discount:</th>
+          <td>
+           ${invoiceData.discount}
+          </td>
+        </tr>
+
+        <tr>
+          <th>Shipping:</th>
+          <td>
+           ${invoiceData.shipping}
+          </td>
+        </tr>
+
+        <tr>
+          <th>
+            Tax ${invoiceData.applyIGST ? '(IGST)' : '(CGST + SGST)'}:
+            
+          </th>
+          <td>₹ ${(invoiceData.applyIGST || invoiceData.applyCGST || invoiceData.applySGST) ? invoiceData.taxTotal.toFixed(2) : '0.00'}</td>
+        </tr>
+
+        <tr>
+          <th>Final Total:</th>
+          <td><strong>₹ ${invoiceData.totalAmount.toFixed(2)}</strong></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+` : ''}
+
+<div class="col-md-12 my-4">
+  <div class="d-flex justify-content-between">
+    <h4>Rental Amount</h4>
+    
+  </div>
+  <hr />
+
+  <div class="overflow-auto">
+    <table class="invoice-table" id="rental-table" style="margin-bottom:0px;">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Date</th>
+          <th>Time</th>
+          <th>Amount INR</th>
+          <th>Gateway</th>
+          <th>Payment Method</th>
+          <th>Transaction Id</th>
+         </tr>
+      </thead>
+      <tbody id="rental-table-body">
+        ${invoiceData.addRental && invoiceData.addRental.length > 0 ? invoiceData.addRental.map((rental, index) => `
+          <tr>
+            <td>${index + 1}</td>
+            <td>${rental.date}</td>
+            <td>${rental.time}</td>
+            <td>${rental.amount}</td>
+            <td>${rental.gateway}</td>
+            <td>${rental.method}</td>
+            <td>${rental.transaction}</td>
+            
+          </tr>
+        `).join('') : `
+          <tr>
+            <td colspan="8" class="text-center">No Rental Added</td>
+          </tr>
+        `}
+      </tbody>
+    </table>
+  </div>
+
+  ${invoiceData.addRental && invoiceData.addRental.length > 0 ? `
+    <div class="col-md-4 ms-auto" style="max-width:33%;margin-left:auto;">
+      <table  class="invoice-table" id="rental-table" style="margin-bottom:0px;margin-top:10px;">
+        <tbody>
+          <tr>
+            <th>Final Total:</th>
+            <td><strong>₹ ${invoiceData.addRental.reduce((acc, rental) => acc + parseFloat(rental.amount || 0), 0).toFixed(2)}</strong></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  ` : ''}
+</div>
+
+
+<div class="col-md-12 my-4">
+  <div class="d-flex justify-content-between">
+    <h4>Security Amount Received</h4>
+    
+  </div>
+  <hr />
+
+  <div class="overflow-auto">
+    <table class="invoice-table" id="rental-table" style="margin-bottom:0px;">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Date</th>
+          <th>Time</th>
+          <th>Amount INR</th>
+          <th>Gateway</th>
+          <th>Payment Method</th>
+          <th>Transaction Id</th>
+         </tr>
+      </thead>
+      <tbody id="rental-table-body">
+        ${invoiceData.addReceived && invoiceData.addReceived.length > 0 ? invoiceData.addReceived.map((rental, index) => `
+          <tr>
+            <td>${index + 1}</td>
+            <td>${rental.date}</td>
+            <td>${rental.time}</td>
+            <td>${rental.amount}</td>
+            <td>${rental.gateway}</td>
+            <td>${rental.method}</td>
+            <td>${rental.transaction}</td>
+            
+          </tr>
+        `).join('') : `
+          <tr>
+            <td colspan="8" class="text-center">No Rental Added</td>
+          </tr>
+        `}
+      </tbody>
+    </table>
+  </div>
+
+  ${invoiceData.addReceived && invoiceData.addReceived.length > 0 ? `
+    <div class="col-md-4 ms-auto" style="max-width:33%;margin-left:auto;">
+      <table  class="invoice-table" id="rental-table" style="margin-bottom:0px;margin-top:10px;">
+        <tbody>
+          <tr>
+            <th>Final Total:</th>
+            <td><strong>₹ ${invoiceData.addReceived.reduce((acc, rental) => acc + parseFloat(rental.amount || 0), 0).toFixed(2)}</strong></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  ` : ''}
+</div>
+
+     
+<div class="col-md-12 my-4">
+  <div class="d-flex justify-content-between">
+    <h4> Security Amount Return
+ </h4>
+    
+  </div>
+  <hr />
+
+  <div class="overflow-auto">
+    <table class="invoice-table" id="rental-table" style="margin-bottom:0px;">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Date</th>
+          <th>Time</th>
+          <th>Amount INR</th>
+          <th>Gateway</th>
+          <th>Payment Method</th>
+          <th>Transaction Id</th>
+         </tr>
+      </thead>
+      <tbody id="rental-table-body">
+        ${invoiceData.addReturn && invoiceData.addReturn.length > 0 ? invoiceData.addReturn.map((rental, index) => `
+          <tr>
+            <td>${index + 1}</td>
+            <td>${rental.date}</td>
+            <td>${rental.time}</td>
+            <td>${rental.amount}</td>
+            <td>${rental.gateway}</td>
+            <td>${rental.method}</td>
+            <td>${rental.transaction}</td>
+            
+          </tr>
+        `).join('') : `
+          <tr>
+            <td colspan="8" class="text-center">No Rental Added</td>
+          </tr>
+        `}
+      </tbody>
+    </table>
+  </div>
+
+  ${invoiceData.addReturn && invoiceData.addReturn.length > 0 ? `
+    <div class="col-md-4 ms-auto" style="max-width:33%;margin-left:auto;">
+      <table  class="invoice-table" id="rental-table" style="margin-bottom:0px;margin-top:10px;">
+        <tbody>
+          <tr>
+            <th>Final Total:</th>
+            <td><strong>₹ ${invoiceData.addReturn.reduce((acc, rental) => acc + parseFloat(rental.amount || 0), 0).toFixed(2)}</strong></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  ` : ''}
+</div>
+
+
+<br>
+     <p style="text-align:center" >This is a Computer Generated Invoice </p>
+ <br>
+
+
+
+    </div>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+      }
+      h2 {
+        font-weight: 700;
+      }
+        h1,h2{
+        font-size: 14pt;
+}
+        p,td,th{font-size: 10pt;}
+      .invoice {
+        width: 95%;
+        margin: 10px auto;
+        padding: 20px;
+      }
+      .invoice-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: start;
+        margin-bottom: 20px;
+      }
+      .invoice-header-left {
+        flex: 1;
+      }
+      .invoice-header-right {
+        flex: 1;
+        text-align: right;
+      }
+      .invoice-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-bottom: 10%;
+      }
+      .invoice-table th,
+      .invoice-table td {
+        border: 1px solid #000;
+        padding: 10px;
+        text-align: center;
+      }
+      .invoice-table th {
+      
+        color:green;
+    
+      }
+      .invoice-total {
+        float: right;
+      }
+    </style>
+  `;
+
+
+  await page.setContent(htmlContent);
+  const pdfBuffer = await page.pdf({ format: "A4" });
+
+  await browser.close();
+
+  return pdfBuffer;
 };
