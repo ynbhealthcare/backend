@@ -7088,3 +7088,4 @@ ${invoiceData.addProduct && invoiceData.addProduct.length > 0 ? `
 
   return pdfBuffer;
 };
+
