@@ -41,6 +41,10 @@ import { exec } from "child_process";
 import util from "util";
 import crypto from "crypto";  // Ensure you require the crypto module if you haven't
 import consultationModel from "../models/ConsultationModel.js";
+import cron from "node-cron";
+import nurseDepartmentsModel from "../models/nurseDepartmentsModel.js";
+import skillDepartmentsModel from "../models/skillDepartmentsModel.js";
+import attributeDepartmentsModel from "../models/attributeDepartmentsModel.js";
 
 const execPromise = util.promisify(exec);
 
@@ -376,6 +380,336 @@ export const Userlogin = async (req, res) => {
 };
 
 
+export const UserPdfView = async (req, res) => {
+  try {
+    const id = req.params.id;  // Correctly access the ID
+    console.log('id:', id);
+
+    const user = await userModel.findById(id) .populate('skill', 'name')
+      .populate('attribute', 'name')
+      .populate('nurse', 'name');
+
+    console.log(user);
+    
+    if (!user) {
+      return res.status(404).send({
+        success: false,
+        message: "User not found",
+        user: null,
+      });
+    }
+
+ 
+       // Convert to HTML lists
+    const skillHtml = `
+      <div class="skills-list">
+    ${(Array.isArray(user.skill) ? user.skill : []).map(s => `<div class="skill">${s.name}</div>`).join('\n')}
+      </div>
+    `;
+
+    const attributeHtml = `
+      <div class="skills-list">
+    ${(Array.isArray(user.attribute) ? user.attribute : []).map(a => `<div class="skill">${a.name}</div>`).join('\n')}
+      </div>
+    `;
+
+    const nurseHtml = `
+      <div class="tags">
+    ${(Array.isArray(user.nurse) ? user.nurse : []).map(n => `<div class="tag">${n.name}</div>`).join('\n')}
+      </div>
+    `;
+
+        const dutyHtml = ` 
+  ${(Array.isArray(user.DutyShift) ? user.DutyShift : []).map(n => `${n}, `).join('\n')}
+      `;
+
+    
+
+const calculateAge = (dob) => {
+  const birthDate = new Date(dob);
+  const today = new Date();
+  let age = today.getFullYear() - birthDate.getFullYear();
+  const m = today.getMonth() - birthDate.getMonth();
+  if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
+    age--;
+  }
+  return age;
+};
+
+const age = user.DOB ? calculateAge(user.DOB) : 'NA';
+
+    const content = `
+    <!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title> ${user.username || 'NA'}</title>
+  <style>
+    body {
+      font-family: 'Arial', sans-serif;
+      margin: 0;
+      background: #f0f0f0;
+    }
+    .wrapper {
+      max-width: 800px;
+      margin: 20px auto;
+      background: white;
+      border-radius: 12px;
+      padding: 30px;
+      background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="100%" height="100%"><text x="0" y="20" fill="orange" opacity="0.1" font-size="30" font-family="Arial">YNB - YNB - YNB - YNB - YNB - YNB - YNB - YNB - YNB - YNB - YNB - YNB - YNB - YNB - YNB</text></svg>');
+      background-repeat: repeat;
+      border: 12px solid orange;
+    }
+    .header {
+      text-align: left;
+      margin-bottom: 20px;
+    }
+    .profile-pic {
+      border-radius: 50%;
+      border: 5px solid orange;
+      width: 100px;
+      height: 100px;
+      object-fit: cover;
+    }
+    h1 {
+      margin: 10px 0 5px;
+    }
+    .tags {
+      display: flex;
+      justify-content: left;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+    .tag {
+      border: 2px solid green;
+      border-radius: 20px;
+      padding: 5px 10px;
+      font-size: 14px;
+    }
+    .section {
+      margin-top: 20px;
+    }
+    .section h3 {
+      color: #ff6600;
+      border: 2px solid #ff6600;
+      display: inline-block;
+      padding: 5px 10px;
+      border-radius: 6px;
+      font-size: 16px;
+    }
+    .info-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      row-gap: 10px;
+      margin-top: 10px;
+    }
+    .info-grid div {
+      font-size: 14px;
+    }
+    .label {
+      font-weight: bold;
+    }
+    .skills-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 10px;
+    }
+    .skill {
+      border: 2px solid green;
+      border-radius: 16px;
+      padding: 5px 10px;
+      font-size: 13px;
+    }
+    .clock {
+      text-align: left;
+      font-weight: bold;
+      color: #333;
+      margin-top: 10px;
+      font-size: 16px;
+    }
+    .clock span {
+      color: blue;
+    }
+      .mybtn{
+      margin-top:50px;
+    background: #0c0546;
+    color: white;
+    display: flex ;
+    gap: 5px;
+    align-items: center;
+    padding: 6px 20px;
+    border-radius: 25px;
+    margin-top: 16px;
+    font-size: 20px;
+    cursor:pointer;
+    }
+
+      @media print {
+     .mybtn{
+        display: none;
+      }
+    .blurbg:before {
+    width: 100%;
+    height: 50%;
+    position: absolute;
+    content: "";
+    z-index: 99;
+ 
+    bottom: 0px;
+}
+
+    .blurbg {
+    position: relative;
+}
+ 
+ .image-wrapper {
+
+      height: 180px !important;
+
+    }
+
+
+    }
+
+    .blurbg {
+    position: relative;
+}
+ 
+    .blurbg:before {
+    width: 100%;
+    height: 50%;
+    position: absolute;
+    content: "";
+    z-index: 99;
+    backdrop-filter: blur(10px);
+    bottom: 0px;
+  
+}
+
+ .image-wrapper {
+      position: relative;
+     width:100%;
+      height: 250px;
+      overflow: hidden;
+      border-radius: 10px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+    }
+
+    .image-clear,
+    .image-blur {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .image-blur {
+      filter: blur(8px);
+      -webkit-filter: blur(8px);
+      clip-path: inset(50% 0 0 0); /* bottom half blurred */
+      z-index: 2;
+    }
+
+    .image-clear {
+      z-index: 1;
+    }
+
+  </style>
+</head>
+<body style="
+    background-image: url(https://ynbhealthcare.com/logo-patch.webp);
+    background-size: 200px;
+" >
+  <div class="wrapper">
+    <div class="header">
+      <img src="https://backend-2o7f.onrender.com/uploads/new/image-1726306777273.webp" width="60%" /> <br/><br/>
+
+      <img src="${user.profile && user.profile !== '' ? process.env.SERVER + '/' + user.profile :  'https://www.pngitem.com/pimgs/m/524-5244625_font-awesome-user-svg-hd-png-download.png'} " alt="Ranjita Devi" class="profile-pic" />
+      <h1 > ${user.username || 'NA'}</h1>
+
+        ${nurseHtml}
+ 
+      <div class="clock">⏰Working hours: <span>${dutyHtml}</span></div>
+    </div>
+
+    <div class="section">
+      <h3>General Information</h3>
+      <div class="info-grid">
+        <div><span class="label">Age: </span> ${age} yrs</div>
+        <div><span class="label">Education:</span> ${user.Education || 'NA'}  </div>
+        <div><span class="label">Hometown:</span> ${user.city || 'NA'}</div>
+        <div><span class="label">Marital Status: </span> ${user.MaritalStatus || 'NA'} </div>
+        <div><span class="label">Staff code: </span> YNB-00${user.userId || ''} </div>
+
+        
+        <div style="grid-column: span 2;">
+          <span class="label">Permanent Address:</span> ${user.address || ''}
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
+      <h3>Skill & Performance</h3>
+      <div class="label" style="margin-top: 10px;">Attributes</div>
+       ${attributeHtml}
+
+      <div class="label" style="margin-top: 15px;">Skills</div>
+        ${skillHtml}
+    </div>
+
+    <div class="section">
+      <h3>Extra Information</h3>
+      <div class="skills-list">
+        <div class="skill" style="width:40%;height:100%;">
+          <div class="image-wrapper">
+ <img src="${process.env.SERVER + '/' + user.Doc2}" width="100%"  class="image-clear" />
+    <img src="${process.env.SERVER + '/' + user.Doc2}" width="100%"  class="image-blur" />
+  </div>
+         </div>
+        <div class="skill" style="width:40%;height:100%;">
+        <div class="image-wrapper">
+ <img src="${process.env.SERVER + '/' + user.Doc3}" width="100%"  class="image-clear" />
+    <img src="${process.env.SERVER + '/' + user.Doc3}" width="100%"  class="image-blur" />
+  </div>
+         
+         </div>
+      </div>
+    </div>
+
+    
+    
+    <button onclick="window.print()" class="mybtn" >
+    <svg width="25px" height="25px" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+<path d="M14 2.26953V6.40007C14 6.96012 14 7.24015 14.109 7.45406C14.2049 7.64222 14.3578 7.7952 14.546 7.89108C14.7599 8.00007 15.0399 8.00007 15.6 8.00007H19.7305M9 15L12 18M12 18L15 15M12 18L12 12M14 2H8.8C7.11984 2 6.27976 2 5.63803 2.32698C5.07354 2.6146 4.6146 3.07354 4.32698 3.63803C4 4.27976 4 5.11984 4 6.8V17.2C4 18.8802 4 19.7202 4.32698 20.362C4.6146 20.9265 5.07354 21.3854 5.63803 21.673C6.27976 22 7.11984 22 8.8 22H15.2C16.8802 22 17.7202 22 18.362 21.673C18.9265 21.3854 19.3854 20.9265 19.673 20.362C20 19.7202 20 18.8802 20 17.2V8L14 2Z" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
+Download </button>
+
+
+  </div>
+</body>
+</html>
+`;
+
+// Replace with your PDF generation logic if needed
+    return res.status(200).send(content);
+ 
+  } catch (error) {
+    return res.status(500).send({
+      success: false,
+      message: `Error retrieving user: ${error.message}`,
+      error,
+    });
+  }
+};
+
+
+
+
 export const SignupUserType = async (req, res) => {
   try {
     const {
@@ -392,8 +726,32 @@ export const SignupUserType = async (req, res) => {
       DOB,
       address,
       city,
+      empType,
+      AltPhone,
+      AltAddress,
+      Salary,
+      Experience,
+      Shift,
+      DutyShift,
+      skill,
+      attribute,
+      nurse,
+      MaritalStatus,
+      Education,
+      location
     } = req.body;
 
+      // Extract document paths safely
+    const Doc1Path = req.files?.Doc1?.[0]?.path.replace(/\\/g, "/").replace(/^public\//, "") || null;
+     const Doc2Path = req.files?.Doc2?.[0]?.path.replace(/\\/g, "/").replace(/^public\//, "") || null;
+    const Doc3Path = req.files?.Doc3?.[0]?.path.replace(/\\/g, "/").replace(/^public\//, "") || null;
+        const Doc4Path = req.files?.Doc4?.[0]?.path.replace(/\\/g, "/").replace(/^public\//, "") || null;
+        const Doc5Path = req.files?.Doc5?.[0]?.path.replace(/\\/g, "/").replace(/^public\//, "") || null;
+        const Doc6Path = req.files?.Doc6?.[0]?.path.replace(/\\/g, "/").replace(/^public\//, "") || null;
+        const Doc7Path = req.files?.Doc7?.[0]?.path.replace(/\\/g, "/").replace(/^public\//, "") || null;
+        const Doc8Path = req.files?.Doc8?.[0]?.path.replace(/\\/g, "/").replace(/^public\//, "") || null;
+ 
+    const profileImg = req.files.profile?.[0]?.path.replace(/\\/g, "/").replace(/^public\//, "") || null;
 
     // const {
     //   profile,
@@ -416,6 +774,7 @@ export const SignupUserType = async (req, res) => {
       userId = 1;
     }
 
+
     const newUser = new userModel({
       type,
       username,
@@ -430,9 +789,33 @@ export const SignupUserType = async (req, res) => {
       statename,
       country,
       city,
-
+      empType : empType ? empType : 0 ,
       userId,
+      AltPhone: AltPhone || null,
+      AltAddress: AltAddress || null,
+      Salary: Salary || null,
+      Experience: Experience || null,
+      Shift: Shift || null,
+      DutyShift: DutyShift || null,
+      skill : skill|| null,
+      attribute : attribute|| null,
+      nurse : nurse || null,
+      MaritalStatus : MaritalStatus || null,
+      Education : Education || null,
+      profile : profileImg || null,
+      Doc1 : Doc1Path  || null,
+      Doc2 : Doc2Path  || null,
+      Doc3 : Doc3Path  || null,
+      Doc4 : Doc4Path  || null,
+      Doc5 : Doc5Path  || null,
+      Doc6 : Doc6Path  || null,
+      Doc7 : Doc7Path  || null,
+      Doc8 : Doc8Path  || null,
+      location : location || null,
     });
+
+        
+  
 
     await newUser.save();
     res.status(201).json({
@@ -567,7 +950,7 @@ export const updateBlogController = async (req, res) => {
 export const getBlogIdController = async (req, res) => {
   try {
     const { id } = req.params;
-    const blog = await blogModel.findById(id);
+    const blog = await blogModel.findOne({slug:id});
     if (!blog) {
       return res.status(200).send({
         message: "Blog Not Found By Id",
@@ -759,31 +1142,51 @@ export const UsergetAllCategories = async (req, res) => {
 
 export const UsergetAllProducts = async (req, res) => {
   try {
+    const { type } = req.query; // Get `type` from query string
+
+    // Build query dynamically
+    let query = { status: "true" };
+
+    if (type !== undefined) {
+      // If type is passed, filter by exact protype value
+      query.protype = type;
+    } else {
+      // Default: Show products where protype != 0 or not present
+      query.$or = [
+        { protype: { $ne: 0 } },
+        { protype: { $exists: false } }
+      ];
+    }
+
     const products = await productModel.find(
-      { status: "true" },
-      "_id title slug"
+      query,
+      "_id title slug regularPrice salePrice oneto7 eightto14 fivto30 monthto3month threemonthto6month stock reStock serialNumber protype"
     );
 
-    if (!products) {
+    if (!products || products.length === 0) {
       return res.status(200).send({
-        message: "NO products Find",
+        message: "No products found",
         success: false,
       });
     }
+
     return res.status(200).send({
-      message: "All products List ",
+      message: "All products list",
       proCount: products.length,
       success: true,
       products,
     });
+
   } catch (error) {
     return res.status(500).send({
-      message: `error while All products ${error}`,
+      message: `Error while fetching all products: ${error.message}`,
       success: false,
       error,
     });
   }
 };
+
+
 
 export const UsergetAllHomeProducts = async (req, res) => {
   try {
@@ -1235,7 +1638,7 @@ async function sendOrderConfirmationEmail(email, username, userId, newOrder) {
       from: process.env.MAIL_FROM_ADDRESS, // Update with your email address
       to: email, // Update with your email address
       cc: process.env.MAIL_FROM_ADDRESS,
-      subject: "www.cayroshop.com Order Confirmation",
+      subject: "www.seotowebdesign.com Order Confirmation",
 
       //   html: `
 
@@ -1253,7 +1656,7 @@ async function sendOrderConfirmationEmail(email, username, userId, newOrder) {
       //      text-align: center;
       //  ">
       //        <div class="modal-header">
-      //  <h1 style="color:black;"> cayroshop <h1>
+      //  <h1 style="color:black;"> seotowebdesign <h1>
       //        </div>
       //        <div class="modal-body text-center">
       //          <h5 style="
@@ -1270,7 +1673,7 @@ async function sendOrderConfirmationEmail(email, username, userId, newOrder) {
       //        </div>
       //        <div class="modal-footer">
 
-      //        <a href="https://cayroshop.com/account/order/${userId}/${newOrder._id}"  style="
+      //        <a href="https://seotowebdesign.com/account/order/${userId}/${newOrder._id}"  style="
       //      background: green;
       //      color: white;
       //      padding: 10px;
@@ -1366,7 +1769,7 @@ async function sendOrderConfirmationEmail(email, username, userId, newOrder) {
               </div>
               <div className="flex-lg-grow-1 ms-3">
                 <h6 className="small mb-0">
-                  <a href="https://cayroshop.com/product/${Pro.id}" style="font-size:10px;">
+                  <a href="https://seotowebdesign.com/product/${Pro.id}" style="font-size:10px;">
                     ${Pro.title}  
                   </a>
                 </h6>
@@ -1453,7 +1856,7 @@ async function sendOrderConfirmationEmail(email, username, userId, newOrder) {
           <strong style="display:block;margin:0 0 10px 0;">Regards</strong> 
           
           <address><strong class="mb-2"> CAYRO ENTERPRISES </strong><br>
-          <b title="Phone" class="mb-2">Web:</b>www.cayroshop.com <br></address>
+          <b title="Phone" class="mb-2">Web:</b>www.seotowebdesign.com <br></address>
          
         </td>
       </tr>
@@ -1496,7 +1899,7 @@ export const EmailVerify = async (req, res) => {
   const mailOptions = {
     from: process.env.MAIL_FROM_ADDRESS, // Update with your email address
     to: email, // Update with your email address
-    subject: "OTP Verification cayroshop.com",
+    subject: "OTP Verification seotowebdesign.com",
     text: `OTP: ${OTP}`,
   };
 
@@ -2508,7 +2911,7 @@ export const AddWishListByUser = async (req, res) => {
 };
 
 
-export const getProductIdUserBySlug = async (req, res) => {
+export const getProductIdUserBySlug_old = async (req, res) => {
   try {
     const { slug } = req.params;
     const Product = await productModel.findOne({ slug: slug });
@@ -2531,6 +2934,44 @@ export const getProductIdUserBySlug = async (req, res) => {
     });
   }
 };
+
+export const getProductIdUserBySlug = async (req, res) => {
+  try {
+    const { slug } = req.params;
+
+    const Product = await productModel.findOne(
+      {
+        slug: slug,
+        status: "true",
+        $or: [
+          { protype: { $ne: 0 } },
+          { protype: { $exists: false } }
+        ]
+      },
+      "_id title slug regularPrice salePrice oneto7 eightto14 fivto30 monthto3month threemonthto6month stock reStock serialNumber protype"
+    );
+
+    if (!Product) {
+      return res.status(200).send({
+        message: "Product not found by slug",
+        success: false,
+      });
+    }
+
+    return res.status(200).json({
+      message: "Fetch single product!",
+      success: true,
+      Product,
+    });
+  } catch (error) {
+    return res.status(400).json({
+      message: `Error while getting product: ${error.message}`,
+      success: false,
+      error,
+    });
+  }
+};
+
 
 
 export const ViewWishListByUser = async (req, res) => {
@@ -2851,7 +3292,7 @@ const sendRegOTP = async (phone, otp) => {
       unicode: false,
       from: "CAYROE",
       to: phone,
-      text: `Here is your OTP ${otp} for registering your account on cayroshop.com`,
+      text: `Here is your OTP ${otp} for registering your account on seotowebdesign.com`,
     });
     const url = `https://pgapi.smartping.ai/fe/api/v1/send?${queryParams}`;
 
@@ -2924,7 +3365,7 @@ const sendOrderOTP = async (phone, order_id) => {
       unicode: false,
       from: "CAYROE",
       to: phone,
-      text: `Thank you for your order. Your order id is ${order_id} cayroshop.com`,
+      text: `Thank you for your order. Your order id is ${order_id} seotowebdesign.com`,
     });
     const url = `https://pgapi.smartping.ai/fe/api/v1/send?${queryParams}`;
 
@@ -4773,6 +5214,7 @@ export const AuthUserByID = async (req, res) => {
           phone: existingUser.phone,
           email: existingUser.email,
           type: existingUser.type,
+          empType: existingUser.type,
           state: existingUser.state,
           statename: existingUser.statename,
           city: existingUser.city,
@@ -4789,6 +5231,15 @@ export const AuthUserByID = async (req, res) => {
           aadharno: existingUser.aadharno,
           pHealthHistory: existingUser.pHealthHistory,
           cHealthStatus: existingUser.cHealthStatus,
+          company : existingUser.cHealthStatus,
+          companyName : existingUser.companyName,
+          companyGST : existingUser.companyGST,
+          companyAddress : existingUser.companyAddress,
+            age: existingUser.age,
+          weight : existingUser.weight,
+          Education: existingUser.Education,
+          nurse: existingUser.nurse,
+
         },
       });
 
@@ -4806,6 +5257,78 @@ export const AuthUserByID = async (req, res) => {
     });
   }
 };
+
+
+export const AuthUserByIDHistory = async (req, res) => {
+  try {
+    const { id } = req.body;
+
+    const existingUser = await userModel.findById(id);
+ 
+
+    // Find all orders where addHistory.assignId matches the user ID
+    const orders = await orderModel.find({ 'addHistory.assignId': id });
+
+    // Extract relevant history entries from matching orders
+    const matchedHistories = orders.flatMap(order =>
+      order.addHistory.filter(entry => entry.assignId === id)
+    );
+
+    if (existingUser) {
+
+      return res.status(200).json({
+        success: true,
+        message: "login sucesssfully with password",
+        existingUser: {
+          _id: existingUser._id,
+          username: existingUser.username,
+          phone: existingUser.phone,
+          email: existingUser.email,
+          type: existingUser.type,
+          empType: existingUser.type,
+          state: existingUser.state,
+          statename: existingUser.statename,
+          city: existingUser.city,
+          address: existingUser.address,
+          verified: existingUser.verified,
+          pincode: existingUser.pincode,
+          DOB: existingUser.DOB,
+          about: existingUser.about,
+          department: existingUser.department,
+          Doc1: existingUser.Doc1,
+          Doc2: existingUser.Doc2,
+          Doc3: existingUser.Doc3,
+          profile: existingUser.profile,
+          aadharno: existingUser.aadharno,
+          pHealthHistory: existingUser.pHealthHistory,
+          cHealthStatus: existingUser.cHealthStatus,
+          company : existingUser.cHealthStatus,
+          companyName : existingUser.companyName,
+          companyGST : existingUser.companyGST,
+          companyAddress : existingUser.companyAddress,
+            age: existingUser.age,
+          weight : existingUser.weight,
+          Education: existingUser.Education,
+          nurse: existingUser.nurse,
+          history: orders.reverse() || [], 
+        },
+      });
+
+    } else {
+      return res.status(401).send({
+        success: false,
+        message: "user Not found",
+      });
+    }
+  } catch (error) {
+    return res.status(500).send({
+      message: `error on Auth ${error}`,
+      sucesss: false,
+      error,
+    });
+  }
+};
+
 
 export const updateProfileUser = async (req, res) => {
   try {
@@ -5337,6 +5860,75 @@ export const getAllDepartment = async (req, res) => {
   }
 };
 
+export const getAllNurseDepartment = async (req, res) => {
+  try {
+    const Department = await nurseDepartmentsModel.find({}).lean();
+    if (!Department) {
+      return res.status(400).send({
+        message: "NO Nurse Department Found",
+        success: false,
+      });
+    }
+    return res.status(200).send({
+      message: "All Nurse Department List ",
+      success: true,
+      Department,
+    });
+  } catch (error) {
+    return res.status(500).send({
+      message: `error while getting Department ${error}`,
+      success: false,
+      error,
+    });
+  }
+};
+
+
+export const getAllNurseSkillDepartment = async (req, res) => {
+  try {
+    const Department = await skillDepartmentsModel.find({}).lean();
+    if (!Department) {
+      return res.status(400).send({
+        message: "NO Nurse Department Found",
+        success: false,
+      });
+    }
+    return res.status(200).send({
+      message: "All Nurse Department List ",
+      success: true,
+      Department,
+    });
+  } catch (error) {
+    return res.status(500).send({
+      message: `error while getting Department ${error}`,
+      success: false,
+      error,
+    });
+  }
+};
+
+export const getAllNurseAttributeDepartment = async (req, res) => {
+  try {
+    const Department = await attributeDepartmentsModel.find({}).lean();
+    if (!Department) {
+      return res.status(400).send({
+        message: "NO Attribute Department Found",
+        success: false,
+      });
+    }
+    return res.status(200).send({
+      message: "All Attribute Department List ",
+      success: true,
+      Department,
+    });
+  } catch (error) {
+    return res.status(500).send({
+      message: `error while getting Attribute Department ${error}`,
+      success: false,
+      error,
+    });
+  }
+};
 
 export const ViewAllZonesDepartment = async (req, res) => {
   try {
@@ -6171,14 +6763,20 @@ any time without notice.
   
  <div style="height:100vh;">
    <div class="d-flex">
-  <div class="mycard myheight">
+  <div class="mycard myheight" style="position: relative;
+    overflow: hidden;" >
+<img src="https://img.freepik.com/free-vector/pastel-blue-banner-background_1048-11857.jpg" style="
+    position: absolute;
+    left: 0px;
+    top: 0px;
+    z-index: -1;
+">
     <div class="d-flex">
-    <img src="https://ynbhealthcare.com/assets/img/logo-final.webp" width="200"/>
+    <img src="https://ynbhealthcare.com/assets/img/logo-final.webp" width="200" style="padding:5px;" class="rounded bg-white" />
     <h4 style="text-align: right;width:100%;"> HEALTH CARD</h4>
   </div>
 
    <div class="d-flex" style="
-    background: #ffeded;
     padding: 8px;
 ">
      <img src="https://backend-2o7f.onrender.com/${invoiceData?.details?.profile}" alt="Profile Image" width="80" style="
@@ -6189,7 +6787,7 @@ any time without notice.
 <div>
     <p class="m-0 p-0"> <b> Rahul Rana </b> </p>
   <p class="m-0 p-0">
- 
+ <b> Gender </b>
   ${(() => {
     const dob = invoiceData.details.DOB; // The DOB in 'YYYY-MM-DD' format
 
@@ -6206,9 +6804,11 @@ any time without notice.
       age--;
     }
 
-    // Display the age
-    return age;
-  })()} | ${(() => {
+     
+  return age;
+  })()} 
+
+  ${(() => {
       const gender = invoiceData.details.gender;
   
       if (gender === 1 || gender === "1" ) {
@@ -6230,8 +6830,15 @@ any time without notice.
     <h4 style="margin:0px;margin-bottom:5px;"> Phone No. : ${invoiceData.details?.phone} </h4>
 
     
-      </div>
-    <div class="mycard myheight">
+      </div> 
+    <div class="mycard myheight" style="position: relative;
+    overflow: hidden;" >
+<img src="https://img.freepik.com/free-vector/pastel-blue-banner-background_1048-11857.jpg" style="
+    position: absolute;
+    left: 0px;
+    top: 0px;
+    z-index: -1;
+">
         <div class="d-flex" style="justify-content:center;">
 
   <svg width="20" height="20" xmlns="http://www.w3.org/2000/svg" shape-rendering="geometricPrecision" text-rendering="geometricPrecision" image-rendering="optimizeQuality" fill-rule="evenodd" clip-rule="evenodd" viewBox="0 0 279 512.01"><path fill-rule="nonzero" d="M122.89 495.31h33.22c29.19 0 55.74-11.95 74.99-31.2 19.24-19.25 31.2-45.8 31.2-74.99V275.56H16.7v113.56c0 29.19 11.96 55.74 31.2 74.99 19.25 19.25 45.8 31.2 74.99 31.2zm5.23-412.59V64.69c0-9.7-1.53-17.63-4.22-23.92-3.06-7.16-7.7-12.31-13.31-15.63-5.76-3.4-12.72-5.02-20.22-5.02-8.35 0-17.26 1.99-25.9 5.68-5.1 2.16-11-.21-13.16-5.31-2.17-5.1.21-10.99 5.3-13.16C67.77 2.56 79.38 0 90.37 0c10.96 0 21.43 2.52 30.44 7.85 9.17 5.43 16.7 13.7 21.56 25.06 3.74 8.77 5.88 19.33 5.88 31.78v18.03h7.86c33.8 0 64.53 13.82 86.8 36.09 22.27 22.27 36.09 53 36.09 86.8v183.51c0 33.8-13.82 64.53-36.09 86.8-22.27 22.27-53 36.09-86.8 36.09h-33.22c-33.8 0-64.53-13.82-86.8-36.09C13.82 453.65 0 422.92 0 389.12V205.61c0-33.8 13.82-64.53 36.09-86.8 22.27-22.27 53-36.09 86.8-36.09h5.23zM262.3 258.86v-53.25c0-29.19-11.96-55.74-31.2-74.99-19.25-19.25-45.8-31.2-74.99-31.2h-6.55v50.99c7.28 3.71 12.3 11.29 12.3 19.94v35.75c0 8.64-5.03 16.22-12.3 19.93v32.83H262.3zm-132.86 0v-32.82c-7.26-3.7-12.3-11.26-12.3-19.94v-35.75c0-8.68 5.02-16.25 12.3-19.94V99.42h-6.55c-29.19 0-55.74 11.95-74.99 31.2-19.24 19.25-31.2 45.8-31.2 74.99v53.25h112.74z"/></svg>
@@ -6257,7 +6864,7 @@ any time without notice.
 </svg> 
  
 
-<p style="margin:0px;font-size:12px; " > Toll Free: </p>
+<p style="margin:0px;font-size:12px; " > Helpline No: </p>
 <h4 style="margin:0px;font-size:12px;"> +918100188188 </h4>
 
     </div>
@@ -6433,9 +7040,10 @@ any time without notice.
 <b>Email Id</b>: ${invoiceData.userId?.email}<br/>
 <b>Phone No.</b>: ${invoiceData.userId?.phone}<br/> 
 Dear Customer,<br/><br/>
-Thank you for choosing the YNB Super Health Card. This card offers a comprehensive range of healthcare services
-at discounted rates, ensuring that you have access to high-quality care when needed. Please review the following
-details to understand the benefits and services offered under this plan.
+Thank you for choosing the YNB Super Health Card. This card offers a cashless home
+healthcare services upto Rs50,000 and discounted vendor services, ensuring that you have access to high-quality care when
+needed. Please review the following details to understand the benefits and services offered under this
+plan.
 </p>
 
 <br>
@@ -6451,7 +7059,7 @@ details to understand the benefits and services offered under this plan.
 </ul>
   
 <hr>
-<p style="color:blue;">Annual Membership Fee:</p> 
+<p style="color:blue;">Annual Membership Includes:</p> 
 <ol>
  
 ${Plan?.Category?.map(category => `<li>${category.name}</li>`).join('')}
@@ -6667,7 +7275,7 @@ any time without notice.
           </thead>
           <tbody>
             <tr>
-              <td>${invoiceData.planId?.name}</td>
+              <td>${Plan?.name}</td>
               <td>₹${parseFloat(amountWithoutGST.toFixed(2))}</td>
             </tr>
           </tbody>
@@ -6690,14 +7298,20 @@ any time without notice.
   
   <div style="height:100vh;">
    <div class="d-flex">
-  <div class="mycard myheight">
+ <div class="mycard myheight" style="position: relative;
+    overflow: hidden;" >
+<img src="https://img.freepik.com/free-vector/pastel-blue-banner-background_1048-11857.jpg" style="
+    position: absolute;
+    left: 0px;
+    top: 0px;
+    z-index: -1;
+">
     <div class="d-flex">
-    <img src="https://ynbhealthcare.com/assets/img/logo-final.webp" width="200"/>
+    <img src="https://ynbhealthcare.com/assets/img/logo-final.webp" width="200" class="p-1 bg-white rounded" />
     <h4 style="text-align: right;width:100%;"> HEALTH CARD</h4>
   </div>
 
    <div class="d-flex" style="
-    background: #ffeded;
     padding: 8px;
 ">
      <img src="https://backend-2o7f.onrender.com/${invoiceData?.details?.profile}" alt="Profile Image" width="80" style="
@@ -6709,25 +7323,7 @@ any time without notice.
     <p class="m-0 p-0"> <b> Rahul Rana </b> </p>
   <p class="m-0 p-0">
  
-  ${(() => {
-    const dob = invoiceData.details.DOB; // The DOB in 'YYYY-MM-DD' format
-
-    // Create Date objects for the DOB and the current date
-    const dobDate = new Date(dob);
-    const currentDate = new Date();
-
-    // Calculate the difference in years (age)
-    let age = currentDate.getFullYear() - dobDate.getFullYear();
-    const monthDiff = currentDate.getMonth() - dobDate.getMonth();
-
-    // Adjust the age if the current date is before the birthday in the current year
-    if (monthDiff < 0 || (monthDiff === 0 && currentDate.getDate() < dobDate.getDate())) {
-      age--;
-    }
-
-    // Display the age
-    return age;
-  })()} | ${(() => {
+ <b> Gender </b>  ${(() => {
       const gender = invoiceData.details.gender;
   
       if (gender === 1 || gender === "1" ) {
@@ -6747,10 +7343,18 @@ any time without notice.
  
     <h4 style="margin:0px;margin-bottom:5px;" > Email ID : ${invoiceData.details?.email} </h4>
     <h4 style="margin:0px;margin-bottom:5px;"> Phone No. : ${invoiceData.details?.phone} </h4>
+    <h4 style="margin:0px;margin-bottom:5px;"> DOB : ${invoiceData.details?.DOB} </h4>
 
     
       </div>
-    <div class="mycard myheight">
+    <div class="mycard myheight" style="position: relative;
+    overflow: hidden;" >
+<img src="https://img.freepik.com/free-vector/pastel-blue-banner-background_1048-11857.jpg" style="
+    position: absolute;
+    left: 0px;
+    top: 0px;
+    z-index: -1;
+">
         <div class="d-flex" style="justify-content:center;">
 
   <svg width="20" height="20" xmlns="http://www.w3.org/2000/svg" shape-rendering="geometricPrecision" text-rendering="geometricPrecision" image-rendering="optimizeQuality" fill-rule="evenodd" clip-rule="evenodd" viewBox="0 0 279 512.01"><path fill-rule="nonzero" d="M122.89 495.31h33.22c29.19 0 55.74-11.95 74.99-31.2 19.24-19.25 31.2-45.8 31.2-74.99V275.56H16.7v113.56c0 29.19 11.96 55.74 31.2 74.99 19.25 19.25 45.8 31.2 74.99 31.2zm5.23-412.59V64.69c0-9.7-1.53-17.63-4.22-23.92-3.06-7.16-7.7-12.31-13.31-15.63-5.76-3.4-12.72-5.02-20.22-5.02-8.35 0-17.26 1.99-25.9 5.68-5.1 2.16-11-.21-13.16-5.31-2.17-5.1.21-10.99 5.3-13.16C67.77 2.56 79.38 0 90.37 0c10.96 0 21.43 2.52 30.44 7.85 9.17 5.43 16.7 13.7 21.56 25.06 3.74 8.77 5.88 19.33 5.88 31.78v18.03h7.86c33.8 0 64.53 13.82 86.8 36.09 22.27 22.27 36.09 53 36.09 86.8v183.51c0 33.8-13.82 64.53-36.09 86.8-22.27 22.27-53 36.09-86.8 36.09h-33.22c-33.8 0-64.53-13.82-86.8-36.09C13.82 453.65 0 422.92 0 389.12V205.61c0-33.8 13.82-64.53 36.09-86.8 22.27-22.27 53-36.09 86.8-36.09h5.23zM262.3 258.86v-53.25c0-29.19-11.96-55.74-31.2-74.99-19.25-19.25-45.8-31.2-74.99-31.2h-6.55v50.99c7.28 3.71 12.3 11.29 12.3 19.94v35.75c0 8.64-5.03 16.22-12.3 19.93v32.83H262.3zm-132.86 0v-32.82c-7.26-3.7-12.3-11.26-12.3-19.94v-35.75c0-8.68 5.02-16.25 12.3-19.94V99.42h-6.55c-29.19 0-55.74 11.95-74.99 31.2-19.24 19.25-31.2 45.8-31.2 74.99v53.25h112.74z"/></svg>
@@ -6776,7 +7380,7 @@ any time without notice.
 </svg> 
  
 
-<p style="margin:0px;font-size:12px; " > Toll Free: </p>
+<p style="margin:0px;font-size:12px; " > Helpline No: </p>
 <h4 style="margin:0px;font-size:12px;"> +918100188188 </h4>
 
     </div>
@@ -6944,10 +7548,13 @@ export const checkUserPlan_old = async (req, res) => {
 };
 
 export const checkUserPlan = async (req, res) => {
+  const { userId } = req.params;
+
   try {
+
     // Retrieve all purchases with plan details
     const allPlans = await buyPlanModel
-      .find()
+      .find({ userId })
       .populate('planId'); // Ensure that 'planId' is populated with plan details
 
     const activePlans = [];
@@ -7378,7 +7985,7 @@ export const BuyPlanByUser = async (req, res) => {
       UserData,
       planId,
       totalAmount,
-      username,
+      username, 
       phone,
       email,
       pHealthHistory,
@@ -7387,10 +7994,6 @@ export const BuyPlanByUser = async (req, res) => {
       gender
     } = req.body;
      
-    if (!req.files || !req.files.profile) {
-      Console.log('req.files',req.files);
-      return res.status(500).json({ success: false, message: 'Profile image is required.' });
-    }
 
     let profileImg = req.files ? req.files.profile : profileImg;
 
@@ -7761,30 +8364,57 @@ export const updateVendorProfileUser = async (req, res) => {
       state,
       statename,
       city,
+      DOB,
       confirm_password,
       about,
-      department
+      department,
+      Salary,
+      Experience,
+      Shift,
+      DutyShift,
+      Education,
+      MaritalStatus,
+      nurse,
+skill,
+attribute,
     } = req.body;
     console.log("Uploaded files:", req.files);
 
     const Doc1 = req.files ? req.files.Doc1 : undefined;
     const Doc2 = req.files ? req.files.Doc2 : undefined;
     const Doc3 = req.files ? req.files.Doc3 : undefined;
+    const Doc4 = req.files ? req.files.Doc4 : undefined;
+    const Doc5 = req.files ? req.files.Doc5 : undefined;
+    const Doc6 = req.files ? req.files.Doc6 : undefined;
+    const Doc7 = req.files ? req.files.Doc7 : undefined;
+    const Doc8 = req.files ? req.files.Doc8 : undefined;
+ 
+
     const profileImg = req.files ? req.files.profile : undefined;
 
-    console.log("req.body", req.body, profileImg);
+    console.log("req.body",profileImg);
 
     let updateFields = {
       username,
       address,
-      email,
       pincode,
       gender,
       state,
       statename,
       city,
       about,
-      department,
+      department : department || null,
+      DOB : DOB || null,
+      Salary : Salary || null,
+      Experience : Experience || null,
+      Shift : Shift || null,
+      DutyShift : DutyShift || null,
+      Education : Education || null,
+      MaritalStatus : MaritalStatus || null,
+      nurse : nurse || null,
+      skill : skill || null,
+      attribute : attribute || null,
+      
     };
 
     if (password.length > 0 && confirm_password.length > 0) {
@@ -7801,9 +8431,29 @@ export const updateVendorProfileUser = async (req, res) => {
     if (Doc3 && Doc3[0]) {
       updateFields.Doc3 = Doc3[0].path.replace(/\\/g, "/").replace(/^public\//, "");
     }
-    if (profileImg && profileImg[0]) {
-      updateFields.profile = profileImg[0].path.replace(/\\/g, "/").replace(/^public\//, "");
+     if (Doc4 && Doc4[0]) {
+      updateFields.Doc4 = Doc4[0].path.replace(/\\/g, "/").replace(/^public\//, "");
     }
+     if (Doc5 && Doc5[0]) {
+      updateFields.Doc5 = Doc5[0].path.replace(/\\/g, "/").replace(/^public\//, "");
+    }
+     if (Doc6 && Doc6[0]) {
+      updateFields.Doc3 = Doc6[0].path.replace(/\\/g, "/").replace(/^public\//, "");
+    }
+     if (Doc7 && Doc7[0]) {
+      updateFields.Doc7 = Doc7[0].path.replace(/\\/g, "/").replace(/^public\//, "");
+    }
+     if (Doc8 && Doc8[0]) {
+      updateFields.Doc8 = Doc8[0].path.replace(/\\/g, "/").replace(/^public\//, "");
+    }
+    
+if (profileImg && profileImg.length > 0) {
+    updateFields.profile = profileImg[0].path.replace(/\\/g, "/").replace(/^public\//, "");
+    console.log("Updated profile path:", updateFields.profile);
+} else {
+    console.log("No profile image uploaded.");
+}
+
 
     const user = await userModel.findByIdAndUpdate(id, updateFields, {
       new: true,
@@ -7999,3 +8649,254 @@ export const GetWebsiteData = async (req, res) => {
   }
 };
 
+export const getAllOrderUser = async (req, res) => {
+
+  try {
+    const page = parseInt(req.query.page) || 1; // Current page, default is 1
+    const limit = parseInt(req.query.limit) || 10; // Number of documents per page, default is 10
+    const searchTerm = req.query.search || ""; // Get search term from the query parameters
+    const statusFilter = req.query.status || ''; // Get status filter from the query parameters and split into an array
+    const productId = req.query.productId || '';
+    const type = req.query.type || '';
+    const userId = req.query.userId || '';
+
+    const notStatus = req.query.notStatus || ''; // Get status filter from the query parameters and split into an array
+
+
+    const startDate = req.query.startDate
+    ? new Date(req.query.startDate)
+    : null;
+  const endDate = req.query.endDate ? new Date(req.query.endDate) : null;
+
+    const skip = (page - 1) * limit;
+
+    const query = {};
+    if (searchTerm) {
+      const regex = new RegExp(searchTerm, "i"); // Case-insensitive regex pattern for the search term
+
+      // Add regex pattern to search both username and email fields for the full name
+      query.$or = [
+        { orderId: regex },
+        { mode: regex },
+      ];
+    }
+    // Add status filter to the query if statusFilter is provided
+    if (statusFilter.length > 0) {
+      query.status = { $in: statusFilter }; // Use $in operator to match any of the values in the array
+    }
+
+    
+    if (notStatus) {
+      const notStatusArray = notStatus.split(',').map(Number);
+      query.status = { $nin: notStatusArray };
+    }
+
+    
+
+    
+
+ // Add status filter to the query if statusFilter is provided
+ if (type.length > 0) {
+  query.type = { $in: type }; // Use $in operator to match any of the values in the array
+ }
+
+    
+
+      // Add date range filtering to the query
+      if (startDate && endDate) {
+        query.createdAt = { $gte: startDate, $lte: endDate };
+      } else if (startDate) {
+        query.createdAt = { $gte: startDate };
+      } else if (endDate) {
+        query.createdAt = { $lte: endDate };
+      }
+      
+      if (productId) {
+        query['addProduct._id'] = productId; // Simple string match
+      }
+      if (userId) {
+        query.userId = userId; // Simple string match
+      }
+      
+    const total = await orderModel.countDocuments(query); // Count total documents matching the query
+
+    const Order = await orderModel
+      .find(query)
+      .sort({ _id: -1 }) // Sort by _id in descending order
+      .skip(skip)
+      .limit(limit)
+      .populate({
+        path: "userId",
+        model: userModel,
+        select: "username email phone",
+      })
+      .populate({
+        path: "employeeId",
+        model: userModel,
+        select: "username email phone",
+      })
+      .populate({
+        path: "employeeSaleId",
+        model: userModel,
+        select: "username email phone",
+      })
+      .lean();
+
+
+    if (!Order || Order.length === 0) { // Check if no users found
+      return res.status(404).send({ // Send 404 Not Found response
+        message: "No Order Found",
+        success: false,
+      });
+    }
+
+    return res.status(200).send({ // Send successful response
+      message: "All Order list",
+      Count: Order.length,
+      currentPage: page,
+      totalPages: Math.ceil(total / limit),
+      success: true,
+      Order, // Return users array
+    });
+  } catch (error) {
+    return res.status(500).send({ // Send 500 Internal Server Error response
+      message: `Error while Order: ${error.message}`,
+      success: false,
+      error,
+    });
+  }
+
+
+};
+
+export const ReminderStatus = async (req, res) => {
+ 
+           // Send notification
+  const notificationData = {
+            mobile: `91${user.phone}`,
+            templateid: "1281274550294188",
+            overridebot: "yes/no",
+            template: {
+              components: [
+                {
+                  type: "body",
+                  parameters: [
+                    { type: "text", text: user.username }, 
+                    { type: "text", text: user.username }, 
+                  ]
+                }
+              ]
+            }
+          };
+  
+     await axios.post(process.env.WHATSAPPAPI, notificationData, {
+        headers: {
+          "API-KEY": process.env.WHATSAPPKEY,
+          "Content-Type": "application/json"
+        }
+      });
+
+      
+    }
+
+    
+ 
+      // cron.schedule("36 17 * * *", async () => { 5 36
+      
+        cron.schedule("0 11 * * *", async () => {
+        // Configure Nodemailer transporter once (outside the cron job)
+const transporter = nodemailer.createTransport({
+  host: process.env.MAIL_HOST,
+  port: process.env.MAIL_PORT,
+  secure: process.env.MAIL_ENCRYPTION === "true", // convert string to boolean
+  auth: {
+    user: process.env.MAIL_USERNAME,
+    pass: process.env.MAIL_PASSWORD,
+  },
+});
+
+        console.log('cron job start');
+        const today = new Date();
+        today.setHours(0, 0, 0, 0); // Start of today
+
+        const tomorrow = new Date(today.getTime() + 2 * 24 * 60 * 60 * 1000);
+
+console.log("Tomorrow's date:", tomorrow.toLocaleDateString());
+ 
+        try {
+
+          // Get orders for tomorrow's pickup
+          const orders = await orderModel.find({
+            PickupDate: {
+              $gte: tomorrow, // Orders that have pickup >= tomorrow's midnight
+              $lt: new Date(tomorrow.getTime() + 24 * 60 * 60 * 1000), // Orders that have pickup < the start of the day after tomorrow
+            },
+          }).populate("userId").populate("employeeId").populate("employeeSaleId");
+
+          console.log('orders',orders);
+
+          for (const order of orders) {
+            const users = [order.userId, order.employeeSaleId];
+ 
+  const productNames = Array.isArray(order.addProduct)
+  ? order.addProduct.map(p => p.title || "Unnamed Product").join(", ")
+  : "No products added";
+
+            for (const user of users) {
+              // Send WhatsApp message
+              if (user?.phone) {
+                const notificationData = {
+                  mobile: `91${user.phone}`,
+                  templateid: "4047860938866959",
+                  overridebot: "yes",
+                  template: {
+                    components: [ 
+                      {
+                        type: "body",
+                        parameters: [
+                          { type: "text", text: tomorrow.toDateString() || "Date" },
+                          { type: "text", text: order.orderId },
+                          { type: "text", text: productNames },
+                          { type: "text", text: order.totalAmount },
+                        ],
+                      },
+                    ],
+                  },
+                };
+      
+                try {
+                  await axios.post(process.env.WHATSAPPAPI, notificationData, {
+                    headers: {
+                      "API-KEY": process.env.WHATSAPPKEY,
+                      "Content-Type": "application/json",
+                    },
+                  });
+                  console.log(`WhatsApp reminder sent to ${user.phone}`);
+                } catch (err) {
+                  console.error(`WhatsApp failed for ${user.phone}:`, err.message);
+                }
+              }
+      
+              // Send Email
+              if (user?.email) {
+                const mailOptions = {
+                  from: process.env.MAIL_FROM_ADDRESS,
+                  to: user.email,
+                  subject: "Reminder: Upcoming Pickup from ynbhealthcare.com",
+                  text: `Hello ${user.username || "Customer"},\n\nThis is a reminder that your order is scheduled for pickup on ${tomorrow.toDateString()}.\n\nThank you,\nynbhealthcare.com`,
+                };
+      
+                try {
+                  await transporter.sendMail(mailOptions);
+                  console.log(`Email sent to ${user.email}`);
+                } catch (emailErr) {
+                  console.error(`Failed to send email to ${user.email}:`, emailErr.message);
+                }
+              }
+            }
+          }
+        } catch (err) {
+          console.error("Error processing cron job:", err);
+        }
+      });
+ 
