@@ -1,23 +1,41 @@
 import express from "express";
 import {
-  UserloginAll, SignupAdmin, Adminlogin, getAllGalleryController, deleteGalleryController, AddAdminBlogController, AdmindeleteBlogController, AddAdminCategoryController
+  UserloginAll, SignupAdmin, Adminlogin, getAllGalleryController, deleteGalleryController, AddAdminBlogController, AdmindeleteBlogController, AddAdminCategoryController,AddAdminOrderController,getOrderIdAdminController
   , getAllReviewsAdmin, AdmingetAllCategories, AddAdminProduct, getAllcategoryFillAdmin, updateCategoryAdmin, getCategoryIdAdmin, deleteCategoryAdmin, getAllProductFillAdmin, updateProductAdmin, getProductIdAdmin, deleteProductAdmin,
   AddAdminPromoController, getAllPromoAdmin, updatePromoAdmin, getPromoIdAdmin, deletePromoAdmin
-  , getAllEnquireAdmin, ChangePassAdmin, ForgotAdminPassword, editOrderAdmin, deleteOrderAdmin, AddAdminPageController, getAllPageAdmin, updatePageAdmin, getPageIdAdmin, deletePageAdmin, getAllBlogAdmin, exportAllProAdmin, importAllProAdmin, getAllUserAdmin, AddAdminTaxController, getAllTaxAdmin, updateTaxAdmin, getTaxIdAdmin, deleteTaxAdmin, ViewAllAdminZones, AddAdminZonesController, getAllZonesAdmin, updateZonesAdmin, getZonesIdAdmin, deleteZonesAdmin, GetImageAdmin, deleteFolderAdmin, UpdateFolderAdmin, getUserIdAdmin, GetFolderIDAdmin, AddAdminFolderController, GetFolderAdmin, editUserAdmin, AddAdminAttributeController, deleteRatingAdmin, editReviewAdmin, getAllOrderAdmin, getAllAttributeFillAdmin, updateAttributeAdmin, getAttributeIdAdmin, deleteAttributeAdmin, getAllAttribute, AddAdminTagController, getAllTagFillAdmin, updateTagAdmin, getTagIdAdmin, deleteTagAdmin, getAllTag, editHomeData, editHomeLayoutData,
+  , getAllEnquireAdmin, getAllConsultationEnquireAdmin, ChangePassAdmin, ForgotAdminPassword, editOrderAdmin,editFullOrderAdmin, deleteOrderAdmin, AddAdminPageController, getAllPageAdmin, updatePageAdmin, getPageIdAdmin, deletePageAdmin, getAllBlogAdmin, exportAllProAdmin, importAllProAdmin, getAllUserAdmin, AddAdminTaxController, getAllTaxAdmin, updateTaxAdmin, getTaxIdAdmin, deleteTaxAdmin, ViewAllAdminZones, AddAdminZonesController, getAllZonesAdmin, updateZonesAdmin, getZonesIdAdmin, deleteZonesAdmin, GetImageAdmin, deleteFolderAdmin, UpdateFolderAdmin, getUserIdHistoryAdmin,getUserIdAdmin, GetFolderIDAdmin, AddAdminFolderController, GetFolderAdmin, editUserAdmin, AddAdminAttributeController, deleteRatingAdmin, editReviewAdmin, getAllOrderAdmin, getAllAttributeFillAdmin, updateAttributeAdmin, getAttributeIdAdmin, deleteAttributeAdmin, getAllAttribute, AddAdminTagController, getAllTagFillAdmin, updateTagAdmin, getTagIdAdmin, deleteTagAdmin, getAllTag, editHomeData, editHomeLayoutData,
   AddPlanCategoryController, getAllPlanCategoryAdmin, AddPlanController, getAllPlanAdmin, getPlanIdAdmin, updatePlanAdmin, deletePlanAdmin, AddAdminDepartmentController,
   getAllDepartmentFillAdmin,
   getDepartmentIdAdmin,
   updateDepartmentAdmin,
-  deleteDepartmentAdmin, editUserVerifyAdmin, AllPaymentAdmin, AdminAllEnquireStatus, profileImageHealth
+  deleteDepartmentAdmin,downloadUserAdminInvoice,
+  AddAdminNurseDepartmentController,
+getAllNurseDepartmentFillAdmin,
+updateNurseDepartmentAdmin,
+getNurseDepartmentIdAdmin,
+deleteNurseDepartmentAdmin,
+AddAdminSkillDepartmentController,
+getAllSkillDepartmentFillAdmin,
+updateSkillDepartmentAdmin,
+getSkillDepartmentIdAdmin,
+deleteSkillDepartmentAdmin,
+AddAdminAttributeDepartmentController,
+getAllAttributeDepartmentFillAdmin,
+updateAttributeDepartmentAdmin,
+getAttributeDepartmentIdAdmin,
+deleteAttributeDepartmentAdmin,deleteUserAdmin,
+  generateUserInvoicePDFView, editUserVerifyAdmin, AdminGetAllEmployee, profileDocImage,AllPaymentAdmin, AdminAllEnquireStatus, profileImageHealth,deletePlanCategoryAdmin
 } from "../controller/adminController.js";
 
 import {
   AddCart, contactEnquire, razorpayCallback, UpdateCart, getCart, userTokenController, userBlogsController, Userlogin, SignupUser, getAllBlogsController, createBlogController,
   LoginAndVerifyOTP, updateBlogController, deleteBlogController, getBlogIdController, CreateChatController, findUserschatController, findchatController
-  , EmailVerify, postman, PaymentResponse, PaymentRequest, getProductsByFilterUser, cancelOrderUser, ViewAllZones, getProductsByHSN, AuthUserByID, updateProfileUser, SignupNewUser, LoginUserWithOTP, LoginUserWithPass, SendOTP,SignupLoginNew, SignupLoginUser, getTaxIdUser, ViewAllUserTaxes, ViewCompareByUser, applyPromoCode, getHomeLayoutData, AddWishListByUser, deleteCompareByUser, deleteWishListByUser, ViewWishListByUser, AddCompareByUser, ViewProductRating, ViewCategoryRating, AddRating, UsergetAllCategories, UsergetAllProducts, UsergetAllHomeProducts, userOrdersViewController, getAllAttributeUser, getProductIdUser, updateUserController, createOrderController, updateUserAndCreateOrderController, userOrdersController, getHomeData, GetAllCategoriesByParentIdController, GetAllCategoriesBySlugController
-  , BuyPlanUser, GetPlanUser, HomeSendEnquire, getAllPlanCategoryController, uploadDataZone, deleteAllZones, SignupUserType, updateDetailsUser, updateDetailsUserHealth, getAllPlanUser, getProductIdUserBySlug
-  , getAllVendor, getAllDepartment, profileVendorImage, ApiGetKey, PaymentSuccess, PaymentFail,
-  updateVendorProfileUser, paymentVerification, BuyPlanAddUser, BuyPlanByUser, PayuHash, userPlanIdController, ViewAllZonesDepartment, getVendorById, HomeSendvendorEnquire, ApplyEnquireStatus, SenderEnquireStatus, AllPayment, downloadUserInvoice, checkUserPlan, GetWebsiteData, GetWebsiteData_old
+  , EmailVerify, postman, PaymentResponse, PaymentRequest, getProductsByFilterUser, cancelOrderUser, ViewAllZones, getProductsByHSN,AuthUserByIDHistory, AuthUserByID, updateProfileUser, SignupNewUser, LoginUserWithOTP, LoginUserWithPass, SendOTP,SignupLoginNew, SignupLoginUser, getTaxIdUser, ViewAllUserTaxes, ViewCompareByUser, applyPromoCode, getHomeLayoutData, AddWishListByUser, deleteCompareByUser, deleteWishListByUser, ViewWishListByUser, AddCompareByUser, ViewProductRating, ViewCategoryRating, AddRating, UsergetAllCategories, UsergetAllProducts, UsergetAllHomeProducts, userOrdersViewController, getAllAttributeUser, getProductIdUser, updateUserController, createOrderController, updateUserAndCreateOrderController, userOrdersController, getHomeData, GetAllCategoriesByParentIdController, GetAllCategoriesBySlugController
+  , BuyPlanUser, GetPlanUser, getAllNurseDepartment,
+getAllNurseSkillDepartment,
+getAllNurseAttributeDepartment, HomeSendEnquire,ConsultationSendEnquire, getAllPlanCategoryController, uploadDataZone, deleteAllZones, SignupUserType, updateDetailsUser, updateDetailsUserHealth, getAllPlanUser, getProductIdUserBySlug
+  , getAllVendor, getAllDepartment, profileVendorImage,ApiGetKey, PaymentSuccess, PaymentFail,
+  generateUserAttachPDF, UserPdfView, updateVendorProfileUser, paymentVerification, BuyPlanAddUser, BuyPlanByUser, PayuHash, userPlanIdController, ViewAllZonesDepartment, getVendorById, HomeSendvendorEnquire, ApplyEnquireStatus, SenderEnquireStatus, AllPayment, downloadUserInvoice, checkUserPlan, GetWebsiteData, GetWebsiteData_old,getAllOrderUser
 } from "../controller/userController.js"
 import authenticateToken from "../middleware/authMiddleware.js";
 import { uploadImage, handleImageUpload } from "../controller/adminController.js";
@@ -43,6 +61,9 @@ router.delete('/admin/delete-blog/:id', AdmindeleteBlogController);
 router.post('/admin/add-category', AddAdminCategoryController);
 router.get('/all/category/:parentId', GetAllCategoriesByParentIdController);
 router.get('/all/category-slug/:parentSlug', GetAllCategoriesBySlugController);
+router.post('/admin/add-order', AddAdminOrderController);
+router.get("/admin/get-order/:id", getOrderIdAdminController);
+ 
 
 router.get('/all-category', UsergetAllCategories);
 router.get('/all-products', UsergetAllProducts);
@@ -58,6 +79,8 @@ router.get('/admin/all-product-fillter', getAllProductFillAdmin);
 router.get('/admin/get-product/:id', getProductIdAdmin);
 router.put('/admin/update-product/:id', updateProductAdmin);
 router.delete('/admin/delete-product/:id', deleteProductAdmin);
+router.delete('/admin/delete-user/:id', deleteUserAdmin);
+
 
 
 router.post('/admin/add-attribute', AddAdminAttributeController);
@@ -88,17 +111,26 @@ router.delete('/admin/delete-rating/:id', deleteRatingAdmin);
 // enquire Admin
 
 router.get('/admin/all-enquire', getAllEnquireAdmin);
-
+router.get('/admin/all-consultation-enquire', getAllConsultationEnquireAdmin);
 // order Admin
 
 router.get('/admin/all-order', getAllOrderAdmin);
 router.put('/admin/update-order/:id', editOrderAdmin);
+router.put('/admin/update-full-order/:id', editFullOrderAdmin);
+
+router.get('/admin/all-report', getAllOrderAdmin);
+
+
+
+router.get("/user-invoice/:id", generateUserInvoicePDFView);
+
 
 // user Admin
 
 router.get('/admin/all-user', getAllUserAdmin);
 router.put('/admin/update-user/:id', editUserAdmin);
 router.get('/admin/get-user/:id', getUserIdAdmin);
+router.get('/admin/get-user-history/:id', getUserIdHistoryAdmin);
 
 // Folder Admin 
 
@@ -115,7 +147,7 @@ router.post('/admin/add-plan-category', AddPlanCategoryController);
 router.get('/admin/all-plan-category', getAllPlanCategoryAdmin);
 router.get('/admin/get-plan-category/:id', GetFolderIDAdmin);
 router.put('/admin/update-plan-category/:id', UpdateFolderAdmin);
-router.delete('/admin/delete-plan-category/:id', deleteFolderAdmin);
+router.delete('/admin/delete-plan-category/:id', deletePlanCategoryAdmin);
 
 // for Plan
 
@@ -171,6 +203,10 @@ router.get('/admin/get-image', GetImageAdmin);
 
 router.get('/admin/export/allproducts/', exportAllProAdmin);
 router.post('/admin/import/allproducts/', importAllProAdmin);
+
+router.get("/all-employee", AdminGetAllEmployee);
+
+router.get("/all-orders", getAllOrderUser);
 
 
 // --------------------    user routes start  -------------------//
@@ -311,10 +347,13 @@ router.post('/login-with-otp/', checkOrigin, LoginUserWithOTP);
 router.post('/signup-new-user/', checkOrigin, SignupNewUser);
 
 router.post('/auth-user/', checkOrigin, AuthUserByID);
+router.post('/auth-user-history/', checkOrigin, AuthUserByIDHistory);
+
 router.post('/contact-enquire/', checkOrigin, contactEnquire);
 router.post('/send-enquire/', checkOrigin, HomeSendEnquire);
 router.post('/send-enquire-vendor/', checkOrigin, HomeSendvendorEnquire);
-
+router.post('/send-enquire-consultation/', checkOrigin, ConsultationSendEnquire);
+ 
 router.put("/admin/update-user-details/:id", updateDetailsUser);
 
 router.put("/update-user-details-health/:id", profileImageHealth, updateDetailsUserHealth);
@@ -327,7 +366,7 @@ router.get('/products-variations-fillter/', checkOrigin, getProductsByFilterUser
 
 router.post('/login-verify-otp/', checkOrigin, LoginAndVerifyOTP);
 
-router.post("/signup-user-type", SignupUserType);
+router.post("/signup-user-type", profileDocImage, SignupUserType);
 router.get("/my-plan/:id", getAllPlanUser);
 
 router.post("/buy-plan", BuyPlanUser);
@@ -345,6 +384,32 @@ router.get("/admin/all-department-fillter", getAllDepartmentFillAdmin);
 router.get("/admin/get-department/:id", getDepartmentIdAdmin);
 router.put("/admin/update-department/:id", updateDepartmentAdmin);
 router.delete("/admin/delete-department/:id", deleteDepartmentAdmin);
+
+// for nurse department
+router.get("/get-all-nurse-department", getAllNurseDepartment);
+router.post("/admin/add-nurse-department", AddAdminNurseDepartmentController);
+router.get("/admin/all-nurse-department-fillter", getAllNurseDepartmentFillAdmin);
+router.get("/admin/get-nurse-department/:id", getNurseDepartmentIdAdmin);
+router.put("/admin/update-nurse-department/:id", updateNurseDepartmentAdmin);
+router.delete("/admin/delete-nurse-department/:id", deleteNurseDepartmentAdmin);
+
+
+// for nurse skill
+router.get("/get-all-nurse-skill-department", getAllNurseSkillDepartment);
+router.post("/admin/add-nurse-skill-department", AddAdminSkillDepartmentController);
+router.get("/admin/all-nurse-skill-department-fillter", getAllSkillDepartmentFillAdmin);
+router.get("/admin/get-nurse-skill-department/:id", getSkillDepartmentIdAdmin);
+router.put("/admin/update-nurse-skill-department/:id", updateSkillDepartmentAdmin);
+router.delete("/admin/delete-nurse-skill-department/:id", deleteSkillDepartmentAdmin);
+
+// for nurse Attributes
+router.get("/get-all-nurse-attributes-department", getAllNurseAttributeDepartment);
+router.post("/admin/add-nurse-attributes-department", AddAdminAttributeDepartmentController);
+router.get("/admin/all-nurse-attributes-department-fillter", getAllAttributeDepartmentFillAdmin);
+router.get("/admin/get-nurse-attributes-department/:id", getAttributeDepartmentIdAdmin);
+router.put("/admin/update-nurse-attributes-department/:id", updateAttributeDepartmentAdmin);
+router.delete("/admin/delete-nurse-attributes-department/:id", deleteAttributeDepartmentAdmin)
+
 
 
 
@@ -369,15 +434,17 @@ router.post("/buy-plan-add-user", profileImageHealth, BuyPlanAddUser);
 router.post("/paymentverification-plan", paymentVerification);
 
 router.get("/api/get-key", checkOrigin, ApiGetKey);
+router.get("/getpdf/:id", generateUserAttachPDF);
 
+ 
 
 router.get("/get-plan/:id", userPlanIdController);
 
-router.post("/buy-plan-by-user", BuyPlanByUser);
+router.post("/buy-plan-by-user", profileImageHealth, BuyPlanByUser);
 
 router.put(
   "/update-user-vendor/:id",
-  profileVendorImage,
+  profileDocImage,
   updateVendorProfileUser
 );
 
@@ -389,6 +456,12 @@ router.get("/ssr-data", GetWebsiteData);
 router.get("/full-ssr-data", GetWebsiteData_old);
 router.post("/payment-success", PaymentSuccess);
 router.post("/payment-fail", PaymentFail);
+
+router.post("/admin/download-invoice", downloadUserAdminInvoice);
+
+
+router.get("/user-view/:id", UserPdfView);
+
 
 export default router;
 
