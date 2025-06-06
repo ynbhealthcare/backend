@@ -12,12 +12,10 @@ const productSchema = new mongoose.Schema(
         },
         description: {
             type: String,
-            require: [true, "Description is required"],
-        },
+         },
         pImage: {
             type: String,
-            require: [true, "Image is required"],
-        },
+         },
         images: {
             type: Array,
         },
@@ -43,7 +41,21 @@ const productSchema = new mongoose.Schema(
         salePrice: {
             type: Number,
         },
-
+        oneto7: {
+            type: Number,
+        },
+        eightto14: {
+            type: Number,
+        },
+        fivto30: {
+            type: Number,
+        },
+        monthto3month: {
+            type: Number,
+        },
+        threemonthto6month: {
+            type: Number,
+        },
         status: {
             type: String,
             default: 'true',
@@ -51,9 +63,22 @@ const productSchema = new mongoose.Schema(
         stock: {
             type: Number,
         },
+        reStock: {
+            type: Number,
+        },
+        serialNumber: {
+            type: Number,
+        },
+        brandName: {
+            type: String,
+        },
+        modelNo: {
+            type: String,
+        },
+        
         variations: {
             type: Object,
-        }, 
+        },
         variant_products: {
             type: Object,
         },
@@ -61,6 +86,10 @@ const productSchema = new mongoose.Schema(
             type: Boolean,
             default: false,
         },
+        protype: {
+            type: Number,
+           default: 0,
+         },
         specifications: {
             type: Object,
             default: {
@@ -91,7 +120,12 @@ const productSchema = new mongoose.Schema(
         sku: {
             type: String,
         },
-
+        canonical: {
+            type: String,
+        },
+        testimonials: {
+            type: Object,
+        },
     },
     { timestamps: true }
 );
