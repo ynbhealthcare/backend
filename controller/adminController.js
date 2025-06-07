@@ -1054,7 +1054,26 @@ export const deleteCategoryAdmin = async (req, res) => {
   }
 };
 
-export const AddAdminProduct = async (req, res) => {
+
+export const deleteUserAdmin = async (req, res) => {
+  try {
+    await userModel.findByIdAndDelete(req.params.id);
+
+    return res.status(200).send({
+      success: true,
+      message: "userModel Deleted!",
+    });
+  } catch (error) {
+    console.log(error);
+    return res.status(400).send({
+      success: false,
+      message: "Erorr WHile Deleteing Employee",
+      error,
+    });
+  }
+};
+
+export const AddAdminProduct_old = async (req, res) => {
   try {
     const {
       title,
@@ -1073,16 +1092,23 @@ export const AddAdminProduct = async (req, res) => {
       Category,
       tag,
       features,
-      specifications, gst, weight, hsn, sku, canonical, reStock ,serialNumber,brandName,modelNo
+      specifications, gst, weight, hsn, sku, canonical, reStock ,serialNumber,brandName,modelNo,protype
     } = req.body;
 
+    if(!protype){
+       return res.status(400).send({
+        success: false,
+        message: "Select product to show",
+      });
+    }
     // Validation
-    if (!title || !slug || !salePrice) {
+    if (!title  || !salePrice) {
       return res.status(400).send({
         success: false,
         message: "Please Provide All Fields",
       });
     }
+
 
     let updatespecifications;
 
@@ -1120,7 +1146,8 @@ export const AddAdminProduct = async (req, res) => {
 
     console.log('p_idp_idp_id', p_id)
     // Create a new category with the specified parent
-    const newProduct = new productModel({
+
+    const updateproduct = {
       p_id,
       title,
       description,
@@ -1138,8 +1165,11 @@ export const AddAdminProduct = async (req, res) => {
       Category,
       tag,
       features,
-      specifications: updatespecifications, gst, weight, hsn, sku, canonical, reStock ,serialNumber,brandName,modelNo
-    });
+      specifications: updatespecifications, gst, weight, hsn, sku, canonical, reStock ,serialNumber,brandName,modelNo,
+      protype: protype || 0
+    }
+
+    const newProduct = new productModel(updateproduct);
 
 
     await newProduct.save();
@@ -1158,6 +1188,142 @@ export const AddAdminProduct = async (req, res) => {
     });
   }
 };
+ 
+
+export const AddAdminProduct = async (req, res) => {
+  try {
+    const {
+      title,
+      description,
+      pImage,
+      images,
+      slug,
+      metaDescription,
+      metaTitle,
+      regularPrice,
+      salePrice,
+      status,
+      stock,
+      variations,
+      metaKeywords,
+      Category,
+      tag,
+      features,
+      specifications,
+      gst,
+      weight,
+      hsn,
+      sku,
+      canonical,
+      reStock,
+      serialNumber,
+      brandName,
+      modelNo,
+      protype
+    } = req.body;
+
+    if (!protype) {
+      return res.status(400).send({
+        success: false,
+        message: "Select product to show",
+      });
+    }
+
+    if (!title || !salePrice) {
+      return res.status(400).send({
+        success: false,
+        message: "Please Provide All Fields",
+      });
+    }
+
+    // Validate and clean up specifications
+    let updatespecifications;
+    if (
+      !specifications ||
+      !specifications.specifications ||
+      !specifications.specifications[0] ||
+      !specifications.specifications[0].heading
+    ) {
+      updatespecifications = {
+        specifications: [
+          {
+            heading: " ",
+            labels: [
+              {
+                label: " ",
+                value: " "
+              }
+            ]
+          }
+        ]
+      };
+    } else {
+      updatespecifications = specifications;
+    }
+
+    // Sanitize Category field
+    let validCategory = [];
+    if (Array.isArray(Category)) {
+      validCategory = Category.filter(
+        (cat) => cat && mongoose.Types.ObjectId.isValid(cat)
+      );
+    } else if (typeof Category === 'string' && mongoose.Types.ObjectId.isValid(Category)) {
+      validCategory = [Category];
+    }
+
+    // Generate new p_id
+    const lastProduct = await productModel.findOne().sort({ _id: -1 }).limit(1);
+    let p_id = lastProduct ? Number(lastProduct.p_id || 0) + 1 : 0;
+
+    const updateproduct = {
+      p_id,
+      title,
+      description,
+      pImage,
+      images,
+      slug : slug || 'product_'+p_id,
+      metaDescription,
+      metaTitle,
+      regularPrice,
+      salePrice,
+      status,
+      stock,
+      variations,
+      metaKeywords,
+      Category: validCategory,
+      tag,
+      features,
+      specifications: updatespecifications,
+      gst,
+      weight,
+      hsn,
+      sku,
+      canonical,
+      reStock,
+      serialNumber,
+      brandName,
+      modelNo,
+      protype: protype || 0
+    };
+
+    const newProduct = new productModel(updateproduct);
+    await newProduct.save();
+
+    return res.status(201).send({
+      success: true,
+      message: "Product Added Success!",
+      newProduct,
+    });
+  } catch (error) {
+    console.error("Error while creating category:", error);
+    return res.status(400).send({
+      success: false,
+      message: "Error While Adding Product",
+      error,
+    });
+  }
+};
+
 
 export const getAllProductFillAdmin = async (req, res) => {
   try {
@@ -1227,7 +1393,7 @@ export const updateProductAdmin = async (req, res) => {
       variations,
       metaKeywords,
       Category,
-      tag, features,
+      tag, features,protype,
       specifications, weight, gst, hsn, sku, variant_products, type, canonical, testimonials, oneto7, eightto14, fivto30, monthto3month, threemonthto6month,reStock,serialNumber,brandName,modelNo
     } = req.body;
 
@@ -1250,7 +1416,7 @@ export const updateProductAdmin = async (req, res) => {
       Category,
       tag, features,
       specifications, weight, gst, hsn, sku, variant_products, type, canonical, testimonials,
-      oneto7, eightto14, fivto30, monthto3month, threemonthto6month,reStock,serialNumber,brandName,modelNo
+      oneto7, eightto14, fivto30, monthto3month, threemonthto6month,reStock,serialNumber,brandName,modelNo,protype
     };
 
     const Product = await productModel.findByIdAndUpdate(id, updateFields, {
