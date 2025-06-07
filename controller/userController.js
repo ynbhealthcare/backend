@@ -1160,7 +1160,7 @@ export const UsergetAllProducts = async (req, res) => {
 
     const products = await productModel.find(
       query,
-      "_id title slug regularPrice salePrice oneto7 eightto14 fivto30 monthto3month threemonthto6month stock reStock serialNumber protype"
+      "_id title slug regularPrice salePrice brandName oneto7 eightto14 fivto30 monthto3month threemonthto6month Rentalgst gst modelNo stock reStock serialNumber protype"
     );
 
     if (!products || products.length === 0) {
