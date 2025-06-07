@@ -1142,31 +1142,51 @@ export const UsergetAllCategories = async (req, res) => {
 
 export const UsergetAllProducts = async (req, res) => {
   try {
+    const { type } = req.query; // Get `type` from query string
+
+    // Build query dynamically
+    let query = { status: "true" };
+
+    if (type !== undefined) {
+      // If type is passed, filter by exact protype value
+      query.protype = type;
+    } else {
+      // Default: Show products where protype != 0 or not present
+      query.$or = [
+        { protype: { $ne: 0 } },
+        { protype: { $exists: false } }
+      ];
+    }
+
     const products = await productModel.find(
-      { status: "true" },
-      "_id title slug regularPrice salePrice oneto7 eightto14 fivto30 monthto3month threemonthto6month stock reStock serialNumber"
+      query,
+      "_id title slug regularPrice salePrice oneto7 eightto14 fivto30 monthto3month threemonthto6month stock reStock serialNumber protype"
     );
 
-    if (!products) {
+    if (!products || products.length === 0) {
       return res.status(200).send({
-        message: "NO products Find",
+        message: "No products found",
         success: false,
       });
     }
+
     return res.status(200).send({
-      message: "All products List ",
+      message: "All products list",
       proCount: products.length,
       success: true,
       products,
     });
+
   } catch (error) {
     return res.status(500).send({
-      message: `error while All products ${error}`,
+      message: `Error while fetching all products: ${error.message}`,
       success: false,
       error,
     });
   }
 };
+
+
 
 export const UsergetAllHomeProducts = async (req, res) => {
   try {
@@ -1618,7 +1638,7 @@ async function sendOrderConfirmationEmail(email, username, userId, newOrder) {
       from: process.env.MAIL_FROM_ADDRESS, // Update with your email address
       to: email, // Update with your email address
       cc: process.env.MAIL_FROM_ADDRESS,
-      subject: "www.cayroshop.com Order Confirmation",
+      subject: "www.seotowebdesign.com Order Confirmation",
 
       //   html: `
 
@@ -1636,7 +1656,7 @@ async function sendOrderConfirmationEmail(email, username, userId, newOrder) {
       //      text-align: center;
       //  ">
       //        <div class="modal-header">
-      //  <h1 style="color:black;"> cayroshop <h1>
+      //  <h1 style="color:black;"> seotowebdesign <h1>
       //        </div>
       //        <div class="modal-body text-center">
       //          <h5 style="
@@ -1653,7 +1673,7 @@ async function sendOrderConfirmationEmail(email, username, userId, newOrder) {
       //        </div>
       //        <div class="modal-footer">
 
-      //        <a href="https://cayroshop.com/account/order/${userId}/${newOrder._id}"  style="
+      //        <a href="https://seotowebdesign.com/account/order/${userId}/${newOrder._id}"  style="
       //      background: green;
       //      color: white;
       //      padding: 10px;
@@ -1749,7 +1769,7 @@ async function sendOrderConfirmationEmail(email, username, userId, newOrder) {
               </div>
               <div className="flex-lg-grow-1 ms-3">
                 <h6 className="small mb-0">
-                  <a href="https://cayroshop.com/product/${Pro.id}" style="font-size:10px;">
+                  <a href="https://seotowebdesign.com/product/${Pro.id}" style="font-size:10px;">
                     ${Pro.title}  
                   </a>
                 </h6>
@@ -1836,7 +1856,7 @@ async function sendOrderConfirmationEmail(email, username, userId, newOrder) {
           <strong style="display:block;margin:0 0 10px 0;">Regards</strong> 
           
           <address><strong class="mb-2"> CAYRO ENTERPRISES </strong><br>
-          <b title="Phone" class="mb-2">Web:</b>www.cayroshop.com <br></address>
+          <b title="Phone" class="mb-2">Web:</b>www.seotowebdesign.com <br></address>
          
         </td>
       </tr>
@@ -1879,7 +1899,7 @@ export const EmailVerify = async (req, res) => {
   const mailOptions = {
     from: process.env.MAIL_FROM_ADDRESS, // Update with your email address
     to: email, // Update with your email address
-    subject: "OTP Verification cayroshop.com",
+    subject: "OTP Verification seotowebdesign.com",
     text: `OTP: ${OTP}`,
   };
 
@@ -2891,7 +2911,7 @@ export const AddWishListByUser = async (req, res) => {
 };
 
 
-export const getProductIdUserBySlug = async (req, res) => {
+export const getProductIdUserBySlug_old = async (req, res) => {
   try {
     const { slug } = req.params;
     const Product = await productModel.findOne({ slug: slug });
@@ -2914,6 +2934,44 @@ export const getProductIdUserBySlug = async (req, res) => {
     });
   }
 };
+
+export const getProductIdUserBySlug = async (req, res) => {
+  try {
+    const { slug } = req.params;
+
+    const Product = await productModel.findOne(
+      {
+        slug: slug,
+        status: "true",
+        $or: [
+          { protype: { $ne: 0 } },
+          { protype: { $exists: false } }
+        ]
+      },
+      "_id title slug regularPrice salePrice oneto7 eightto14 fivto30 monthto3month threemonthto6month stock reStock serialNumber protype"
+    );
+
+    if (!Product) {
+      return res.status(200).send({
+        message: "Product not found by slug",
+        success: false,
+      });
+    }
+
+    return res.status(200).json({
+      message: "Fetch single product!",
+      success: true,
+      Product,
+    });
+  } catch (error) {
+    return res.status(400).json({
+      message: `Error while getting product: ${error.message}`,
+      success: false,
+      error,
+    });
+  }
+};
+
 
 
 export const ViewWishListByUser = async (req, res) => {
@@ -3234,7 +3292,7 @@ const sendRegOTP = async (phone, otp) => {
       unicode: false,
       from: "CAYROE",
       to: phone,
-      text: `Here is your OTP ${otp} for registering your account on cayroshop.com`,
+      text: `Here is your OTP ${otp} for registering your account on seotowebdesign.com`,
     });
     const url = `https://pgapi.smartping.ai/fe/api/v1/send?${queryParams}`;
 
@@ -3307,7 +3365,7 @@ const sendOrderOTP = async (phone, order_id) => {
       unicode: false,
       from: "CAYROE",
       to: phone,
-      text: `Thank you for your order. Your order id is ${order_id} cayroshop.com`,
+      text: `Thank you for your order. Your order id is ${order_id} seotowebdesign.com`,
     });
     const url = `https://pgapi.smartping.ai/fe/api/v1/send?${queryParams}`;
 
