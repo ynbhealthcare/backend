@@ -1219,7 +1219,8 @@ export const AddAdminProduct = async (req, res) => {
       serialNumber,
       brandName,
       modelNo,
-      protype
+      protype,
+      Rentalgst
     } = req.body;
 
     if (!protype) {
@@ -1303,7 +1304,8 @@ export const AddAdminProduct = async (req, res) => {
       serialNumber,
       brandName,
       modelNo,
-      protype: protype || 0
+      protype: protype || 0,
+      Rentalgst
     };
 
     const newProduct = new productModel(updateproduct);
@@ -1330,6 +1332,7 @@ export const getAllProductFillAdmin = async (req, res) => {
     const page = parseInt(req.query.page) || 1; // Current page, default is 1
     const limit = parseInt(req.query.limit) || 10; // Number of documents per page, default is 10
     const searchTerm = req.query.search || ""; // Get search term from the query parameters
+    const type = req.query.type || ""; // Get search term from the query parameters
 
     const skip = (page - 1) * limit;
 
@@ -1339,6 +1342,18 @@ export const getAllProductFillAdmin = async (req, res) => {
       query.$or = [
         { title: { $regex: searchTerm, $options: "i" } }, // Case-insensitive username search
         { slug: { $regex: searchTerm, $options: "i" } }, // Case-insensitive email search
+      ];
+    }
+ 
+
+    if (type !== undefined) {
+      // If type is passed, filter by exact protype value
+      query.protype = type;
+    } else {
+      // Default: Show products where protype != 0 or not present
+      query.$or = [
+        { protype: { $ne: 0 } },
+        { protype: { $exists: false } }
       ];
     }
 
@@ -1394,7 +1409,7 @@ export const updateProductAdmin = async (req, res) => {
       metaKeywords,
       Category,
       tag, features,protype,
-      specifications, weight, gst, hsn, sku, variant_products, type, canonical, testimonials, oneto7, eightto14, fivto30, monthto3month, threemonthto6month,reStock,serialNumber,brandName,modelNo
+      specifications, weight, gst, hsn, sku, variant_products, type, canonical, testimonials, oneto7, eightto14, fivto30, monthto3month, threemonthto6month,reStock,serialNumber,brandName,modelNo,Rentalgst
     } = req.body;
 
     console.log('typp', type);
@@ -1416,7 +1431,7 @@ export const updateProductAdmin = async (req, res) => {
       Category,
       tag, features,
       specifications, weight, gst, hsn, sku, variant_products, type, canonical, testimonials,
-      oneto7, eightto14, fivto30, monthto3month, threemonthto6month,reStock,serialNumber,brandName,modelNo,protype
+      oneto7, eightto14, fivto30, monthto3month, threemonthto6month,reStock,serialNumber,brandName,modelNo,protype,Rentalgst
     };
 
     const Product = await productModel.findByIdAndUpdate(id, updateFields, {
