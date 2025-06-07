@@ -107,6 +107,9 @@ const productSchema = new mongoose.Schema(
         },
         gst: {
             type: Number,
+        }, 
+        Rentalgst: {
+            type: Number,
         },
         length: {
             type: String,
