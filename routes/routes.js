@@ -23,7 +23,7 @@ AddAdminAttributeDepartmentController,
 getAllAttributeDepartmentFillAdmin,
 updateAttributeDepartmentAdmin,
 getAttributeDepartmentIdAdmin,
-deleteAttributeDepartmentAdmin,
+deleteAttributeDepartmentAdmin,deleteUserAdmin,
   generateUserInvoicePDFView, editUserVerifyAdmin, AdminGetAllEmployee, profileDocImage,AllPaymentAdmin, AdminAllEnquireStatus, profileImageHealth,deletePlanCategoryAdmin
 } from "../controller/adminController.js";
 
@@ -79,6 +79,8 @@ router.get('/admin/all-product-fillter', getAllProductFillAdmin);
 router.get('/admin/get-product/:id', getProductIdAdmin);
 router.put('/admin/update-product/:id', updateProductAdmin);
 router.delete('/admin/delete-product/:id', deleteProductAdmin);
+router.delete('/admin/delete-user/:id', deleteUserAdmin);
+
 
 
 router.post('/admin/add-attribute', AddAdminAttributeController);
