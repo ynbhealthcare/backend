@@ -12,12 +12,10 @@ const productSchema = new mongoose.Schema(
         },
         description: {
             type: String,
-            require: [true, "Description is required"],
-        },
+         },
         pImage: {
             type: String,
-            require: [true, "Image is required"],
-        },
+         },
         images: {
             type: Array,
         },
@@ -88,6 +86,10 @@ const productSchema = new mongoose.Schema(
             type: Boolean,
             default: false,
         },
+        protype: {
+            type: Number,
+           default: 0,
+         },
         specifications: {
             type: Object,
             default: {
