@@ -2935,21 +2935,19 @@ export const getProductIdUserBySlug_old = async (req, res) => {
   }
 };
 
+
 export const getProductIdUserBySlug = async (req, res) => {
   try {
     const { slug } = req.params;
 
-    const Product = await productModel.findOne(
-      {
-        slug: slug,
-        status: "true",
-        $or: [
-          { protype: { $ne: 0 } },
-          { protype: { $exists: false } }
-        ]
-      },
-      "_id title slug regularPrice salePrice oneto7 eightto14 fivto30 monthto3month threemonthto6month stock reStock serialNumber protype"
-    );
+    const Product = await productModel.findOne({
+      slug: slug,
+      status: "true",
+      $or: [
+        { protype: { $ne: 0 } },
+        { protype: { $exists: false } }
+      ]
+    });
 
     if (!Product) {
       return res.status(200).send({
