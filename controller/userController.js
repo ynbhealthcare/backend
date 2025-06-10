@@ -2935,7 +2935,6 @@ export const getProductIdUserBySlug_old = async (req, res) => {
   }
 };
 
-
 export const getProductIdUserBySlug = async (req, res) => {
   try {
     const { slug } = req.params;
@@ -2969,7 +2968,6 @@ export const getProductIdUserBySlug = async (req, res) => {
     });
   }
 };
-
 
 
 export const ViewWishListByUser = async (req, res) => {
@@ -8390,7 +8388,7 @@ attribute,
 
     const profileImg = req.files ? req.files.profile : undefined;
 
-    console.log("req.body",profileImg);
+    console.log("req.body",req.body);
 
     let updateFields = {
       username,
@@ -8463,7 +8461,7 @@ if (profileImg && profileImg.length > 0) {
     });
   } catch (error) {
     return res.status(400).json({
-      message: `Error while updating Promo code: ${error}`,
+      message: `Error while updating : ${error}`,
       success: false,
       error,
     });
