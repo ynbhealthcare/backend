@@ -459,7 +459,7 @@ const age = user.DOB ? calculateAge(user.DOB) : 'NA';
       padding: 30px;
       background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="100%" height="100%"><text x="0" y="20" fill="orange" opacity="0.1" font-size="30" font-family="Arial">YNB - YNB - YNB - YNB - YNB - YNB - YNB - YNB - YNB - YNB - YNB - YNB - YNB - YNB - YNB</text></svg>');
       background-repeat: repeat;
-      border: 12px solid orange;
+      border: 12px solid #03003d;
     }
     .header {
       text-align: left;
