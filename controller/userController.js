@@ -467,7 +467,7 @@ const age = user.DOB ? calculateAge(user.DOB) : 'NA';
     }
     .profile-pic {
       border-radius: 50%;
-      border: 5px solid orange;
+      border: 5px solid #fd0000;
       width: 100px;
       height: 100px;
       object-fit: cover;
@@ -492,8 +492,8 @@ const age = user.DOB ? calculateAge(user.DOB) : 'NA';
       margin-top: 20px;
     }
     .section h3 {
-      color: #ff6600;
-      border: 2px solid #ff6600;
+         color: #fd0000;
+    border: 2px solid #fd0000;;
       display: inline-block;
       padding: 5px 10px;
       border-radius: 6px;
