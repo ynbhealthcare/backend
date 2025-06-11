@@ -1,4 +1,4 @@
-import mongoose from "mongoose";
+ import mongoose from "mongoose";
 import blogModel from "../models/blogModel.js";
 import userModel from "../models/userModel.js";
 import chatModel from "../models/chatModel.js";
@@ -628,10 +628,10 @@ const age = user.DOB ? calculateAge(user.DOB) : 'NA';
 " >
   <div class="wrapper">
     <div class="header">
-      <img src="https://backend-2o7f.onrender.com/uploads/new/image-1726306777273.webp" width="40%" /> <br/><br/>
+      <img src="https://backend-2o7f.onrender.com/uploads/new/image-1726306777273.webp" width="40%" /> <br/> 
 
       <img src="${user.profile && user.profile !== '' ? process.env.SERVER + '/' + user.profile :  'https://www.pngitem.com/pimgs/m/524-5244625_font-awesome-user-svg-hd-png-download.png'} " alt="Ranjita Devi" class="profile-pic" />
-      <h2 > ${user.username || 'NA'}</h2>
+      <h2 style="margin-top:0px;margin-bottom:10px;" > ${user.username || 'NA'}</h2>
 
         ${nurseHtml}
  
