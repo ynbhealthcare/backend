@@ -486,12 +486,13 @@ const age = user.DOB ? calculateAge(user.DOB) : 'NA';
       border: 2px solid green;
       border-radius: 20px;
       padding: 5px 10px;
-      font-size: 14px;
+      font-size: 12px;
     }
     .section {
-      margin-top: 20px;
+      margin-top: 0px;
     }
     .section h3 {
+     margin: 0px;
          color: #fd0000;
     border: 2px solid #fd0000;;
       display: inline-block;
@@ -627,10 +628,10 @@ const age = user.DOB ? calculateAge(user.DOB) : 'NA';
 " >
   <div class="wrapper">
     <div class="header">
-      <img src="https://backend-2o7f.onrender.com/uploads/new/image-1726306777273.webp" width="60%" /> <br/><br/>
+      <img src="https://backend-2o7f.onrender.com/uploads/new/image-1726306777273.webp" width="40%" /> <br/><br/>
 
       <img src="${user.profile && user.profile !== '' ? process.env.SERVER + '/' + user.profile :  'https://www.pngitem.com/pimgs/m/524-5244625_font-awesome-user-svg-hd-png-download.png'} " alt="Ranjita Devi" class="profile-pic" />
-      <h1 > ${user.username || 'NA'}</h1>
+      <h2 > ${user.username || 'NA'}</h2>
 
         ${nurseHtml}
  
@@ -654,7 +655,9 @@ const age = user.DOB ? calculateAge(user.DOB) : 'NA';
     </div>
 
     <div class="section">
-      <h3>Skill & Performance</h3>
+      <h3 style="
+    margin-top: 10px;
+" >Skill & Performance</h3>
       <div class="label" style="margin-top: 10px;">Attributes</div>
        ${attributeHtml}
 
@@ -663,7 +666,9 @@ const age = user.DOB ? calculateAge(user.DOB) : 'NA';
     </div>
 
     <div class="section">
-      <h3>Extra Information</h3>
+      <h3 style="
+    margin-top: 10px;
+" >Extra Information</h3>
       <div class="skills-list">
         <div class="skill" style="width:40%;height:100%;">
           <div class="image-wrapper">
