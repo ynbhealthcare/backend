@@ -1,4 +1,4 @@
- import mongoose from "mongoose";
+import mongoose from "mongoose";
 import blogModel from "../models/blogModel.js";
 import userModel from "../models/userModel.js";
 import chatModel from "../models/chatModel.js";
@@ -414,9 +414,9 @@ export const UserPdfView = async (req, res) => {
     `;
 
     const nurseHtml = `
-      <div class="tags">
-    ${(Array.isArray(user.nurse) ? user.nurse : []).map(n => `<div class="tag">${n.name}</div>`).join('\n')}
-      </div>
+      
+    ${(Array.isArray(user.nurse) ? user.nurse : []).map(n => ` ${n.name} ,`).join('\n')}
+      
     `;
 
         const dutyHtml = ` 
@@ -503,12 +503,14 @@ const age = user.DOB ? calculateAge(user.DOB) : 'NA';
     .info-grid {
       display: grid;
       grid-template-columns: 1fr 1fr;
-      row-gap: 10px;
+      row-gap: 0x;
       margin-top: 10px;
     }
-    .info-grid div {
+    .info-grid div, .myfont div {
       font-size: 14px;
+          margin-bottom: 5px;
     }
+
     .label {
       font-weight: bold;
     }
@@ -630,22 +632,32 @@ const age = user.DOB ? calculateAge(user.DOB) : 'NA';
     <div class="header">
       <img src="https://backend-2o7f.onrender.com/uploads/new/image-1726306777273.webp" width="40%" /> <br/> 
 
-      <img src="${user.profile && user.profile !== '' ? process.env.SERVER + '/' + user.profile :  'https://www.pngitem.com/pimgs/m/524-5244625_font-awesome-user-svg-hd-png-download.png'} " alt="Ranjita Devi" class="profile-pic" />
-      <h2 style="margin-top:0px;margin-bottom:10px;" > ${user.username || 'NA'}</h2>
+    <div style="display:flex;"> 
+        <div  class="myfont"  style="width:70%;height:100%;">
+                <h2 style="margin-top:0px;margin-bottom:10px;color:#08023e;" > ${user.username || 'NA'}</h2>
+   
+        <div><span class="label">Registration code: </span> YNB-00${user.userId || ''} </div>
+        <div><span class="label">category: </span> ${nurseHtml} </div>
+        <div><span class="label"> Working hours: </span>${dutyHtml} </div>
+        <div><span class="label"> Experience: </span>${user?.Experience + 'yr' || ''} </div>
 
-        ${nurseHtml}
+         </div>
+        <div  style="width:30%;height:100%;">
+        
+               <img src="${user.profile && user.profile !== '' ? process.env.SERVER + '/' + user.profile :  'https://www.pngitem.com/pimgs/m/524-5244625_font-awesome-user-svg-hd-png-download.png'} " alt="Ranjita Devi" class="profile-pic" />
+
+         </div>
+      </div>
  
-      <div class="clock">⏰Working hours: <span>${dutyHtml}</span></div>
     </div>
 
     <div class="section">
-      <h3>General Information</h3>
+      <h3>Personal Information</h3>
       <div class="info-grid">
         <div><span class="label">Age: </span> ${age} yrs</div>
         <div><span class="label">Education:</span> ${user.Education || 'NA'}  </div>
         <div><span class="label">Hometown:</span> ${user.city || 'NA'}</div>
         <div><span class="label">Marital Status: </span> ${user.MaritalStatus || 'NA'} </div>
-        <div><span class="label">Staff code: </span> YNB-00${user.userId || ''} </div>
 
         
         <div style="grid-column: span 2;">
@@ -668,7 +680,7 @@ const age = user.DOB ? calculateAge(user.DOB) : 'NA';
     <div class="section">
       <h3 style="
     margin-top: 10px;
-" >Extra Information</h3>
+" >Identification </h3>
       <div class="skills-list">
         <div class="skill" style="width:40%;height:100%;">
           <div class="image-wrapper">
