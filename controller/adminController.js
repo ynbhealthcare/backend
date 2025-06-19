@@ -589,7 +589,7 @@ export const AddAdminOrderController = async (req, res) => {
         message: "Please Provide All Fields",
       });
     }
-    const Newuser = new userModel({ username:UserDetails.name,phone:UserDetails.phone, email:UserDetails.email, address :UserDetails.address,gender : UserDetails.gender,type :1,
+    const Newuser = new userModel({ username:UserDetails.name,phone:UserDetails.phone, email:UserDetails.email, address :UserDetails.address,gender : UserDetails.gender,type :2,
       company : UserDetails.company,companyName : UserDetails.companyName,companyGST : UserDetails.companyGST,companyAddress : UserDetails.companyAddress,age : UserDetails.age,weight : UserDetails.weight });
     if(UserDetails && UserDetails.id === 'none'){
      await Newuser.save();
@@ -1348,7 +1348,7 @@ export const getAllProductFillAdmin = async (req, res) => {
         { protype: { $exists: false } }
       ];
     }
-    
+
     if (searchTerm) {
       // If search term is provided, add it to the query
       query.$or = [
