@@ -2960,7 +2960,7 @@ export const getProductIdUserBySlug = async (req, res) => {
       slug: slug,
       status: "true",
       $or: [
-        { protype: { $ne: 0 } },
+        { protype: { $eq: 0 } },
         { protype: { $exists: false } }
       ]
     });
