@@ -1337,16 +1337,8 @@ export const getAllProductFillAdmin = async (req, res) => {
     const skip = (page - 1) * limit;
 
     const query = {};
-    if (searchTerm) {
-      // If search term is provided, add it to the query
-      query.$or = [
-        { title: { $regex: searchTerm, $options: "i" } }, // Case-insensitive username search
-        { slug: { $regex: searchTerm, $options: "i" } }, // Case-insensitive email search
-      ];
-    }
- 
-
-    if (type !== undefined) {
+    
+    if (type !== '') {
       // If type is passed, filter by exact protype value
       query.protype = type;
     } else {
@@ -1356,6 +1348,16 @@ export const getAllProductFillAdmin = async (req, res) => {
         { protype: { $exists: false } }
       ];
     }
+    
+    if (searchTerm) {
+      // If search term is provided, add it to the query
+      query.$or = [
+        { title: { $regex: searchTerm, $options: "i" } }, // Case-insensitive username search
+        { slug: { $regex: searchTerm, $options: "i" } }, // Case-insensitive email search
+      ];
+    }
+ 
+
 
     const totalProduct = await productModel.countDocuments();
 
