@@ -1352,7 +1352,7 @@ export const getAllProductFillAdmin = async (req, res) => {
     } else {
       // Default: Show products where protype != 0 or not present
       query.$or = [
-        { protype: { $ne: 0 } },
+        { protype: { $eq: 0 } },
         { protype: { $exists: false } }
       ];
     }
