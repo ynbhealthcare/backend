@@ -1,6 +1,6 @@
 import express from "express";
 import {
-  UserloginAll, SignupAdmin, Adminlogin, getAllGalleryController, deleteGalleryController, AddAdminBlogController, AdmindeleteBlogController, AddAdminCategoryController,AddAdminOrderController,getOrderIdAdminController
+  UserloginAll, SignupAdmin, Adminlogin, getAllGalleryController, deleteGalleryController, AddAdminBlogController, AdmindeleteBlogController, AddAdminCategoryController,AddAdminLeadController,AddAdminOrderController,getOrderIdAdminController
   , getAllReviewsAdmin, AdmingetAllCategories, AddAdminProduct, getAllcategoryFillAdmin, updateCategoryAdmin, getCategoryIdAdmin, deleteCategoryAdmin, getAllProductFillAdmin, updateProductAdmin, getProductIdAdmin, deleteProductAdmin,
   AddAdminPromoController, getAllPromoAdmin, updatePromoAdmin, getPromoIdAdmin, deletePromoAdmin
   , getAllEnquireAdmin, getAllConsultationEnquireAdmin, ChangePassAdmin, ForgotAdminPassword, editOrderAdmin,editFullOrderAdmin, deleteOrderAdmin, AddAdminPageController, getAllPageAdmin, updatePageAdmin, getPageIdAdmin, deletePageAdmin, getAllBlogAdmin, exportAllProAdmin, importAllProAdmin, getAllUserAdmin, AddAdminTaxController, getAllTaxAdmin, updateTaxAdmin, getTaxIdAdmin, deleteTaxAdmin, ViewAllAdminZones, AddAdminZonesController, getAllZonesAdmin, updateZonesAdmin, getZonesIdAdmin, deleteZonesAdmin, GetImageAdmin, deleteFolderAdmin, UpdateFolderAdmin, getUserIdHistoryAdmin,getUserIdAdmin, GetFolderIDAdmin, AddAdminFolderController, GetFolderAdmin, editUserAdmin, AddAdminAttributeController, deleteRatingAdmin, editReviewAdmin, getAllOrderAdmin, getAllAttributeFillAdmin, updateAttributeAdmin, getAttributeIdAdmin, deleteAttributeAdmin, getAllAttribute, AddAdminTagController, getAllTagFillAdmin, updateTagAdmin, getTagIdAdmin, deleteTagAdmin, getAllTag, editHomeData, editHomeLayoutData,
@@ -24,7 +24,7 @@ getAllAttributeDepartmentFillAdmin,
 updateAttributeDepartmentAdmin,
 getAttributeDepartmentIdAdmin,
 deleteAttributeDepartmentAdmin,deleteUserAdmin,
-  generateUserInvoicePDFView, editUserVerifyAdmin, AdminGetAllEmployee, profileDocImage,AllPaymentAdmin, AdminAllEnquireStatus, profileImageHealth,deletePlanCategoryAdmin
+  generateUserInvoicePDFView, editUserVerifyAdmin,editFullLeadAdmin, AdminGetAllEmployee, profileDocImage,AllPaymentAdmin, AdminAllEnquireStatus, profileImageHealth,deletePlanCategoryAdmin
 } from "../controller/adminController.js";
 
 import {
@@ -63,7 +63,8 @@ router.get('/all/category/:parentId', GetAllCategoriesByParentIdController);
 router.get('/all/category-slug/:parentSlug', GetAllCategoriesBySlugController);
 router.post('/admin/add-order', AddAdminOrderController);
 router.get("/admin/get-order/:id", getOrderIdAdminController);
- 
+router.post('/admin/add-lead', AddAdminLeadController);
+
 
 router.get('/all-category', UsergetAllCategories);
 router.get('/all-products', UsergetAllProducts);
@@ -117,6 +118,7 @@ router.get('/admin/all-consultation-enquire', getAllConsultationEnquireAdmin);
 router.get('/admin/all-order', getAllOrderAdmin);
 router.put('/admin/update-order/:id', editOrderAdmin);
 router.put('/admin/update-full-order/:id', editFullOrderAdmin);
+router.put('/admin/update-full-lead/:id', editFullLeadAdmin);
 
 router.get('/admin/all-report', getAllOrderAdmin);
 
@@ -464,4 +466,3 @@ router.get("/user-view/:id", UserPdfView);
 
 
 export default router;
-
