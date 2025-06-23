@@ -571,6 +571,76 @@ export const AddAdminCategoryController = async (req, res) => {
 };
 
 
+export const AddAdminLeadController = async (req, res) => {
+  try {
+    const {
+      type, discount,subtotal,shipping,applyIGST,applyCGST,
+      applySGST,finalTotal,taxTotal, addRental,
+      addReceived,addReturn,addProduct,
+      userId,UserDetails,employeeSaleId,PickupDate,ReturnDate,SecurityAmt,
+      AdvanceAmt,employeeId,OnBoardDate,dutyHr,addHistory,date,time,comment,requirement
+    } = req.body;
+    console.log(req.body)
+
+    // Validation
+    if (!type || !date || !time || !comment || !requirement ) {
+      return res.status(400).send({
+        success: false,
+        message: "Please Provide All Fields",
+      });
+  
+    }
+
+      
+       // Calculate the auto-increment ID
+        const lastOrder = await orderModel.findOne().sort({ _id: -1 }).limit(1);
+        let order_id;
+    
+        if (lastOrder) {
+          // Convert lastOrder.orderId to a number before adding 1
+          const lastOrderId = parseInt(lastOrder.orderId);
+          order_id = lastOrderId + 1;
+        } else {
+          order_id = 1;
+        } 
+
+      
+
+    // Create a new category with the specified parent
+    const newData = new orderModel({
+      orderId:order_id,
+      type, 
+      UserDetails,
+      employeeSaleId, 
+       status:0,
+       leadType:0,
+       follow : 0,
+        date,
+        time,
+        comment,
+        requirement,
+       addHistory : addHistory || [],
+    });
+ 
+
+    await newData.save();
+
+    return res.status(201).send({
+      success: true,
+      message: "Lead Created!",
+      newData,
+    });
+  } catch (error) {
+    console.error("Error while Lead Creating:", error);
+    return res.status(400).send({
+      success: false,
+      message: `Error While Lead Creating: ${error}`,
+      error,
+    });
+  }
+};
+
+
 export const AddAdminOrderController = async (req, res) => {
   try {
     const {
@@ -699,10 +769,10 @@ export const AddAdminOrderController = async (req, res) => {
       newData,
     });
   } catch (error) {
-    console.error("Error while creating category:", error);
+    console.error("Error while order Creating:", error);
     return res.status(400).send({
       success: false,
-      message: "Error While Creating Category",
+      message: `Error While order Creating: ${error}`,
       error,
     });
   }
@@ -2363,10 +2433,14 @@ export const getAllOrderAdmin = async (req, res) => {
     const notStatus = req.query.notStatus || '';
     const productId = req.query.productId || '';
     const type = req.query.type || '';
+    const leadtype = req.query.leadtype || '';
+
     const overdue = req.query.overdue || ''; 
     const startDate = req.query.startDate ? new Date(req.query.startDate) : null;
     const endDate = req.query.endDate ? new Date(req.query.endDate) : null;
-     const userId = req.query.userId || null;
+    const start = req.query.start ? new Date(req.query.start) : null;
+    const end = req.query.end ? new Date(req.query.end) : null;
+    const userId = req.query.userId || null;
 
     const skip = (page - 1) * limit;
 
@@ -2392,6 +2466,15 @@ if (startDate && endDate) {
 } else if (endDate) {
   query.PickupDate = { $lte: endDate };
 }
+
+  if (start && end) {
+      query.createdAt = { $gte: start, $lte: end };
+    } else if (start) {
+      query.createdAt = { $gte: start };
+    } else if (end) {
+      query.createdAt = { $lte: end };
+    }
+
 
 if (userId) {
   query.$or = [
@@ -2421,6 +2504,15 @@ if (userId) {
     if (type.length > 0) {
       query.type = { $in: type.split(',').map(Number) };
     }
+    if (leadtype) {
+      query.leadType = leadtype;
+    }else{
+       query.$or = [
+        { leadType: { $eq: 1 } },
+        { leadType: { $exists: false } }
+      ];
+    }
+    
 
     if (productId) {
       query['addProduct._id'] = productId;
@@ -2883,6 +2975,59 @@ if (OnBoardDate && !isNaN(Date.parse(OnBoardDate))) {
 };
 
 
+export const editFullLeadAdmin = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const {
+      type,order, discount,subtotal,shipping,applyIGST,applyCGST,applySGST,finalTotal,taxTotal,  addRental,addReceived,addReturn,addProduct,
+      userId,UserDetails,employeeSaleId,PickupDate,ReturnDate,SecurityAmt,AdvanceAmt,employeeId,OnBoardDate,addHistory,dutyHr,date,time,comment
+      ,requirement
+    } = req.body;
+
+    const orderUpdate = await orderModel.findById(id).populate('userId'); // Fetch order details including user
+
+    if (!orderUpdate) {
+      return res.status(404).json({
+        message: "Order not found",
+        success: false,
+      });
+    } 
+ 
+   
+    let updateFields = {
+       type, 
+      UserDetails,
+      employeeSaleId, 
+        date,
+        time,
+        comment,
+        requirement,
+       addHistory : addHistory || [],
+    };
+
+ 
+
+    await orderModel.findByIdAndUpdate(id, updateFields, {
+      new: true,
+    });
+ 
+
+    return res.status(200).json({
+            message: "Lead Updated!",
+            success: true,
+          });
+
+  } catch (error) {
+    console.log('error',error)
+    return res.status(500).json({
+      message: `Error while updating Rating: ${error}`,
+      success: false,
+      error,
+    });
+  }
+};
+
+
 export const editOrderAdmin = async (req, res) => {
   try {
     const { id } = req.params;
@@ -2931,6 +3076,86 @@ export const editOrderAdmin = async (req, res) => {
   }
 }
 
+ if (status === 10) {
+ 
+  let updateFields = {
+      leadType:1,
+    };
+
+  const neworder = await orderModel.findById(id).populate('employeeId', 'phone username')
+ 
+     // Calculate the auto-increment ID
+        const lastOrder = await orderModel.findOne().sort({ _id: -1 }).limit(1);
+        let order_id;
+    
+        if (lastOrder) {
+          // Convert lastOrder.orderId to a number before adding 1
+          const lastOrderId = parseInt(lastOrder.orderId);
+          order_id = lastOrderId + 1;
+        } else {
+          order_id = 1;
+        } 
+
+
+const userDetails = neworder?.UserDetails[0];
+console.log('userDetails',userDetails)
+if (userDetails) {
+  // Step 1: Try to find an existing user by phone
+  const existingUser = await userModel.findOne({ phone: userDetails.phone });
+
+  // Step 2: If user not found, create a new one
+  if (!existingUser) {
+    const newUser = new userModel({
+      username: userDetails.name,
+      phone: userDetails.phone,
+      email: userDetails.email,
+      address: userDetails.address,
+      gender: userDetails.gender,
+      type: 2,
+      company: userDetails.company,
+      companyName: userDetails.companyName,
+      companyGST: userDetails.companyGST,
+      companyAddress: userDetails.companyAddress,
+      age: userDetails.age,
+      weight: userDetails.weight
+    });
+
+     
+    updateFields = {
+      orderId:order_id,
+      leadType:1,
+      userId: newUser._id,
+    };
+
+ await orderModel.findByIdAndUpdate(id, updateFields, {
+      new: true,
+    });
+
+    await newUser.save();
+  }else{
+
+     updateFields = {
+      orderId:order_id,
+      leadType:1,
+      userId: existingUser._id,
+    };
+
+ await orderModel.findByIdAndUpdate(id, updateFields, {
+      new: true,
+    });
+
+}
+}
+
+
+
+   return res.status(200).json({
+            message: "Order Updated!",
+            success: true,
+          });
+
+
+} 
     let updateFields = {
       status,
     };
