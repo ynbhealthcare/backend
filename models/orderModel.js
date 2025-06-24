@@ -3,7 +3,6 @@ import mongoose from "mongoose";
 const orderSchema = mongoose.Schema({
   items: {
     type: Array,
-    required: [true, "items is required"],
   },
   status: {
     type: Number,
@@ -36,13 +35,11 @@ const orderSchema = mongoose.Schema({
     type: Number,
   },
   totalAmount: {
-    required: [true, "Total Amount is required"],
     type: Number,
   },
   userId: {  // Changed field name to plural and set type as an array of ObjectIds
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
-    required: true,
   },
   primary: {
     type: String,
@@ -100,7 +97,24 @@ const orderSchema = mongoose.Schema({
   dutyHr: {
     type: Number,
   },
-  
+
+    date: {
+    type: Date,
+  },
+    time: {
+    type: String,
+  },
+  leadType: {
+    type: Number,
+    default: 0,
+  },
+  follow: {
+    type: Number,
+  },
+  requirement: {
+    type: String,
+  },
+ 
   employeeSaleId: {  // Changed field name to plural and set type as an array of ObjectIds
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
