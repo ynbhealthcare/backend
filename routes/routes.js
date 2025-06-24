@@ -29,7 +29,7 @@ deleteAttributeDepartmentAdmin,deleteUserAdmin,
 
 import {
   AddCart, contactEnquire, razorpayCallback, UpdateCart, getCart, userTokenController, userBlogsController, Userlogin, SignupUser, getAllBlogsController, createBlogController,
-  LoginAndVerifyOTP, updateBlogController, deleteBlogController, getBlogIdController, CreateChatController, findUserschatController, findchatController
+  LoginAndVerifyOTP, updateBlogController, deleteBlogController, getBlogIdController, getBlogByIdController,CreateChatController, findUserschatController, findchatController
   , EmailVerify, postman, PaymentResponse, PaymentRequest, getProductsByFilterUser, cancelOrderUser, ViewAllZones, getProductsByHSN,AuthUserByIDHistory, AuthUserByID, updateProfileUser, SignupNewUser, LoginUserWithOTP, LoginUserWithPass, SendOTP,SignupLoginNew, SignupLoginUser, getTaxIdUser, ViewAllUserTaxes, ViewCompareByUser, applyPromoCode, getHomeLayoutData, AddWishListByUser, deleteCompareByUser, deleteWishListByUser, ViewWishListByUser, AddCompareByUser, ViewProductRating, ViewCategoryRating, AddRating, UsergetAllCategories, UsergetAllProducts, UsergetAllHomeProducts, userOrdersViewController, getAllAttributeUser, getProductIdUser, updateUserController, createOrderController, updateUserAndCreateOrderController, userOrdersController, getHomeData, GetAllCategoriesByParentIdController, GetAllCategoriesBySlugController
   , BuyPlanUser, GetPlanUser, getAllNurseDepartment,
 getAllNurseSkillDepartment,
@@ -280,6 +280,7 @@ router.put('/update-profile/:id', updateProfileUser);
 router.post('/create-blog', createBlogController);
 router.put('/update-blog/:id', updateBlogController);
 router.get('/get-blog/:id', getBlogIdController);
+router.get('/get-blog-id/:id', getBlogByIdController);
 router.delete('/delete-blog/:id', deleteBlogController);
 
 router.post('/create-chat', CreateChatController);
