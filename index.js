@@ -34,17 +34,15 @@ app.use(express.json({ limit: "100mb" }));
 app.use(express.urlencoded({ limit: "100mb", extended: true }));
 
 app.use(morgan("dev"));
-app.use(express.static("public"));
+// Serve uploads with long cache header FIRST
+app.use('/uploads', express.static(path.join("public", "uploads"), {
+  setHeaders: (res, filePath) => {
+    res.setHeader("Cache-Control", "public, max-age=2592000");
+  }
+}));
 
-// 🔥 Uploads with CDN caching headers
-app.use(
-  "/uploads",
-  express.static(path.join("public", "uploads"), {
-    setHeaders: (res) => {
-      res.setHeader("Cache-Control", "public, max-age=2592000"); // 30 days
-    },
-  })
-);
+// Then serve other static files
+app.use(express.static("public"));
 
 app.use("/", Router);
 
