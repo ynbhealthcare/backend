@@ -35,6 +35,17 @@ app.use(express.urlencoded({ limit: "100mb", extended: true }));
 
 app.use(morgan("dev"));
 app.use(express.static("public"));
+
+// 🔥 Serve uploads with cache headers for Cloudflare CDN
+app.use(
+  "/uploads",
+  express.static(path.join("public", "uploads"), {
+    setHeaders: (res, filePath) => {
+      res.setHeader("Cache-Control", "public, max-age=2592000"); // 30 days
+    },
+  })
+);
+
 app.use("/", Router);
 
 
