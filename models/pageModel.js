@@ -18,6 +18,11 @@ const pageSchema = new mongoose.Schema(
         metaKeywords: {
             type: String,
         },
+         type: {
+            type: Number,
+         default: 0,
+
+        }
     },
     { timestamps: true }
 );
