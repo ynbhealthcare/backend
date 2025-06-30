@@ -129,6 +129,11 @@ const productSchema = new mongoose.Schema(
         testimonials: {
             type: Object,
         },
+        recommended_products: {
+            type: Array,
+        },
+          
+        
     },
     { timestamps: true }
 );
