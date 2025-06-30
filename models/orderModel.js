@@ -97,11 +97,22 @@ const orderSchema = mongoose.Schema({
   dutyHr: {
     type: Number,
   },
-
-    date: {
+  Ltime: {
+    type: String,
+  },
+    Ldate: {
     type: Date,
   },
     time: {
+    type: String,
+  },
+     date: {
+    type: Date,
+  },
+     product: {
+    type: String,
+  },
+   source: {
     type: String,
   },
   leadType: {
@@ -114,7 +125,10 @@ const orderSchema = mongoose.Schema({
   requirement: {
     type: String,
   },
- 
+  lead: {
+    type: Number,
+    default: 0,
+  },
   employeeSaleId: {  // Changed field name to plural and set type as an array of ObjectIds
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
@@ -124,6 +138,7 @@ const orderSchema = mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
   },
+
 },
   { timestamps: true }
 );
