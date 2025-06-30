@@ -2586,7 +2586,9 @@ export const GetAllCategoriesBySlugController = async (req, res) => {
     }
 
     const parentId = MainCat._id;
+    console.log('Codeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee',parentId);
     const categories = await getAllCategoriesByParentId(parentId);
+    console.log('Codee enddddddddddddddd');
 
     const filters = { Category: parentId, status: "true" }; // Add status filter for products
 
@@ -2670,7 +2672,7 @@ export const getAllCategoriesByParentId = async (parentId) => {
 
       result.push(categoryData);
     }
-
+console.log('Console @2222222222222');
     return result;
   } catch (error) {
     console.error("Error while fetching categories:", error);
@@ -5552,6 +5554,64 @@ export const contactEnquire = async (req, res) => {
     }
   });
 };
+
+
+export const resumeEnquire = [
+  upload.single('cv'), // 'cv' is the name of the file input field
+  async (req, res) => {
+    const { name, email, phone, city, address, position, message } = req.body;
+
+    // Set up nodemailer transporter
+    const transporter = nodemailer.createTransport({
+      host: process.env.MAIL_HOST,
+      port: process.env.MAIL_PORT,
+      secure: process.env.MAIL_ENCRYPTION === 'true',
+      auth: {
+        user: process.env.MAIL_USERNAME,
+        pass: process.env.MAIL_PASSWORD,
+      },
+    });
+
+    // Mail options
+    const mailOptions = {
+      from: process.env.MAIL_FROM_ADDRESS,
+      to: process.env.MAIL_TO_ADDRESS,
+      subject: 'New Resume Enquiry',
+      text: `
+Name: ${name}
+Email: ${email}
+Phone: ${phone}
+City: ${city}
+Address: ${address}
+Position: ${position}
+Message: ${message}
+      `,
+      attachments: req.file
+        ? [
+            {
+              filename: req.file.originalname,
+              path: req.file.path,
+            },
+          ]
+        : [],
+    };
+
+    // Send mail
+    transporter.sendMail(mailOptions, (error, info) => {
+      // Delete file right after sending
+      if (req.file) fs.unlink(req.file.path, () => {});
+      
+      if (error) {
+        console.error('Error sending email:', error);
+        return res.status(500).send('Failed to send email');
+      }
+      
+      console.log('Email sent: ' + info.response);
+      res.status(200).send('Email sent successfully');
+    });
+  },
+];
+
 
 export const getProductsByHSN = async (req, res) => {
   try {
