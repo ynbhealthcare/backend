@@ -23,12 +23,12 @@ AddAdminAttributeDepartmentController,
 getAllAttributeDepartmentFillAdmin,
 updateAttributeDepartmentAdmin,
 getAttributeDepartmentIdAdmin,
-deleteAttributeDepartmentAdmin,deleteUserAdmin,
-  generateUserInvoicePDFView, editUserVerifyAdmin,editFullLeadAdmin, AdminGetAllEmployee, profileDocImage,AllPaymentAdmin, AdminAllEnquireStatus, profileImageHealth,deletePlanCategoryAdmin
+deleteAttributeDepartmentAdmin,deleteUserAdmin,getAllLeadProductDepartment,AddAdminLeadProductController,getAllLeadProductFillAdmin,updateLeadProductAdmin,getLeadProductIdAdmin,deleteLeadProductAdmin
+,generateUserInvoicePDFView, editUserVerifyAdmin,editFullLeadAdmin, AdminGetAllEmployee, profileDocImage,AllPaymentAdmin, AdminAllEnquireStatus, profileImageHealth,deletePlanCategoryAdmin
 } from "../controller/adminController.js";
 
 import {
-  AddCart, contactEnquire, razorpayCallback, UpdateCart, getCart, userTokenController, userBlogsController, Userlogin, SignupUser, getAllBlogsController, createBlogController,
+  AddCart, contactEnquire,resumeEnquire, razorpayCallback, UpdateCart, getCart, userTokenController, userBlogsController, Userlogin, SignupUser, getAllBlogsController, createBlogController,
   LoginAndVerifyOTP, updateBlogController, deleteBlogController, getBlogIdController, getBlogByIdController,CreateChatController, findUserschatController, findchatController
   , EmailVerify, postman, PaymentResponse, PaymentRequest, getProductsByFilterUser, cancelOrderUser, ViewAllZones, getProductsByHSN,AuthUserByIDHistory, AuthUserByID, updateProfileUser, SignupNewUser, LoginUserWithOTP, LoginUserWithPass, SendOTP,SignupLoginNew, SignupLoginUser, getTaxIdUser, ViewAllUserTaxes, ViewCompareByUser, applyPromoCode, getHomeLayoutData, AddWishListByUser, deleteCompareByUser, deleteWishListByUser, ViewWishListByUser, AddCompareByUser, ViewProductRating, ViewCategoryRating, AddRating, UsergetAllCategories, UsergetAllProducts, UsergetAllHomeProducts, userOrdersViewController, getAllAttributeUser, getProductIdUser, updateUserController, createOrderController, updateUserAndCreateOrderController, userOrdersController, getHomeData, GetAllCategoriesByParentIdController, GetAllCategoriesBySlugController
   , BuyPlanUser, GetPlanUser, getAllNurseDepartment,
@@ -353,6 +353,9 @@ router.post('/auth-user/', checkOrigin, AuthUserByID);
 router.post('/auth-user-history/', checkOrigin, AuthUserByIDHistory);
 
 router.post('/contact-enquire/', checkOrigin, contactEnquire);
+router.post('/resume-enquire/', checkOrigin, resumeEnquire);
+
+
 router.post('/send-enquire/', checkOrigin, HomeSendEnquire);
 router.post('/send-enquire-vendor/', checkOrigin, HomeSendvendorEnquire);
 router.post('/send-enquire-consultation/', checkOrigin, ConsultationSendEnquire);
@@ -414,6 +417,13 @@ router.put("/admin/update-nurse-attributes-department/:id", updateAttributeDepar
 router.delete("/admin/delete-nurse-attributes-department/:id", deleteAttributeDepartmentAdmin)
 
 
+// for lead product
+router.get("/get-all-lead-product", getAllLeadProductDepartment);
+router.post("/admin/add-lead-product", AddAdminLeadProductController);
+router.get("/admin/all-lead-product-fillter", getAllLeadProductFillAdmin);
+router.get("/admin/get-lead-product/:id", getLeadProductIdAdmin);
+router.put("/admin/update-lead-product/:id", updateLeadProductAdmin);
+router.delete("/admin/delete-lead-product/:id", deleteLeadProductAdmin)
 
 
 router.get('/get-all-zones-department', checkOrigin, ViewAllZonesDepartment);
