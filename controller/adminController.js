@@ -49,6 +49,7 @@ import nurseDepartmentsModel from "../models/nurseDepartmentsModel.js";
 import skillDepartmentsModel from "../models/skillDepartmentsModel.js";
 import attributeDepartmentsModel from "../models/attributeDepartmentsModel.js";
 import mongoose from "mongoose";
+import leadProductModel from "../models/leadProductModel.js";
 
 const execPromise = util.promisify(exec);
 
@@ -578,12 +579,12 @@ export const AddAdminLeadController = async (req, res) => {
       applySGST,finalTotal,taxTotal, addRental,
       addReceived,addReturn,addProduct,
       userId,UserDetails,employeeSaleId,PickupDate,ReturnDate,SecurityAmt,
-      AdvanceAmt,employeeId,OnBoardDate,dutyHr,addHistory,date,time,comment,requirement
+      AdvanceAmt,employeeId,OnBoardDate,dutyHr,addHistory,date,time,comment,requirement,Ldate,Ltime,product,source
     } = req.body;
     console.log(req.body)
 
     // Validation
-    if (!type || !date || !time || !comment || !requirement ) {
+    if (!type || !comment || !requirement ) {
       return res.status(400).send({
         success: false,
         message: "Please Provide All Fields",
@@ -620,6 +621,11 @@ export const AddAdminLeadController = async (req, res) => {
         comment,
         requirement,
        addHistory : addHistory || [],
+       Ldate,
+       Ltime,
+       product,
+       source,
+       lead:0,
     });
  
 
@@ -714,6 +720,7 @@ export const AddAdminOrderController = async (req, res) => {
        OnBoardDate,
        dutyHr,
        addHistory : addHistory || [],
+        leadType:1,
     });
 
     if(addProduct){
@@ -1060,7 +1067,7 @@ export const updateCategoryAdmin = async (req, res) => {
       metaTitle,
       metaDescription,
       metaKeywords,
-      parent,
+      parent:parent|| null,
       status, specifications, canonical,filter
     };
 
@@ -1481,7 +1488,8 @@ export const updateProductAdmin = async (req, res) => {
       metaKeywords,
       Category,
       tag, features,protype,
-      specifications, weight, gst, hsn, sku, variant_products, type, canonical, testimonials, oneto7, eightto14, fivto30, monthto3month, threemonthto6month,reStock,serialNumber,brandName,modelNo,Rentalgst
+      specifications, weight, gst, hsn, sku, variant_products, type, canonical, testimonials, oneto7, eightto14, fivto30, monthto3month, threemonthto6month,reStock,serialNumber,brandName,modelNo,
+      Rentalgst, recommended_products
     } = req.body;
 
     console.log('typp', type);
@@ -1503,7 +1511,7 @@ export const updateProductAdmin = async (req, res) => {
       Category,
       tag, features,
       specifications, weight, gst, hsn, sku, variant_products, type, canonical, testimonials,
-      oneto7, eightto14, fivto30, monthto3month, threemonthto6month,reStock,serialNumber,brandName,modelNo,protype,Rentalgst
+      oneto7, eightto14, fivto30, monthto3month, threemonthto6month,reStock,serialNumber,brandName,modelNo,protype,Rentalgst,recommended_products
     };
 
     const Product = await productModel.findByIdAndUpdate(id, updateFields, {
@@ -2037,7 +2045,8 @@ export const editHomeLayoutData = async (req, res) => {
       latest_product_banner,
       latest_product_carousal,
       best_selling_smartphone,
-      recommended_products
+      recommended_products,
+      home_doctor,
     } = req.body;
 
     console.log('top_bar', top_bar)
@@ -2060,7 +2069,8 @@ export const editHomeLayoutData = async (req, res) => {
       latest_product_banner,
       latest_product_carousal,
       best_selling_smartphone,
-      recommended_products
+      recommended_products,
+      home_doctor
     };
 
     const homeLayoutData = await homeLayoutModel.findOneAndUpdate({}, updateFields, {
@@ -2434,6 +2444,7 @@ export const getAllOrderAdmin = async (req, res) => {
     const productId = req.query.productId || '';
     const type = req.query.type || '';
     const leadtype = req.query.leadtype || '';
+    const lead = req.query.lead || '';
 
     const overdue = req.query.overdue || ''; 
     const startDate = req.query.startDate ? new Date(req.query.startDate) : null;
@@ -2512,7 +2523,14 @@ if (userId) {
         { leadType: { $exists: false } }
       ];
     }
-    
+       if (leadtype) {
+      query.leadType = leadtype;
+    }else{
+       query.$or = [
+        { leadType: { $eq: 1 } },
+        { leadType: { $exists: false } }
+      ];
+    }
 
     if (productId) {
       query['addProduct._id'] = productId;
@@ -3038,7 +3056,10 @@ export const editFullLeadAdmin = async (req, res) => {
     const {
       type,order, discount,subtotal,shipping,applyIGST,applyCGST,applySGST,finalTotal,taxTotal,  addRental,addReceived,addReturn,addProduct,
       userId,UserDetails,employeeSaleId,PickupDate,ReturnDate,SecurityAmt,AdvanceAmt,employeeId,OnBoardDate,addHistory,dutyHr,date,time,comment
-      ,requirement
+      ,requirement,Ldate,
+Ltime,
+product,
+source
     } = req.body;
 
     const orderUpdate = await orderModel.findById(id).populate('userId'); // Fetch order details including user
@@ -3060,6 +3081,11 @@ export const editFullLeadAdmin = async (req, res) => {
         comment,
         requirement,
        addHistory : addHistory || [],
+       Ldate,
+Ltime,
+product,
+source
+
     };
 
  
@@ -3137,6 +3163,7 @@ export const editOrderAdmin = async (req, res) => {
  
   let updateFields = {
       leadType:1,
+      lead:1,
     };
 
   const neworder = await orderModel.findById(id).populate('employeeId', 'phone username')
@@ -4741,11 +4768,11 @@ export const updatePageAdmin = async (req, res) => {
   try {
     const { id } = req.params;
 
-    const { title, description, metaTitle, metaDescription, metaKeywords
+    const { title, description, metaTitle, metaDescription, metaKeywords,type
     } = req.body;
 
     let updateFields = {
-      title, description, metaTitle, metaDescription, metaKeywords
+      title, description, metaTitle, metaDescription, metaKeywords,type
     };
 
     const MPage = await pageModel.findByIdAndUpdate(id, updateFields, {
@@ -6153,6 +6180,189 @@ export const deleteAttributeDepartmentAdmin = async (req, res) => {
     return res.status(400).send({
       success: false,
       message: "Erorr WHile Deleteing Department",
+      error,
+    });
+  }
+};
+
+// for lead product Model
+
+export const getAllLeadProductDepartment = async (req, res) => {
+  try {
+    const Department = await leadProductModel.find({}).lean();
+    if (!Department) {
+      return res.status(400).send({
+        message: "NO Lead Product Found",
+        success: false,
+      });
+    }
+    return res.status(200).send({
+      message: "All Lead Product List ",
+      success: true,
+      Department,
+    });
+  } catch (error) {
+    return res.status(500).send({
+      message: `error while getting Lead Product ${error}`,
+      success: false,
+      error,
+    });
+  }
+};
+
+export const AddAdminLeadProductController = async (req, res) => {
+  try {
+    const { name, status } = req.body;
+
+    // Validation
+    if (!name) {
+      return res.status(400).send({
+        success: false,
+        message: "Please Provide name",
+      });
+    }
+
+    // Create a new category with the specified parent
+    const newDepartment = new leadProductModel({
+      name,
+      status,
+    });
+    await newDepartment.save();
+
+    return res.status(201).send({
+      success: true,
+      message: "Lead Product Created!",
+      newDepartment,
+    });
+  } catch (error) {
+    console.error("Error while creating Lead Product:", error);
+    return res.status(400).send({
+      success: false,
+      message: "Error while creating Lead Product",
+      error,
+    });
+  }
+};
+
+export const getAllLeadProductFillAdmin = async (req, res) => {
+  try {
+    const page = parseInt(req.query.page) || 1; // Current page, default is 1
+    const limit = parseInt(req.query.limit) || 10; // Number of documents per page, default is 10
+    const searchTerm = req.query.search || ""; // Get search term from the query parameters
+
+    const skip = (page - 1) * limit;
+
+    const query = {};
+    if (searchTerm) {
+      // If search term is provided, add it to the query
+      query.$or = [
+        { name: { $regex: searchTerm, $options: "i" } }, // Case-insensitive username search
+        { value: { $regex: searchTerm, $options: "i" } }, // Case-insensitive email search
+      ];
+    }
+
+    const totalDepartment = await leadProductModel.countDocuments();
+
+    const Department = await leadProductModel
+      .find(query)
+      .sort({ _id: -1 }) // Sort by _id in descending order
+      .skip(skip)
+      .limit(limit)
+      .lean();
+
+    if (!Department) {
+      return res.status(200).send({
+        message: "NO Attribute Department found",
+        success: false,
+      });
+    }
+    return res.status(200).send({
+      message: "All Attribute Department list ",
+      DepartmentCount: Department.length,
+      currentPage: page,
+      totalPages: Math.ceil(totalDepartment / limit),
+      success: true,
+      Department,
+    });
+  } catch (error) {
+    return res.status(500).send({
+      message: `Error while getting Attribute Department ${error}`,
+      success: false,
+      error,
+    });
+  }
+};
+
+export const updateLeadProductAdmin = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const { name, status } = req.body;
+
+    let updateFields = {
+      name,
+      status,
+    };
+
+    const Department = await leadProductModel.findByIdAndUpdate(
+      id,
+      updateFields,
+      {
+        new: true,
+      }
+    );
+
+    return res.status(200).json({
+      message: "Lead Product Updated!",
+      success: true,
+      Department,
+    });
+  } catch (error) {
+    return res.status(400).json({
+      message: `Error while updating Lead Product: ${error}`,
+      success: false,
+      error,
+    });
+  }
+};
+
+export const getLeadProductIdAdmin = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const Department = await leadProductModel.findById(id);
+    if (!Department) {
+      return res.status(200).send({
+        message: "Lead Product Not Found By Id",
+        success: false,
+      });
+    }
+    return res.status(200).json({
+      message: "fetch Single Lead Product!",
+      success: true,
+      Department,
+    });
+  } catch (error) {
+    return res.status(400).json({
+      message: `Error while get Lead Product: ${error}`,
+      success: false,
+      error,
+    });
+  }
+};
+
+export const deleteLeadProductAdmin = async (req, res) => {
+  try {
+    await leadProductModel.findByIdAndDelete(req.params.id);
+
+    return res.status(200).send({
+      success: true,
+      message: "Lead Product Deleted!",
+    });
+  } catch (error) {
+    console.log(error);
+    return res.status(400).send({
+      success: false,
+      message: "Erorr WHile Deleteing Lead Product",
       error,
     });
   }
