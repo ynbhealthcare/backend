@@ -125,6 +125,7 @@ router.get('/admin/all-report', getAllOrderAdmin);
 
 
 router.get("/user-invoice/:id", generateUserInvoicePDFView);
+router.get("/user-invoice/:id/:rec", generateUserInvoicePDFView);
 
 
 // user Admin
