@@ -2444,7 +2444,7 @@ export const getAllOrderAdmin = async (req, res) => {
     const productId = req.query.productId || '';
     const type = req.query.type || '';
     const leadtype = req.query.leadtype || '';
-    const lead = req.query.lead || '';
+    const lead = req.query.lead || null;
 
     const overdue = req.query.overdue || ''; 
     const startDate = req.query.startDate ? new Date(req.query.startDate) : null;
@@ -2523,13 +2523,8 @@ if (userId) {
         { leadType: { $exists: false } }
       ];
     }
-       if (leadtype) {
-      query.leadType = leadtype;
-    }else{
-       query.$or = [
-        { leadType: { $eq: 1 } },
-        { leadType: { $exists: false } }
-      ];
+    if (lead) {
+      query.lead = lead;
     }
 
     if (productId) {
@@ -3059,7 +3054,7 @@ export const editFullLeadAdmin = async (req, res) => {
       ,requirement,Ldate,
 Ltime,
 product,
-source
+source,history
     } = req.body;
 
     const orderUpdate = await orderModel.findById(id).populate('userId'); // Fetch order details including user
@@ -3080,7 +3075,7 @@ source
         time,
         comment,
         requirement,
-       addHistory : addHistory || [],
+       leadHistory : history || [],
        Ldate,
 Ltime,
 product,
@@ -3209,6 +3204,7 @@ if (userDetails) {
       orderId:order_id,
       leadType:1,
       userId: newUser._id,
+      lead:1,
     };
 
  await orderModel.findByIdAndUpdate(id, updateFields, {
@@ -3222,6 +3218,7 @@ if (userDetails) {
       orderId:order_id,
       leadType:1,
       userId: existingUser._id,
+      lead:1,
     };
 
  await orderModel.findByIdAndUpdate(id, updateFields, {
@@ -6702,7 +6699,7 @@ export const AdminGetuserPhone = async (req, res) => {
 export const generateUserInvoicePDFView = async (req, res) => {
   try {
 
-  const { id } = req.params;
+  const { id,rec } = req.params;
 
   const lastTransaction = await orderModel
     .findById(id)
@@ -6730,6 +6727,16 @@ export const generateUserInvoicePDFView = async (req, res) => {
     return new Date(dateString).toLocaleTimeString(undefined, options);
   };
 
+// invoiceData.addProduct.forEach(product => {
+//   product.amount = 30000; // Set your custom amount
+//   product.total = 30000;  // Set your custom total
+// });
+// rec
+
+  console.log('invoiceData',invoiceData)
+ 
+
+  console.log('invoiceData.addProduct',invoiceData.addProduct)
   // Define the HTML content
   const htmlContent = `     <div class="invoice">
       <div class="invoice-header">
@@ -6741,7 +6748,7 @@ export const generateUserInvoicePDFView = async (req, res) => {
           <h2 style="margin-top:0px;">YNB Healthcare Pvt. Ltd.
  </h2>
  <p>WZ 10C, A-2 Block, Asalatpur Near Mata Chanan Devi Hospital, Janakpuri, New Delhi, 110058 </p>
-<p> Contact - +91-8062182339 </p>
+<p> Contact - +91-8100188188 </p>
   <p> Email : support@ynbhealthcare.com </p>
          
                          
@@ -6789,7 +6796,6 @@ export const generateUserInvoicePDFView = async (req, res) => {
     <tr>
       <th>#</th>
       <th>Name</th>
-      <th>Price</th>
       <th>Quantity</th>
       <th>Tax (%)</th>
       <th>Total Amount</th>
@@ -6800,11 +6806,10 @@ export const generateUserInvoicePDFView = async (req, res) => {
       ? invoiceData.addProduct.map((product, index) => `
         <tr>
           <td>${index + 1}</td>
-          <td>${product.title}</td>
-          <td>₹ ${product.amount.toFixed(2)}</td>
+          <td>${product.title} ${rec ? `for ${invoiceData.addReceived[Number(rec)].days}Days` : ''}</td>
           <td>${product.quantity}</td>
           <td>${product.tax || 0}</td>
-          <td>₹ ${product.total.toFixed(2)}</td>
+          <td>₹ ${rec ? invoiceData.addReceived[Number(rec)].amount : product.total.toFixed(2)}</td>
         </tr>
       `).join('')
       : `<tr><td colspan="6" class="text-center">No products added</td></tr>`
@@ -6818,7 +6823,7 @@ ${invoiceData.addProduct && invoiceData.addProduct.length > 0 ? `
       <tbody  >
         <tr >
           <th>Subtotal:</th>
-          <td>₹ ${invoiceData.subtotal.toFixed(2)}</td>
+          <td>₹ ${rec ? invoiceData.addReceived[Number(rec)].amount : invoiceData.subtotal.toFixed(2)}</td>
         </tr>
 
         <tr>
@@ -6845,7 +6850,8 @@ ${invoiceData.addProduct && invoiceData.addProduct.length > 0 ? `
 
         <tr>
           <th>Final Total:</th>
-          <td><strong>₹ ${invoiceData.totalAmount.toFixed(2)}</strong></td>
+          <td><strong>₹ ${rec ? invoiceData.addReceived[Number(rec)].amount : invoiceData.totalAmount.toFixed(2)}
+          </strong></td>
         </tr>
       </tbody>
     </table>
@@ -7253,7 +7259,7 @@ const generateUserInvoicePDF = async (invoiceData) => {
           <h2 style="margin-top:0px;">Ynb Healthcare Pvt. Ltd.
  </h2>
  <p>45, Kisan Agro Mall, Mandi Road, Jhansi, Uttar Pradesh - 284001 </p>
-<p> Contact - +91-8062182339 </p>
+<p> Contact - +91-8100188188 </p>
   <p> Email : support@ynbhealthcare.com </p>
          
                          
