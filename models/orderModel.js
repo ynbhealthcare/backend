@@ -85,6 +85,9 @@ const orderSchema = mongoose.Schema({
   addHistory: {
     type: Array,
   },
+  leadHistory: {
+    type: Array,
+  },
   PickupDate: {
     type: Date,
   },
