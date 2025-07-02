@@ -6795,7 +6795,7 @@ export const generateUserInvoicePDFView = async (req, res) => {
          
         </div>
         <div class="invoice-header-right">
-          <h2 style="margin-top:0px;">TAX INVOICE</h2>
+          <h2 style="margin-top:0px;"> INVOICE</h2>
             <p> <b> Invoice No.:</b> #${invoiceData?.orderId}</p>
             
           <p> <b>  Delivery Date :</b> ${formatDate(
@@ -7304,7 +7304,7 @@ const generateUserInvoicePDF = async (invoiceData) => {
          
         </div>
         <div class="invoice-header-right">
-          <h2 style="margin-top:0px;">TAX INVOICE</h2>
+          <h2 style="margin-top:0px;"> INVOICE</h2>
             <p> <b> Invoice No.:</b> #${invoiceData?.orderId}</p>
             
           <p> <b>  Pickup Date:</b> ${formatDate(
