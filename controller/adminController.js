@@ -2445,6 +2445,8 @@ export const getAllOrderAdmin = async (req, res) => {
     const type = req.query.type || '';
     const leadtype = req.query.leadtype || '';
     const lead = req.query.lead || null;
+    const datetype = req.query.datetype || null;
+
 
     const overdue = req.query.overdue || ''; 
     const startDate = req.query.startDate ? new Date(req.query.startDate) : null;
@@ -2467,7 +2469,7 @@ export const getAllOrderAdmin = async (req, res) => {
 
 
     // Date range filtering based on PickupDate and ReturnDate
-if (startDate && endDate) {
+if (startDate && endDate && !datetype) {
   query.$and = [
     { PickupDate: { $lte: endDate } },
     { ReturnDate: { $gte: startDate } },
@@ -2478,7 +2480,7 @@ if (startDate && endDate) {
   query.PickupDate = { $lte: endDate };
 }
 
-  if (start && end) {
+  if (start && end && !datetype) {
       query.createdAt = { $gte: start, $lte: end };
     } else if (start) {
       query.createdAt = { $gte: start };
@@ -2486,6 +2488,25 @@ if (startDate && endDate) {
       query.createdAt = { $lte: end };
     }
 
+if (datetype && (start || end)) {
+  const dateRange = {};
+  if (start) dateRange.$gte = new Date(start);
+  if (end) dateRange.$lte = new Date(end);
+
+  if (datetype === '1') {
+    // Lead Date (Ldate)
+    query.Ldate = dateRange;
+  } else if (datetype === '2') {
+    // Created At
+    query.createdAt = dateRange;
+  } else if (datetype === '3') {
+    // Follow-up Date
+    query.date = dateRange;
+  }
+}
+
+   
+    
 
 if (userId) {
   query.$or = [
