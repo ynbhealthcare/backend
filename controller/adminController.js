@@ -6817,7 +6817,7 @@ export const generateUserInvoicePDFView = async (req, res) => {
     <tr>
       <th>#</th>
       <th>Name</th>
-       ${rec && `</td> Date </td>`}
+      ${rec ? `<th>Date</th>` : ''}
       <th>Quantity</th>
       <th>Tax (%)</th>
       <th>Total Amount</th>
@@ -6828,10 +6828,10 @@ export const generateUserInvoicePDFView = async (req, res) => {
       ? invoiceData.addProduct.map((product, index) => `
         <tr>
           <td>${index + 1}</td>
-          
           <td>${product.title} ${rec ? `for ${invoiceData.addReceived[Number(rec)].days}Days` : ''}</td>
-          ${rec && `</td> ${invoiceData.addReceived[Number(rec)].date} </td>`}
-          <td>${product.quantity}</td>
+                  ${rec ? `<td> ${invoiceData.addReceived[Number(rec)].date} </td>` : ''}
+
+                  <td>${product.quantity}</td>
           <td>${product.tax || 0}</td>
           <td>₹ ${rec ? invoiceData.addReceived[Number(rec)].amount : product.total.toFixed(2)}</td>
         </tr>
