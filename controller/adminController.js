@@ -647,7 +647,7 @@ export const AddAdminLeadController = async (req, res) => {
 };
 
 
-export const AddAdminOrderController = async (req, res) => {
+export const AddAdminOrderController_old = async (req, res) => {
   try {
     const {
       order, discount,subtotal,shipping,applyIGST,applyCGST,
@@ -782,6 +782,166 @@ export const AddAdminOrderController = async (req, res) => {
       message: `Error While order Creating: ${error}`,
       error,
     });
+  }
+};
+
+export const AddAdminOrderController = async (req, res) => {
+  try {
+    const {
+      order,
+      discount,
+      subtotal,
+      shipping,
+      applyIGST,
+      applyCGST,
+      applySGST,
+      finalTotal,
+      taxTotal,
+      addRental,
+      addReceived,
+      addReturn,
+      addProduct,
+      UserDetails,
+      employeeSaleId,
+      PickupDate,
+      ReturnDate,
+      SecurityAmt,
+      AdvanceAmt,
+      employeeId,
+      OnBoardDate,
+      dutyHr,
+      addHistory,
+    } = req.body;
+
+    console.log("Request Body:", req.body);
+
+    // Basic Validation
+    if (!order || !finalTotal) {
+      return res.status(400).send({
+        success: false,
+        message: "Please provide all required fields",
+      });
+    }
+
+    let finalUserId;
+
+    // Create a new user only if UserDetails.id === 'none'
+    if (UserDetails && UserDetails.id === 'none') {
+      const newUser = new userModel({
+        username: UserDetails.name,
+        phone: UserDetails.phone,
+        email: UserDetails.email,
+        address: UserDetails.address,
+        gender: UserDetails.gender,
+        type: 2,
+        company: UserDetails.company,
+        companyName: UserDetails.companyName,
+        companyGST: UserDetails.companyGST,
+        companyAddress: UserDetails.companyAddress,
+        age: UserDetails.age,
+        weight: UserDetails.weight,
+      });
+
+      await newUser.save();
+      finalUserId = newUser._id;
+    } else {
+      finalUserId = UserDetails.id;
+    }
+
+    // Generate next orderId
+    const lastOrder = await orderModel.findOne().sort({ _id: -1 }).limit(1);
+    const order_id = lastOrder ? parseInt(lastOrder.orderId || 0) + 1 : 1;
+
+    // Create new order
+    const newOrder = new orderModel({
+      type: order,
+      userId: finalUserId,
+      UserDetails,
+      employeeSaleId,
+      employeeId: employeeId || null,
+      PickupDate,
+      ReturnDate: ReturnDate || PickupDate,
+      SecurityAmt,
+      AdvanceAmt,
+      addRental,
+      addReceived,
+      addReturn,
+      addProduct,
+      discount,
+      subtotal,
+      shipping,
+      applyIGST,
+      applyCGST,
+      applySGST,
+      totalAmount: finalTotal,
+      taxTotal,
+      orderId: order_id,
+      status: 0,
+      OnBoardDate,
+      dutyHr,
+      addHistory: addHistory || [],
+      leadType: 1,
+    });
+
+    // Handle product stock updates
+    if (Array.isArray(addProduct)) {
+      for (let product of addProduct) {
+        const productDetails = await productModel.findById(product._id);
+
+        if (!productDetails) {
+          console.log(`Product not found: ${product._id}`);
+          continue;
+        }
+
+        // Only update stock if stock/reStock is available
+        if ((productDetails.reStock > 0 || productDetails.stock > 0)) {
+          if (newOrder.type !== 1) {
+            productDetails.reStock = Math.max((productDetails.reStock || 0) - 1, 0);
+          } else {
+            productDetails.stock = Math.max((productDetails.stock || 0) - 1, 0);
+          }
+
+          await productDetails.save();
+          console.log(`Updated stock for product: ${product.title}`);
+        }
+      }
+    }
+
+    // Save the order
+    await newOrder.save();
+
+    return res.status(201).send({
+      success: true,
+      message: "Order Created Successfully!",
+      data: newOrder,
+    });
+
+  } catch (error) {
+    console.error("Error while creating order:", error);
+    return res.status(500).send({
+      success: false,
+      message: `Error while creating order: ${error.message}`,
+      error,
+    });
+  }
+};
+
+
+export const assignUserIds = async () => {
+  try {
+    const users = await userModel.find().sort({ createdAt: 1 }); // sort oldest first
+    let counter = 1;
+
+    for (const user of users) {
+      user.userId = counter;
+      await user.save();
+      console.log(`Assigned userId ${counter} to user ${user.username || user.email}`);
+      counter++;
+    }
+
+    console.log("✅ All users updated with incremental userId.");
+  } catch (error) {
+    console.error("❌ Error assigning userIds:", error);
   }
 };
 
@@ -6756,6 +6916,12 @@ export const generateUserInvoicePDFView = async (req, res) => {
 
   console.log('invoiceData',invoiceData)
  
+const formatDateToLongString = (dateString)  => {
+  const date = new Date(dateString);
+  const options = { year: 'numeric', month: 'long', day: 'numeric' };
+  return date.toLocaleDateString('en-US', options);
+}
+
 
   console.log('invoiceData.addProduct',invoiceData.addProduct)
   // Define the HTML content
@@ -6830,8 +6996,9 @@ export const generateUserInvoicePDFView = async (req, res) => {
           <td>${index + 1}</td>
           <td>${product.title} ${rec ? `for ${invoiceData.addReceived[Number(rec)].days}Days` : ''}</td>
                   ${rec ? `<td> ${invoiceData.addReceived[Number(rec)].date} </td>` : ''}
+        ${rec ? `<th>${formatDateToLongString(invoiceData.addReceived[Number(rec)].date)}</th>` : ''}
 
-                  <td>${product.quantity}</td>
+          <td>${product.quantity}</td>
           <td>${product.tax || 0}</td>
           <td>₹ ${rec ? invoiceData.addReceived[Number(rec)].amount : product.total.toFixed(2)}</td>
         </tr>
