@@ -579,12 +579,14 @@ export const AddAdminLeadController = async (req, res) => {
       applySGST,finalTotal,taxTotal, addRental,
       addReceived,addReturn,addProduct,
       userId,UserDetails,employeeSaleId,PickupDate,ReturnDate,SecurityAmt,
-      AdvanceAmt,employeeId,OnBoardDate,dutyHr,addHistory,date,time,comment,requirement,Ldate,Ltime,product,source
+      AdvanceAmt,employeeId,OnBoardDate,dutyHr,addHistory,date,time,comment,requirement,Ldate,Ltime,product,source,reDate,
+priceQ,
+customerEx,
     } = req.body;
     console.log(req.body)
 
     // Validation
-    if (!type || !comment || !requirement ) {
+    if (!type ) {
       return res.status(400).send({
         success: false,
         message: "Please Provide All Fields",
@@ -626,6 +628,9 @@ export const AddAdminLeadController = async (req, res) => {
        product,
        source,
        lead:0,
+       reDate,
+priceQ,
+customerEx,
     });
  
 
@@ -3235,7 +3240,9 @@ export const editFullLeadAdmin = async (req, res) => {
       ,requirement,Ldate,
 Ltime,
 product,
-source,history
+source,history,reDate,
+priceQ,
+customerEx
     } = req.body;
 
     const orderUpdate = await orderModel.findById(id).populate('userId'); // Fetch order details including user
@@ -3260,7 +3267,9 @@ source,history
        Ldate,
 Ltime,
 product,
-source
+source,reDate,
+priceQ,
+customerEx
 
     };
 
