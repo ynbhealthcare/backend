@@ -106,6 +106,15 @@ const orderSchema = mongoose.Schema({
     Ldate: {
     type: Date,
   },
+    reDate: {
+    type: Date,
+  },
+  priceQ: {
+    type: Number,
+  },
+  customerEx: {
+    type: Number,
+  },
     time: {
     type: String,
   },
