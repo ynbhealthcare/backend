@@ -45,6 +45,7 @@ import cron from "node-cron";
 import nurseDepartmentsModel from "../models/nurseDepartmentsModel.js";
 import skillDepartmentsModel from "../models/skillDepartmentsModel.js";
 import attributeDepartmentsModel from "../models/attributeDepartmentsModel.js";
+import callModel from "../models/callModel.js";
 
 const execPromise = util.promisify(exec);
 
@@ -721,6 +722,110 @@ Download </button>
       message: `Error retrieving user: ${error.message}`,
       error,
     });
+  }
+};
+
+
+const removeKeywordss = (slug) => {
+if (!slug || typeof slug !== "string") return "";
+
+  return slug
+    .replace(/\brent\b/gi, "")
+    .replace(/\bdelhi\s*ncr\b/gi, "")
+    .replace(/\bdelhi\b/gi, "")
+     .replace(/\ncr\b/gi, "")
+    .replace(/\bin[-\s]delhi\b/gi, "")
+    .replace(/[-_]+/g, " ")              // Replace - or _ with space
+    .replace(/\s+/g, " ")                // Collapse multiple spaces
+    .trim()
+    .replace(/\b\w/g, (match) => match.toUpperCase()); // Capitalize each word
+};
+
+const removeKeywords = (text) => {
+  if (!text) return text;
+
+  return text
+    .replace(/\s+/g, "-")        // Convert spaces to hyphens
+    .replace(/--+/g, "-")        // Replace multiple hyphens with single
+    .replace(/-+$/, "")          // Remove trailing hyphens
+    .replace(/^-+/, "")          // Remove leading hyphens
+    .toLowerCase()
+    .trim();
+};
+
+const cleanLinksRecursively = (items = []) => {
+  return items.map((item) => {
+    if (item.link) {
+      item.link = removeKeywordss(item.link);
+    }
+
+    if (Array.isArray(item.children) && item.children.length > 0) {
+      item.children = cleanLinksRecursively(item.children);
+    }
+
+    return item;
+  });
+};
+
+
+export const getRemoveData = async (req, res) => {
+  try {
+    let blogs = await blogModel.find();
+    let products = await productModel.find();
+    let categories = await categoryModel.find();
+    // const homeData = await homeModel.findOne({});
+    //  const cleanedFooter = [{"id":1723814394858,"text":"ABOUT YNB","link":"#","target":"_self","children":[{"id":1723814404148,"text":"About Us","link":"\/page\/6763fef05d176bd1ae0b8e1b","target":"_self","children":[]},{"id":1723814480744,"text":"Contact Us","link":"\/contact","target":"_self","children":[]},{"id":1751290054015,"text":"Career","link":"\/page\/686286b8df10d433f4cdefe6","target":"_self","children":[]}]},{"id":1723814588451,"text":"OUR SERVICES","link":"#","target":"_self","children":[{"id":1723814721794,"text":"Medical Equipments","link":"\/medical-equipment","target":"_self","children":[]},{"id":1723814815225,"text":"Nursing with Services","link":"\/home-nursing-service-in","target":"_self","children":[]},{"id":1723814859737,"text":"Ambulance Service ","link":"\/ambulance-services","target":"_self","children":[]},{"id":1723814881463,"text":"Physiotheraphy Service","link":"\/physiotherapy-services-at-home","target":"_self","children":[]}]},{"id":1723814926751,"text":"POPULAR SERVICES","link":"#","target":"_self","children":[{"id":1723815120383,"text":"Medical Equipment Rental","link":"\/medical-equipment","target":"_self","children":[]},{"id":1723815151650,"text":"Home Nursing Services ","link":"\/home-nursing-service-in","target":"_self","children":[]},{"id":1723815172281,"text":"Japa Maid ","link":"\/japa-maids-in","target":"_self","children":[]},{"id":1723815195039,"text":"Ambulance  Service","link":"\/ambulance-services","target":"_self","children":[]},{"id":1751364159998,"text":"Surgery ","link":"\/surgery","target":"_self","children":[]},{"id":1751364443409,"text":"Dialysis At Home","link":"\/dialysis-at-home-in","target":"_self","children":[]},{"id":1751364459096,"text":"Mortuary Freezer","link":"\/mortuary-service","target":"_self","children":[]}]},{"id":1724408332451,"text":"Medical Equipments","link":"#","target":"_self","children":[{"id":1724408340955,"text":"BIPAP Machine","link":"\/product\/bipap-machine-rent","target":"_self","children":[]},{"id":1724408345506,"text":"Oxygen Concentrator ","link":"\/product\/5-ltr-oxygen-concentrator","target":"_self","children":[]},{"id":1724408349835,"text":"Oxygen Cylinder ","link":"\/product\/b-type-10-ltr-oxygen-cylinder","target":"_self","children":[]},{"id":1724408355002,"text":"Suction Machine","link":"\/product\/suction-machine-rent","target":"_self","children":[]},{"id":1724408359955,"text":"Phototherapy Machine ","link":"\/physiotherapy-services-at-home","target":"_self","children":[]},{"id":1724408364450,"text":"CPM Machine","link":"\/product\/cpm-machine-rent","target":"_self","children":[]},{"id":1724408369906,"text":"IFT TENS Machine","link":"\/product\/ift-machine-rent","target":"_self","children":[]},{"id":1724408374442,"text":"Hospital Bed Semi Manual ","link":"\/product\/hospital-bed-semi-manual","target":"_self","children":[]},{"id":1724408378995,"text":"Hospital Bed Semi Electric ","link":"\/product\/icu-bed-3-function-electric-remote-control","target":"_self","children":[]},{"id":1724408384330,"text":"Hospital Fowler BED Manual","link":"\/product\/hospital-bed-double-fowler-manual-deluxe","target":"_self","children":[]},{"id":1724408407249,"text":"Hospital Fowler Bed Electric ","link":"\/product\/hospital-bed-double-fowler-manual-general","target":"_self","children":[]},{"id":1724408423274,"text":"3 Function ICU Hospital BED Electric ","link":"\/product\/icu-bed-3-function-electric-remote-control","target":"_self","children":[]},{"id":1724408427354,"text":"5 Function ICU Hospital BED Electric ","link":"\/product\/icu-bed-5-function-electric-remote-control","target":"_self","children":[]},{"id":1724408431850,"text":"Recliner BED Electric ","link":"\/product\/recliner-bed","target":"_self","children":[]},{"id":1724408436633,"text":"Wheel Chair Electric","link":"product\/wheel-chair-electric-with-battery-backup","target":"_self","children":[]},{"id":1724408441618,"text":"Wheel Chair Simple ","link":"\/product\/wheelchair","target":"_self","children":[]}]},{"id":1724408453442,"text":"Nursing with Services","link":"\/home-nursing-service-in","target":"_self","children":[{"id":1724408475706,"text":"Baby \u00c7are","link":"\/baby-care","target":"_self","children":[]},{"id":1724408482562,"text":"Japa Maid","link":"\/japa-maids-in","target":"_self","children":[]},{"id":1724408487466,"text":"Elderly Care","link":"\/product\/old-citizen-care","target":"_self","children":[]}]},{"id":1724408501074,"text":"Ambulance Service ","link":"\/ambulance-services","target":"_self","children":[{"id":1724408517826,"text":"ICU Ambulance ","link":"\/lcu-ambulance","target":"_self","children":[]},{"id":1724408522570,"text":"BLS Ambulance ","link":"\/bls-ambulance","target":"_self","children":[]}]},{"id":1724408569625,"text":"Mortuary Service","link":"\/dead-body-freezer","target":"_self","children":[{"id":1724408584569,"text":"Dead Body Freezer","link":"\/dead-body-freezer-box-rental-in","target":"_self","children":[]}]},{"id":1747458973381,"text":"Locations","link":"\/locations","target":"_self","children":[{"id":1747459112475,"text":"Delhi","link":"#","target":"_self","children":[]},{"id":1747459220395,"text":"Faridabad","link":"#","target":"_self","children":[]},{"id":1747459269140,"text":"Ghaziabad","link":"#","target":"_self","children":[]},{"id":1747459275996,"text":"Noida","link":"#","target":"_self","children":[]},{"id":1747459284636,"text":"Greater Noida","link":"#","target":"_self","children":[]},{"id":1747459295516,"text":"Gurgaon","link":"#","target":"_self","children":[]},{"id":1747459310708,"text":"Mumbai","link":"#","target":"_self","children":[]},{"id":1747459318716,"text":"Pune","link":"#","target":"_self","children":[]},{"id":1747459326036,"text":"Ahmedabad","link":"#","target":"_self","children":[]},{"id":1747459334579,"text":"Surat","link":"#","target":"_self","children":[]},{"id":1747459342332,"text":"Bangalore","link":"#","target":"_self","children":[]},{"id":1747459349732,"text":"Hyderabad","link":"#","target":"_self","children":[]},{"id":1747459358374,"text":"Chennai","link":"#","target":"_self","children":[]},{"id":1747459367374,"text":"Jaipur","link":"#","target":"_self","children":[]},{"id":1747459376268,"text":"Jodhpur","link":"#","target":"_self","children":[]},{"id":1747459393748,"text":"Lucknow","link":"#","target":"_self","children":[]},{"id":1747459409420,"text":"Agra","link":"#","target":"_self","children":[]},{"id":1747459417675,"text":"Visakhapatnam","link":"#","target":"_self","children":[]},{"id":1747459428212,"text":"Karnal","link":"#","target":"_self","children":[]},{"id":1747459443900,"text":"Sonipat","link":"#","target":"_self","children":[]},{"id":1747459455316,"text":"Panipat","link":"#","target":"_self","children":[]},{"id":1747459487678,"text":"Kurukshetra","link":"#","target":"_self","children":[]},{"id":1747459499036,"text":"Rohtak","link":"#","target":"_self","children":[]},{"id":1747459505356,"text":"Indore","link":"#","target":"_self","children":[]},{"id":1747474058774,"text":"Bhopal","link":"#","target":"_self","children":[]},{"id":1747474067760,"text":"Chandigarh","link":"#","target":"_self","children":[]},{"id":1747474076823,"text":"Amritsar","link":"#","target":"_self","children":[]}]}];
+
+    // // homeData.header = cleanedHeader;
+    // homeData.footer = cleanedFooter;
+
+    // await homeData.save();
+
+    // Process and save Blogs
+    // for (let blog of blogs) {
+ 
+    //   // blog.title = removeKeywords(blog.title);
+    //   // blog.description = removeKeywords(blog.description);
+    //   // blog.metaTitle = removeKeywords(blog.metaTitle);
+    //   // blog.metaDescription = removeKeywords(blog.metaDescription);
+    //         blog.slug = removeKeywords(blog.slug);
+
+    //   await blog.save(); // Save cleaned blog
+    // }
+
+    // // // Process and save Products
+    // for (let product of products) {
+    // //   product.title = removeKeywords(product.title);
+    // //   product.description = removeKeywords(product.description);
+    // //   product.metaTitle = removeKeywords(product.metaTitle);
+    // //   product.metaDescription = removeKeywords(product.metaDescription);
+    //   product.slug = removeKeywords(product.slug);
+    //   product.canonical = removeKeywords(product.canonical);
+    //   await product.save(); // Save cleaned product
+    // }
+
+    // // Process and save Categories
+    for (let category of categories) {
+    //   category.title = removeKeywords(category.title);
+    //   category.description = removeKeywords(category.description);
+    //   category.metaTitle = removeKeywords(category.metaTitle);
+    //   category.metaDescription = removeKeywords(category.metaDescription);
+      // category.slug = removeKeywords(category.slug);
+      // category.canonical = removeKeywords(category.canonical);
+      
+        category.slide_head = removeKeywordss(category.slide_head);
+        category.slide_para = removeKeywordss(category.slide_para);
+
+      await category.save(); // Save cleaned category
+    }
+
+    res.status(200).json({
+      success: true,
+      message: "Data cleaned and saved successfully.",
+    });
+  } catch (error) {
+    console.error("Error cleaning data:", error);
+    res.status(500).json({ success: false, message: "Server Error", error });
   }
 };
 
@@ -5242,6 +5347,17 @@ export const AuthUserByID = async (req, res) => {
 
     const existingUser = await userModel.findById(id);
 
+  const calls = await callModel.find({
+    $or: [
+      { sender: id },
+      { receiver: id }
+    ],
+    start: { $ne: null },  // Not null start time
+    end: null,          // Still ongoing (no end time)
+    active: 1,  // Not null start time
+  }).populate('sender', 'username phone email')      // adjust fields as needed
+      .populate('receiver', 'username phone email')    // adjust fields as needed
+      .populate('orderId');    
     if (existingUser) {
 
       return res.status(200).json({
@@ -5277,8 +5393,8 @@ export const AuthUserByID = async (req, res) => {
             age: existingUser.age,
           weight : existingUser.weight,
           Education: existingUser.Education,
-          nurse: existingUser.nurse,
-
+          nurse: existingUser.nurse, 
+          calls,
         },
       });
 
