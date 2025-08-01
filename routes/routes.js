@@ -24,11 +24,11 @@ getAllAttributeDepartmentFillAdmin,
 updateAttributeDepartmentAdmin,
 getAttributeDepartmentIdAdmin,
 deleteAttributeDepartmentAdmin,deleteUserAdmin,getAllLeadProductDepartment,AddAdminLeadProductController,getAllLeadProductFillAdmin,updateLeadProductAdmin,getLeadProductIdAdmin,deleteLeadProductAdmin
-,generateUserInvoicePDFView, editUserVerifyAdmin,editFullLeadAdmin, AdminGetAllEmployee, profileDocImage,AllPaymentAdmin, AdminAllEnquireStatus, profileImageHealth,deletePlanCategoryAdmin
+,assignUserIds,AddVideoCall ,endVideoCall,getAllVideoCalls,getVideoCall,generateUserInvoicePDFView, editUserVerifyAdmin,editFullLeadAdmin, AdminGetAllEmployee, profileDocImage,AllPaymentAdmin, AdminAllEnquireStatus, profileImageHealth,deletePlanCategoryAdmin
 } from "../controller/adminController.js";
 
 import {
-  AddCart, contactEnquire,resumeEnquire, razorpayCallback, UpdateCart, getCart, userTokenController, userBlogsController, Userlogin, SignupUser, getAllBlogsController, createBlogController,
+  AddCart, getRemoveData, contactEnquire,resumeEnquire, razorpayCallback, UpdateCart, getCart, userTokenController, userBlogsController, Userlogin, SignupUser, getAllBlogsController, createBlogController,
   LoginAndVerifyOTP, updateBlogController, deleteBlogController, getBlogIdController, getBlogByIdController,CreateChatController, findUserschatController, findchatController
   , EmailVerify, postman, PaymentResponse, PaymentRequest, getProductsByFilterUser, cancelOrderUser, ViewAllZones, getProductsByHSN,AuthUserByIDHistory, AuthUserByID, updateProfileUser, SignupNewUser, LoginUserWithOTP, LoginUserWithPass, SendOTP,SignupLoginNew, SignupLoginUser, getTaxIdUser, ViewAllUserTaxes, ViewCompareByUser, applyPromoCode, getHomeLayoutData, AddWishListByUser, deleteCompareByUser, deleteWishListByUser, ViewWishListByUser, AddCompareByUser, ViewProductRating, ViewCategoryRating, AddRating, UsergetAllCategories, UsergetAllProducts, UsergetAllHomeProducts, userOrdersViewController, getAllAttributeUser, getProductIdUser, updateUserController, createOrderController, updateUserAndCreateOrderController, userOrdersController, getHomeData, GetAllCategoriesByParentIdController, GetAllCategoriesBySlugController
   , BuyPlanUser, GetPlanUser, getAllNurseDepartment,
@@ -207,9 +207,20 @@ router.get('/admin/get-image', GetImageAdmin);
 router.get('/admin/export/allproducts/', exportAllProAdmin);
 router.post('/admin/import/allproducts/', importAllProAdmin);
 
+router.post('/admin/add-video-call/', AddVideoCall);
+router.get("/get-video-call/:id", getVideoCall);
+router.post('/admin/end-video-call/', endVideoCall);
+router.get('/admin/all-video-call', getAllVideoCalls);
+
+
+
 router.get("/all-employee", AdminGetAllEmployee);
 
 router.get("/all-orders", getAllOrderUser);
+router.get("/fix-userid", assignUserIds);
+router.get("/remove-data", getRemoveData);
+
+
 
 
 // --------------------    user routes start  -------------------//
