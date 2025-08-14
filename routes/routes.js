@@ -1,9 +1,9 @@
 import express from "express";
 import {
-  UserloginAll, SignupAdmin, Adminlogin, getAllGalleryController, deleteGalleryController, AddAdminBlogController, AdmindeleteBlogController, AddAdminCategoryController,AddAdminLeadController,AddAdminOrderController,getOrderIdAdminController
+  UserloginAll, SignupAdmin, Adminlogin, getAllGalleryController, deleteGalleryController, AddAdminBlogController, AdmindeleteBlogController, AddAdminCategoryController,AddAdminLeadController,AddAdminOrderController,getMedicalIdAdminController,getOrderIdAdminController
   , getAllReviewsAdmin, AdmingetAllCategories, AddAdminProduct, getAllcategoryFillAdmin, updateCategoryAdmin, getCategoryIdAdmin, deleteCategoryAdmin, getAllProductFillAdmin, updateProductAdmin, getProductIdAdmin, deleteProductAdmin,
   AddAdminPromoController, getAllPromoAdmin, updatePromoAdmin, getPromoIdAdmin, deletePromoAdmin
-  , getAllEnquireAdmin, getAllConsultationEnquireAdmin, ChangePassAdmin, ForgotAdminPassword, editOrderAdmin,editFullOrderAdmin, deleteOrderAdmin, AddAdminPageController, getAllPageAdmin, updatePageAdmin, getPageIdAdmin, deletePageAdmin, getAllBlogAdmin, exportAllProAdmin, importAllProAdmin, getAllUserAdmin, AddAdminTaxController, getAllTaxAdmin, updateTaxAdmin, getTaxIdAdmin, deleteTaxAdmin, ViewAllAdminZones, AddAdminZonesController, getAllZonesAdmin, updateZonesAdmin, getZonesIdAdmin, deleteZonesAdmin, GetImageAdmin, deleteFolderAdmin, UpdateFolderAdmin, getUserIdHistoryAdmin,getUserIdAdmin, GetFolderIDAdmin, AddAdminFolderController, GetFolderAdmin, editUserAdmin, AddAdminAttributeController, deleteRatingAdmin, editReviewAdmin, getAllOrderAdmin, getAllAttributeFillAdmin, updateAttributeAdmin, getAttributeIdAdmin, deleteAttributeAdmin, getAllAttribute, AddAdminTagController, getAllTagFillAdmin, updateTagAdmin, getTagIdAdmin, deleteTagAdmin, getAllTag, editHomeData, editHomeLayoutData,
+  , getAllEnquireAdmin, getAllConsultationEnquireAdmin, ChangePassAdmin, ForgotAdminPassword, editOrderAdmin,editFullOrderAdmin, deleteOrderAdmin, AddAdminPageController, getAllPageAdmin, updatePageAdmin, getPageIdAdmin, deletePageAdmin, getAllBlogAdmin, exportAllProAdmin, importAllProAdmin, getAllUserAdmin, AddAdminTaxController, getAllTaxAdmin, updateTaxAdmin, getTaxIdAdmin, deleteTaxAdmin, ViewAllAdminZones, AddAdminZonesController, getAllZonesAdmin, updateZonesAdmin, getZonesIdAdmin, deleteZonesAdmin, GetImageAdmin, deleteFolderAdmin, UpdateFolderAdmin, getUserIdHistoryAdmin,getUserIdAdmin, GetFolderIDAdmin, AddAdminFolderController, GetFolderAdmin, editUserAdmin, AddAdminAttributeController, deleteRatingAdmin, editReviewAdmin,getAllMedicalAdmin, getAllOrderAdmin, getAllAttributeFillAdmin, updateAttributeAdmin, getAttributeIdAdmin, deleteAttributeAdmin, getAllAttribute, AddAdminTagController, getAllTagFillAdmin, updateTagAdmin, getTagIdAdmin, deleteTagAdmin, getAllTag, editHomeData, editHomeLayoutData,
   AddPlanCategoryController, getAllPlanCategoryAdmin, AddPlanController, getAllPlanAdmin, getPlanIdAdmin, updatePlanAdmin, deletePlanAdmin, AddAdminDepartmentController,
   getAllDepartmentFillAdmin,
   getDepartmentIdAdmin,
@@ -24,7 +24,7 @@ getAllAttributeDepartmentFillAdmin,
 updateAttributeDepartmentAdmin,
 getAttributeDepartmentIdAdmin,
 deleteAttributeDepartmentAdmin,deleteUserAdmin,getAllLeadProductDepartment,AddAdminLeadProductController,getAllLeadProductFillAdmin,updateLeadProductAdmin,getLeadProductIdAdmin,deleteLeadProductAdmin
-,assignUserIds,AddVideoCall ,endVideoCall,getAllVideoCalls,getVideoCall,generateUserInvoicePDFView, editUserVerifyAdmin,editFullLeadAdmin, AdminGetAllEmployee, profileDocImage,AllPaymentAdmin, AdminAllEnquireStatus, profileImageHealth,deletePlanCategoryAdmin
+,assignUserIds,AddVideoCall ,editRedeemStatusAdmin,AllAdminRedeemController,endVideoCall,AddAdminRedeemController, getAllVideoCalls,getVideoCall,generateUserprescriptionPDFView,generateUserInvoicePDFView, editUserVerifyAdmin,editFullLeadAdmin, AdminGetAllEmployee, profileDocImage,AllPaymentAdmin, AdminAllEnquireStatus, profileImageHealth,deletePlanCategoryAdmin
 } from "../controller/adminController.js";
 
 import {
@@ -34,8 +34,8 @@ import {
   , BuyPlanUser, GetPlanUser, getAllNurseDepartment,
 getAllNurseSkillDepartment,
 getAllNurseAttributeDepartment, HomeSendEnquire,ConsultationSendEnquire, getAllPlanCategoryController, uploadDataZone, deleteAllZones, SignupUserType, updateDetailsUser, updateDetailsUserHealth, getAllPlanUser, getProductIdUserBySlug
-  , getAllVendor, getAllDepartment, profileVendorImage,ApiGetKey, PaymentSuccess, PaymentFail,
-  generateUserAttachPDF, UserPdfView, updateVendorProfileUser, paymentVerification, BuyPlanAddUser, BuyPlanByUser, PayuHash, userPlanIdController, ViewAllZonesDepartment, getVendorById, HomeSendvendorEnquire, ApplyEnquireStatus, SenderEnquireStatus, AllPayment, downloadUserInvoice, checkUserPlan, GetWebsiteData, GetWebsiteData_old,getAllOrderUser
+  , getAllVendor, getAllDepartment, profileVendorImage,ApiGetKey, PaymentSuccess,PaymentBookSuccess, PaymentFail,
+  generateUserAttachPDF,CheckoutWallet ,AllPaymentWalletAdmin, AllTransactionWalletAdmin,UserPdfView, updateVendorProfileUser, paymentVerification,BookAppointmentByUser, BuyPlanAddUser, BuyPlanByUser, PayuHash, userPlanIdController, ViewAllZonesDepartment, getVendorById, HomeSendvendorEnquire, ApplyEnquireStatus, SenderEnquireStatus, AllPayment, downloadUserInvoice, checkUserPlan, GetWebsiteData, GetWebsiteData_old,getAllMedicalUser,getAllOrderUser
 } from "../controller/userController.js"
 import authenticateToken from "../middleware/authMiddleware.js";
 import { uploadImage, handleImageUpload } from "../controller/adminController.js";
@@ -64,6 +64,7 @@ router.get('/all/category-slug/:parentSlug', GetAllCategoriesBySlugController);
 router.post('/admin/add-order', AddAdminOrderController);
 router.get("/admin/get-order/:id", getOrderIdAdminController);
 router.post('/admin/add-lead', AddAdminLeadController);
+router.get("/admin/get-medical/:id", getMedicalIdAdminController);
 
 
 router.get('/all-category', UsergetAllCategories);
@@ -119,12 +120,16 @@ router.get('/admin/all-order', getAllOrderAdmin);
 router.put('/admin/update-order/:id', editOrderAdmin);
 router.put('/admin/update-full-order/:id', editFullOrderAdmin);
 router.put('/admin/update-full-lead/:id', editFullLeadAdmin);
+router.get('/admin/all-medical', getAllMedicalAdmin);
+
+
 
 router.get('/admin/all-report', getAllOrderAdmin);
 
 
 
 router.get("/user-invoice/:id", generateUserInvoicePDFView);
+router.get("/user-prescription/:id", generateUserprescriptionPDFView);
 router.get("/user-invoice/:id/:rec", generateUserInvoicePDFView);
 
 
@@ -212,6 +217,25 @@ router.get("/get-video-call/:id", getVideoCall);
 router.post('/admin/end-video-call/', endVideoCall);
 router.get('/admin/all-video-call', getAllVideoCalls);
 
+// for wallet 
+
+router.post(
+  "/checkout-wallet",
+  CheckoutWallet
+);
+router.get("/wallet/all-transaction", AllTransactionWalletAdmin);
+router.get("/wallet/all-payments", AllPaymentWalletAdmin);
+
+
+// for redeem 
+
+router.post('/admin/add-redeem', AddAdminRedeemController);
+
+router.get('/admin/all-redeem', AllAdminRedeemController);
+router.put('/admin/update-redeem-status/:id', editRedeemStatusAdmin);
+ 
+
+// for extra
 
 
 router.get("/all-employee", AdminGetAllEmployee);
@@ -220,6 +244,7 @@ router.get("/all-orders", getAllOrderUser);
 router.get("/fix-userid", assignUserIds);
 router.get("/remove-data", getRemoveData);
 
+router.get("/all-medical", getAllMedicalUser);
 
 
 
@@ -461,7 +486,8 @@ router.post("/paymentverification-plan", paymentVerification);
 router.get("/api/get-key", checkOrigin, ApiGetKey);
 router.get("/getpdf/:id", generateUserAttachPDF);
 
- 
+ router.post("/book-appointment", BookAppointmentByUser);
+
 
 router.get("/get-plan/:id", userPlanIdController);
 
@@ -480,6 +506,10 @@ router.get("/payu-hash", PayuHash);
 router.get("/ssr-data", GetWebsiteData);
 router.get("/full-ssr-data", GetWebsiteData_old);
 router.post("/payment-success", PaymentSuccess);
+router.post("/payment-book-success", PaymentBookSuccess);
+
+
+
 router.post("/payment-fail", PaymentFail);
 
 router.post("/admin/download-invoice", downloadUserAdminInvoice);
