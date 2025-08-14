@@ -51,6 +51,7 @@ import attributeDepartmentsModel from "../models/attributeDepartmentsModel.js";
 import mongoose from "mongoose";
 import leadProductModel from "../models/leadProductModel.js";
 import callModel from "../models/callModel.js";
+import redeemModel from "../models/redeemModel.js";
 
 const execPromise = util.promisify(exec);
 
@@ -816,7 +817,7 @@ export const AddAdminOrderController = async (req, res) => {
       employeeId,
       OnBoardDate,
       dutyHr,
-      addHistory,Ltime
+      addHistory,Ltime,appoinment,prescription,images
     } = req.body;
 
     console.log("Request Body:", req.body);
@@ -846,6 +847,7 @@ export const AddAdminOrderController = async (req, res) => {
         companyAddress: UserDetails.companyAddress,
         age: UserDetails.age,
         weight: UserDetails.weight,
+         
       });
 
       await newUser.save();
@@ -887,11 +889,12 @@ export const AddAdminOrderController = async (req, res) => {
       dutyHr,
       addHistory: addHistory || [],
       leadType: 1,
-      Ltime
-    });
+      Ltime,
+    appoinment,prescription,images
+      });
 
     // Handle product stock updates
-    if (Array.isArray(addProduct)) {
+    if (Array.isArray(addProduct) && !appoinment) {
       for (let product of addProduct) {
         const productDetails = await productModel.findById(product._id);
 
@@ -979,6 +982,48 @@ export const getOrderIdAdminController = async (req, res) => {
     });
   }
 };
+
+
+export const getMedicalIdAdminController = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const Order = await orderModel.findById(id).populate({
+      path: 'userId', 
+      select: 'username email phone'
+    }).populate({
+      path: 'userId', 
+      select: 'username email phone'
+    }).populate({
+  path: "employeeId",
+  model: userModel,
+  select: "username email phone department",
+  populate: {
+    path: "department",       // field in userModel
+    model: departmentsModel,   // replace with your department model name
+    select: "name description" // choose the fields you want
+  }
+});
+
+    if (!Order) {
+      return res.status(200).send({
+        message: "Order Not Found By Id",
+        success: false,
+      });
+    }
+    return res.status(200).json({
+      message: "fetch Single Order!",
+      success: true,
+      Order,
+    });
+  } catch (error) {
+    return res.status(400).json({
+      message: `Error while get Order: ${error}`,
+      success: false,
+      error,
+    });
+  }
+};
+
 
 export const GetAllCategoriesByParentIdController_new = async (req, res) => {
   try {
@@ -2141,7 +2186,7 @@ export const editHomeData = async (req, res) => {
       email,
       address,
       cash,
-      razorpay
+      razorpay,commission
     } = req.body;
 
     console.log(meta_favicon)
@@ -2159,7 +2204,7 @@ export const editHomeData = async (req, res) => {
       email,
       address,
       cash,
-      razorpay
+      razorpay,commission
     };
 
     const homeData = await homeModel.findOneAndUpdate({}, updateFields, {
@@ -2625,6 +2670,7 @@ export const getAllOrderAdmin = async (req, res) => {
     const skip = (page - 1) * limit;
 
     const query = {};
+    const appoinment = req.query.appoinment || null;
 
      // if (startDate && endDate) {
     //   query.createdAt = { $gte: startDate, $lte: endDate };
@@ -2671,17 +2717,12 @@ if (datetype && (start || end)) {
     query.date = dateRange;
   }
 }
+ 
 
-   
-    
+    if (appoinment && appoinment.length > 0) {
+      query.appoinment = appoinment;
+    }
 
-if (userId) {
-  query.$or = [
-    { userId: userId },
-    { employeeId: userId },
-    { employeeSaleId: userId }
-  ];
-}
 
 
     if (statusFilter.length > 0) {
@@ -2721,6 +2762,311 @@ if (userId) {
 
 
     
+if (userId) {
+  query.$or = [
+    { userId: userId },
+    { employeeId: userId },
+    { employeeSaleId: userId }
+  ];
+}
+    // Fetch with populate
+    const allOrders = await orderModel
+      .find(query)
+      .sort({ _id: -1 })
+      .populate({
+        path: "userId",
+        model: userModel,
+        select: "username email phone profile",
+      })
+      .populate({
+        path: "employeeId",
+        model: userModel,
+        select: "username email phone profile",
+      })
+      .populate({
+        path: "employeeSaleId",
+        model: userModel,
+        select: "username email phone profile",
+      })
+      .lean();
+
+    // Filter manually for searchTerm
+    const filteredOrders = allOrders.filter((order) => {
+      if (!searchTerm) return true;
+
+      const regex = new RegExp(searchTerm, 'i');
+      return (
+        regex.test(order.orderId?.toString()) ||
+        regex.test(order.mode || '') ||
+        regex.test(order.employeeId?.username || '') ||
+        regex.test(order.employeeId?.email || '') ||
+        regex.test(order.employeeId?.phone || '') ||
+        regex.test(order.employeeSaleId?.username || '') ||
+        regex.test(order.employeeSaleId?.email || '') ||
+        regex.test(order.employeeSaleId?.phone || '') ||
+        regex.test(order.userId?.phone || '') ||
+        regex.test(order.userId?.username || '') ||
+        regex.test(order.userId?.email || '')  
+      )
+    });
+
+    const paginatedOrders = filteredOrders.slice(skip, skip + limit);
+
+    if (paginatedOrders.length === 0) {
+      return res.status(404).send({
+        message: "No Order Found",
+        success: false,
+      });
+    }
+
+    // const enrichedOrders = paginatedOrders.map((order) => {
+    //   const history = order.addHistory || [];
+    //   const nurseMap = {};
+
+    //   history.forEach((entry) => {
+    //     const isNurseChange =
+    //       entry.changes &&
+    //       entry.changes.includes("Update Employee ( Doctor / Nurse / Runner )") &&
+    //       entry.assignId;
+
+    //     if (isNurseChange) {
+    //       const key = entry.assignId;
+    //       if (!nurseMap[key]) {
+    //         nurseMap[key] = {
+    //           assignId: entry.assignId,
+    //           username: extractUsernameFromChanges(entry.changes), // helper function
+    //           workDates: new Set(),
+    //           email: '', // will fill below
+    //         };
+    //       }
+
+    //       nurseMap[key].workDates.add(entry.date);
+    //     }
+    //   });
+
+    //   const nurseStats = Object.values(nurseMap).map((nurse) => ({
+    //     assignId: nurse.assignId,
+    //     username: nurse.username,
+    //     email: '', // Optional: populate if available in users
+    //     totalDays: nurse.workDates.size,
+    //     workDates: Array.from(nurse.workDates),
+    //   }));
+
+    //   return {
+    //     ...order,
+    //     NurseStats: nurseStats.length > 0 ? nurseStats : [],
+    //   };
+    // });
+
+    const enrichedOrders = paginatedOrders.map((order) => {
+  const history = order.addHistory || [];
+  const nurseMap = {};
+
+  history.forEach((entry) => {
+    const isNurseChange =
+      entry.changes &&
+      entry.changes.includes("Update Employee ( Doctor / Nurse / Runner )") &&
+      entry.assignId;
+
+    if (isNurseChange) {
+      const key = entry.assignId;
+      if (!nurseMap[key]) {
+        nurseMap[key] = {
+          assignId: entry.assignId,
+          username: extractUsernameFromChanges(entry.changes),
+          workDates: new Set(),
+          workingDays: new Set(),
+          leaveDays: new Set(),
+          leftDay: null,
+          email: '',
+        };
+      }
+
+      // Normalize date format if needed
+      const date = entry.date;
+
+      if (entry.working === "1") {
+        nurseMap[key].workDates.add(date);
+        nurseMap[key].workingDays.add(date);
+      } else if (entry.working === "0") {
+        nurseMap[key].workDates.add(date);
+        nurseMap[key].leaveDays.add(date);
+      } else if (entry.working === "2" && !nurseMap[key].leftDay) {
+        nurseMap[key].leftDay = date;
+      }
+    }
+  });
+
+  const nurseStats = Object.values(nurseMap).map((nurse) => ({
+    assignId: nurse.assignId,
+    username: nurse.username,
+    email: '',
+    totalDays: nurse.workDates.size,
+    workingDays: Array.from(nurse.workingDays),
+    leaveDays: Array.from(nurse.leaveDays),
+    leftDay: nurse.leftDay,
+    workDates: Array.from(nurse.workDates),
+  }));
+
+  return {
+    ...order,
+    NurseStats: nurseStats.length > 0 ? nurseStats : [],
+  };
+});
+
+
+    return res.status(200).send({
+      message: "All Order list",
+      Count: filteredOrders.length,
+      currentPage: page,
+      totalPages: Math.ceil(filteredOrders.length / limit),
+      success: true,
+      Order: enrichedOrders,
+    });
+
+
+    // return res.status(200).send({
+    //   message: "All Order list",
+    //   Count: paginatedOrders.length,
+    //   currentPage: page,
+    //   totalPages: Math.ceil(filteredOrders.length / limit),
+    //   success: true,
+    //   Order: paginatedOrders,
+    // });
+
+  } catch (error) {
+    return res.status(500).send({
+      message: `Error while fetching Orders: ${error.message}`,
+      success: false,
+      error,
+    });
+  }
+};
+
+
+export const getAllMedicalAdmin = async (req, res) => {
+  try {
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const searchTerm = req.query.search || "";
+    const statusFilter = req.query.status || '';
+    const notStatus = req.query.notStatus || '';
+    const productId = req.query.productId || '';
+    const type = req.query.type || '';
+    const leadtype = req.query.leadtype || '';
+    const lead = req.query.lead || null;
+    const datetype = req.query.datetype || null;
+
+
+    const overdue = req.query.overdue || ''; 
+    const startDate = req.query.startDate ? new Date(req.query.startDate) : null;
+    const endDate = req.query.endDate ? new Date(req.query.endDate) : null;
+    const start = req.query.start ? new Date(req.query.start) : null;
+    const end = req.query.end ? new Date(req.query.end) : null;
+    const userId = req.query.userId || null;
+
+    const skip = (page - 1) * limit;
+
+    const query = {};
+    const appoinment = req.query.appoinment || null;
+
+     // if (startDate && endDate) {
+    //   query.createdAt = { $gte: startDate, $lte: endDate };
+    // } else if (startDate) {
+    //   query.createdAt = { $gte: startDate };
+    // } else if (endDate) {
+    //   query.createdAt = { $lte: endDate };
+    // }
+
+
+    // Date range filtering based on PickupDate and ReturnDate
+if (startDate && endDate && !datetype) {
+  query.$and = [
+    { PickupDate: { $lte: endDate } },
+    { ReturnDate: { $gte: startDate } },
+  ];
+} else if (startDate) {
+  query.ReturnDate = { $gte: startDate };
+} else if (endDate) {
+  query.PickupDate = { $lte: endDate };
+}
+
+  if (start && end && !datetype) {
+      query.createdAt = { $gte: start, $lte: end };
+    } else if (start) {
+      query.createdAt = { $gte: start };
+    } else if (end) {
+      query.createdAt = { $lte: end };
+    }
+
+if (datetype && (start || end)) {
+  const dateRange = {};
+  if (start) dateRange.$gte = new Date(start);
+  if (end) dateRange.$lte = new Date(end);
+
+  if (datetype === '1') {
+    // Lead Date (Ldate)
+    query.Ldate = dateRange;
+  } else if (datetype === '2') {
+    // Created At
+    query.createdAt = dateRange;
+  } else if (datetype === '3') {
+    // Follow-up Date
+    query.date = dateRange;
+  }
+}
+ 
+
+    if (appoinment && appoinment.length > 0) {
+      query.appoinment = appoinment;
+    }
+
+
+
+    if (statusFilter.length > 0) {
+      query.status = { $in: statusFilter.split(',').map(Number) };
+    }
+
+    if (notStatus.length > 0) {
+      query.status = { $nin: notStatus.split(',').map(Number) };
+    }
+
+    if (overdue === 'true') {
+      const targetDate = new Date(); // This will be 2025-05-01
+      console.log('targetDate',targetDate)
+      query.ReturnDate = { ...query.ReturnDate, $lt: targetDate }; // upcoming
+      query.status = { $nin: 5 }; 
+    }
+ 
+    
+    if (type.length > 0) {
+      query.type = { $in: type.split(',').map(Number) };
+    }
+    if (leadtype) {
+      query.leadType = leadtype;
+    }else{
+       query.$or = [
+        { leadType: { $eq: 1 } },
+        { leadType: { $exists: false } }
+      ];
+    }
+    if (lead) {
+      query.lead = lead;
+    }
+
+    if (productId) {
+      query['addProduct._id'] = productId;
+    }
+
+
+    
+if (userId) {
+  query.$or = [
+    { userId: userId },
+    { employeeId: userId },
+    { employeeSaleId: userId }
+  ];
+}
     // Fetch with populate
     const allOrders = await orderModel
       .find(query)
@@ -2894,6 +3240,7 @@ if (userId) {
     });
   }
 };
+
 
 export const getAllUserHistory = async (req, res) => {
   try {
@@ -3164,7 +3511,7 @@ export const editFullOrderAdmin = async (req, res) => {
     const { id } = req.params;
     const {
       order, discount,subtotal,shipping,applyIGST,applyCGST,applySGST,finalTotal,taxTotal,  addRental,addReceived,addReturn,addProduct,
-      userId,UserDetails,employeeSaleId,PickupDate,ReturnDate,SecurityAmt,AdvanceAmt,employeeId,OnBoardDate,addHistory,dutyHr
+      userId,UserDetails,employeeSaleId,PickupDate,ReturnDate,SecurityAmt,AdvanceAmt,employeeId,OnBoardDate,addHistory,dutyHr,Ltime,appoinment,prescription,images
     } = req.body;
 
     const orderUpdate = await orderModel.findById(id).populate('userId'); // Fetch order details including user
@@ -3197,7 +3544,7 @@ export const editFullOrderAdmin = async (req, res) => {
        totalAmount: finalTotal,
        taxTotal,  
         addHistory,
-       dutyHr
+       dutyHr,Ltime,appoinment,prescription,images
     };
 
     // Only include OnBoardDate if it's a valid date
@@ -4178,17 +4525,31 @@ export const GetFolderIDAdmin = async (req, res) => {
 export const GetFolderAdmin = async (req, res) => {
   try {
     const { id } = req.query;
+    const { userId } = req.query;
 
     if (id) {
-      // If id is provided, fetch both parent and child folders
-      const [parentFolder, Folder] = await Promise.all([
+    
+      if(userId){
+     const parentFolder = await folderModel.findOne({ name: id }).lean();
+
+let childFolders = [];
+
+if (parentFolder) {
+  childFolders = await folderModel.find({ folderId: parentFolder._id }).lean();
+}
+
+        return res.status(200).send({
+        message: "Parent and Child Folders found",
+        success: true,
+        parentFolder,
+        Folder:childFolders,
+      });
+      }else{
+          const [parentFolder, Folder] = await Promise.all([
         folderModel.findById(id).lean(), // Fetch parent folder
         folderModel.find({ folderId: id }).lean(), // Fetch child folders
-      ]);
-
-      const userId = req.params.id;
-
-
+       ]);
+ 
 
       if (!parentFolder) {
         return res.status(404).send({
@@ -4197,13 +4558,17 @@ export const GetFolderAdmin = async (req, res) => {
         });
       }
 
-      return res.status(200).send({
+
+        return res.status(200).send({
         message: "Parent and Child Folders found",
         success: true,
         parentFolder,
         Folder,
       });
+      }
+      
     } else {
+  
       // If id is not provided, fetch folders where folderId is empty
       const Folder = await folderModel.find({ folderId: null }).lean();
 
@@ -4863,6 +5228,133 @@ export const deleteOrderAdmin = async (req, res) => {
     });
   }
 };
+
+// for redeem
+
+export const AddAdminRedeemController = async (req, res) => {
+  try {
+    const { note, amount, userId } = req.body;
+
+    // Validation
+    if (!note || !amount || !userId) {
+      return res.status(400).send({
+        success: false,
+        message: "Please Provide All Field",
+      });
+    }
+
+    // Create a new category with the specified parent
+    const newRedeem = new redeemModel({
+      note, totalAmount:amount, userId
+    });
+
+    await newRedeem.save();
+
+    return res.status(201).send({
+      success: true,
+      message: "Redeem Added!",
+      newRedeem,
+    });
+  } catch (error) {
+    console.error("Error while Redeem Added:", error);
+    return res.status(400).send({
+      success: false,
+      message: "Error while creating Promo code",
+      error,
+    });
+  }
+};
+
+
+ 
+export const AllAdminRedeemController = async (req, res) => {
+  try {
+    const page = parseInt(req.query.page) || 1; // Current page, default is 1
+    const limit = parseInt(req.query.limit) || 10; // Number of documents per page, default is 10
+    const searchTerm = req.query.search || ""; // Get search term from the query parameters
+    const userId = req.query.userId ; // Get search term from the query parameters
+
+    const skip = (page - 1) * limit;
+
+    const query = {};
+    if (searchTerm) {
+      // If search term is provided, add it to the query
+      query.$or = [
+        { note: { $regex: searchTerm, $options: "i" } }, // Case-insensitive username search
+        { value: { $regex: searchTerm, $options: "i" } }, // Case-insensitive email search
+      ];
+    }
+
+       const fillter = {};  // Only fetch employees with the type (assuming "employee")
+
+ 
+    if(userId){
+      query.userId = userId;
+    }
+ 
+    const totalDepartment = await redeemModel.countDocuments();
+ 
+    const Transaction = await redeemModel
+      .find(query)
+      .sort({ _id: -1 }) // Sort by _id in descending order
+      .skip(skip)
+      .limit(limit)
+      .lean();
+
+    if (!Transaction) {
+      return res.status(200).send({
+        message: "NO redeem found",
+        success: false,
+      });
+    }
+    return res.status(200).send({
+      message: "All redeem list ",
+      TransactionCount: Transaction.length,
+      currentPage: page,
+      totalPages: Math.ceil(totalDepartment / limit),
+      success: true,
+      Transaction,
+    });
+  } catch (error) {
+    return res.status(500).send({
+      message: `Error while getting Transaction ${error}`,
+      success: false,
+      error,
+    });
+  }
+};
+
+export const editRedeemStatusAdmin = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { status } = req.body;
+
+   
+   
+    let updateFields = {
+     confirm: status,
+    };
+
+    const updatedOrder = await redeemModel.findByIdAndUpdate(id, updateFields, {
+      new: true,
+    });
+ 
+
+    return res.status(200).json({
+            message: "Order Updated!",
+            success: true,
+          });
+
+  } catch (error) {
+    console.log('error',error)
+    return res.status(500).json({
+      message: `Error while updating Rating: ${error}`,
+      success: false,
+      error,
+    });
+  }
+};
+
 
 // for pages 
 
@@ -7400,6 +7892,320 @@ ${invoiceData.type === 2 ?  `
 
 };
 
+
+export const generateUserprescriptionPDFView = async (req, res) => {
+  try {
+
+  const { id,rec } = req.params;
+
+  const lastTransaction = await orderModel
+    .findById(id)
+    .limit(1) // Only get the most recent transaction
+    .populate({
+      path: "userId", // The field to populate
+      select: "phone username email c_name gstin statename ", // Only select the phone and username fields from the User model
+    }).populate({
+  path: "employeeId",
+  model: userModel,
+  select: "username email phone department Doc4",
+  populate: {
+    path: "department",       // field in userModel
+    model: departmentsModel,   // replace with your department model name
+    select: "name description" // choose the fields you want
+  }
+}) .lean(); // Convert documents to plain JavaScript objects
+
+  // If lastTransaction is an array, you can access the first element like this
+  const invoiceData = lastTransaction;
+  
+  // console.log(invoiceData);
+  console.log('invoiceData.UserDetails',invoiceData);
+ 
+
+  const formatDate = (dateString) => {
+    const options = { year: "numeric", month: "long", day: "numeric" };
+    return new Date(dateString).toLocaleDateString(undefined, options);
+  };
+
+  const formatTime = (dateString) => {
+    const options = { hour: "2-digit", minute: "2-digit" };
+    return new Date(dateString).toLocaleTimeString(undefined, options);
+  };
+
+// invoiceData.addProduct.forEach(product => {
+//   product.amount = 30000; // Set your custom amount
+//   product.total = 30000;  // Set your custom total
+// });
+// rec
+
+  console.log('invoiceData',invoiceData)
+ 
+const formatDateToLongString = (dateString)  => {
+  const date = new Date(dateString);
+  const options = { year: 'numeric', month: 'long', day: 'numeric' };
+  return date.toLocaleDateString('en-US', options);
+}
+
+
+  console.log('invoiceData.addProduct',invoiceData.addProduct)
+// Optional helpers if you don't already have them
+const fmtDate = (iso) => {
+  if (!iso) return '';
+  const d = new Date(iso);
+  return d.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }).toUpperCase();
+};
+const safe = (v, fallback = '—') => (v ?? fallback);
+
+// Define the HTML content
+const htmlContent = `
+  <div class="prescription">
+
+    <!-- Header: Doctor & Prescription meta -->
+    <div class="rx-header">
+      <div class="rx-header-left">
+        <h1 class="doc-name">${safe(invoiceData?.employeeId?.username, 'Doctor')}</h1>
+        <div class="doc-qual">${safe(invoiceData?.employeeId?.department?.name, 'Department')}</div>
+        <div class="doc-contact">
+          <span>Email:</span> ${safe(invoiceData?.employeeId?.email)}
+          &nbsp;&nbsp;|&nbsp;&nbsp;
+          <span>Phone:</span> ${safe(invoiceData?.employeeId?.phone)}
+        </div>
+      </div>
+      <div class="rx-header-right">
+        <div class="rx-title">PRESCRIPTION</div>
+        <div><b>Prescription No.</b> : #${safe(invoiceData?.orderId, '')}</div>
+        <div><b>Date</b> : ${fmtDate(invoiceData?.PickupDate)}</div>
+      </div>
+    </div>
+
+    <div class="divider"></div>
+
+    <!-- Patient details -->
+    <section class="patient">
+      <h2>Patient Details</h2>
+      <div class="grid-2">
+        <div><b>Name:</b> ${safe(invoiceData?.UserDetails?.[0]?.name)}</div>
+        <div><b>Phone:</b> ${safe(invoiceData?.UserDetails?.[0]?.phone)}</div>
+        <div><b>Email:</b> ${safe(invoiceData?.UserDetails?.[0]?.email)}</div>
+        <div><b>Address:</b> ${safe(invoiceData?.UserDetails?.[0]?.address)}</div>
+        <div><b>Age:</b> ${safe(invoiceData?.UserDetails?.[0]?.age)}</div>
+        <div><b>Gender:</b> ${invoiceData?.UserDetails?.[0]?.gender === '1' ? 'Male' : invoiceData?.UserDetails?.[0]?.gender === '2' ? 'Female' : '—'}</div>
+      </div>
+    </section>
+
+    <!-- Diagnosis (if any) -->
+    ${invoiceData?.UserDetails?.[0]?.disease ? `
+      <section class="diagnosis">
+        <h2>Diagnosis</h2>
+        <p>${invoiceData.UserDetails[0].disease}</p>
+      </section>
+    ` : ''}
+
+    <!-- Medicines / Rx -->
+    <section class="rx">
+      <div class="rx-mark">℞</div>
+      <div class="rx-body">
+        <h2>Medications</h2>
+        ${
+          Array.isArray(invoiceData?.prescription) && invoiceData.prescription.length
+          ? `<ol class="rx-list">
+              ${invoiceData.prescription.map(item => `<li>${item}</li>`).join('')}
+            </ol>`
+          : `<p class="muted">No medicines listed.</p>`
+        }
+      </div>
+    </section>
+
+   
+
+    <!-- Attachments / Images -->
+    ${
+      Array.isArray(invoiceData?.images) && invoiceData.images.length
+      ? `
+      <section class="attachments">
+        <h2>Attachments</h2>
+        <div class="img-grid">
+          ${invoiceData.images.map((src, i) => `
+            <a href="${src}" target="_blank" rel="noopener">
+              <img src="${src}" alt="attachment-${i+1}" />
+            </a>
+          `).join('')}
+        </div>
+      </section>
+      ` : ''
+    }
+
+    <!-- Doctor signature -->
+    <section class="sign-row">
+      <div class="sign-box">
+        <div class="sign-line"> <img src="/${safe(invoiceData?.employeeId?.Doc4, '')}" style="display: block;" /> 
+        </div>
+        <div class="sign-label">${safe(invoiceData?.employeeId?.username, 'Doctor')}</div>
+      </div>
+ 
+    </section>
+
+    <p class="disc">This prescription is intended for use only by the patient named above.</p>
+
+    <div class="print-area">
+      <button class="btn" onclick="window.print()">Print Page</button>
+    </div>
+  </div>
+
+  <style>
+    :root{
+      --ink:#111;
+      --muted:#666;
+      --line:#1b5e20; /* medical green */
+      --border:#999;
+    }
+    body{ font-family: Arial, Helvetica, sans-serif; color:var(--ink); }
+    .prescription{ width:95%; margin:12px auto 24px; padding:20px; background:#fff; }
+    h1,h2{ margin:0 0 6px 0; }
+    h1{ font-size:20pt; font-weight:800; color:var(--line); }
+    h2{ font-size:12pt; font-weight:700; }
+    .muted{ color:var(--muted); }
+
+    .rx-header{ display:flex; justify-content:space-between; gap:20px; align-items:flex-start; margin-bottom:8px; }
+    .doc-name{ margin-top:0; }
+    .doc-qual{ color:var(--muted); font-size:10pt; margin-bottom:6px; }
+    .doc-contact{ font-size:10pt; color:var(--ink); }
+    .rx-title{ font-size:14pt; font-weight:800; color:var(--line); text-align:right; margin-bottom:4px; }
+    .rx-header-right{ text-align:right; font-size:10pt; }
+
+    .divider{ height:2px; background:var(--line); opacity:.9; margin:10px 0 16px; }
+
+    .patient .grid-2{ display:grid; grid-template-columns: 1fr 1fr; gap:6px 16px; }
+    .patient, .diagnosis, .rx, .services, .attachments{ margin-bottom:16px; }
+    .diagnosis p{ margin:6px 0 0; }
+
+    .rx{ display:flex; gap:12px; align-items:flex-start; }
+    .rx-mark{ font-size:26pt; color:var(--line); font-weight:800; line-height:1; }
+    .rx-body h2{ margin-bottom:8px; }
+    .rx-list{ margin:6px 0 0 18px; }
+    .rx-list li{ margin:4px 0; }
+
+    .rx-table{ width:100%; border-collapse:collapse; }
+    .rx-table th, .rx-table td{ border:1px solid var(--border); padding:8px; font-size:10pt; text-align:left; }
+    .rx-table th{ color:var(--line); }
+
+    .attachments .img-grid{ display:grid; grid-template-columns: repeat(auto-fill, minmax(140px,1fr)); gap:12px; }
+    .attachments img{ width:100%; height:140px; object-fit:cover; border:1px solid #ddd; border-radius:4px; }
+
+    .sign-row{ display:flex; gap:20px; align-items:flex-end; justify-content:space-between; margin-top:18px; }
+    .sign-box{ width:320px; text-align:center; }
+    .sign-line{ border-bottom:1.5px solid #333;  margin-bottom:6px; }
+    .sign-label{ font-size:10pt; color:#333; }
+    .meta-box table{ border-collapse:collapse; font-size:10pt; }
+    .meta-box th, .meta-box td{ border:1px solid var(--border); padding:6px 10px; }
+    .meta-box th{ color:var(--line); text-align:left; }
+
+    .disc{ margin:18px 0 0; text-align:center; color:var(--muted); font-size:10pt; }
+    .print-area{ margin-top:14px; text-align:left; }
+
+    .btn{ display:inline-block; border:0; padding:10px 18px; background:#0d6efd; color:#fff; border-radius:6px; cursor:pointer; }
+    .btn:hover{ background:#0b5ed7; }
+
+    @media (max-width:720px){
+      .rx-header{ flex-direction:column; }
+      .rx-header-right{ text-align:left; }
+      .patient .grid-2{ grid-template-columns:1fr; }
+      .sign-row{ flex-direction:column; align-items:stretch; }
+      .sign-box{ width:100%; }
+    }
+
+    @media print{
+      .btn{ display:none; }
+      .prescription{ width:100%; padding:0; }
+      .attachments img{ -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+    }
+  </style>
+`;
+
+  res.send(htmlContent);
+
+} catch (error) {
+  console.error("Error generating invoice PDF view:", error.message);
+  // Redirect to YNB.com on error
+  const htmlContent =`
+  <!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>404 Not Found</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: #f8f8f8;
+      font-family: Arial, sans-serif;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      text-align: center;
+      color: #333;
+    }
+
+    .container {
+      max-width: 600px;
+    }
+
+    h1 {
+      font-size: 120px;
+      margin-bottom: 20px;
+      color: #ff6b6b;
+    }
+
+    h2 {
+      font-size: 32px;
+      margin-bottom: 10px;
+    }
+
+    p {
+      font-size: 18px;
+      margin-bottom: 30px;
+    }
+
+    a {
+      display: inline-block;
+      text-decoration: none;
+      background-color: #007bff;
+      color: #fff;
+      padding: 12px 24px;
+      border-radius: 5px;
+      transition: background-color 0.3s ease;
+    }
+
+    a:hover {
+      background-color: #0056b3;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <h1>404</h1>
+    <h2>Page Not Found</h2>
+    <p>Sorry, the page you’re looking for doesn’t exist.</p>
+   </div>
+
+</body>
+</html>
+
+    `;
+
+  res.send(htmlContent);
+}
+
+};
+
+
 export const downloadUserAdminInvoice = async (req, res) => {
   try {
     const { invoiceId } = req.body; // Assuming invoiceData is sent in the request body
@@ -7812,7 +8618,8 @@ export const AddVideoCall = async (req, res) => {
   try {
     const {  userId, senderId ,orderId} = req.body;
 
-    console.log(userId, senderId);
+    console.log(userId, senderId, orderId);
+  
     // Create a new Message document
     const message = new callModel({
       receiver: userId,
@@ -7926,8 +8733,8 @@ export const getAllVideoCalls = async (req, res) => {
       ]
     })
       .sort({ createdAt: -1 })
-      .populate('sender', 'name email')      // adjust fields as needed
-      .populate('receiver', 'name email')    // adjust fields as needed
+      .populate('sender', 'username email')      // adjust fields as needed
+      .populate('receiver', 'username email')    // adjust fields as needed
       .populate('orderId');                  // populate full order object
 
     res.status(200).json({ success: true, Order: calls });
