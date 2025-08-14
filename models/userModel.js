@@ -58,6 +58,10 @@ const userSchema = mongoose.Schema({
     type: Number,
     default: 0
   },
+  wallet: {
+    type: Number,
+    default: 0
+  },
   profile: {
     type: String,
     default: "",
